@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile – SmartFarm AI</title>
+  <meta name="description" content="Manage your SmartFarm AI account information and farm details.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+
+    <!-- ── Sidebar ── -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+        {% if user and user.profile_photo %}
+          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+        {% else %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile – AgroVisionAI</title>
+  <meta name="description" content="Manage your AgroVisionAI account information and farm details.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+
+    <!-- ── Sidebar ── -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+        {% if user and user.profile_photo %}
+          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+        {% else %}
+          <i class="fas fa-user dashboard-avatar"></i>
+        {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>Smart Farm AI</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link is-active" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <section class="dashboard-main">
+
+      <!-- Hero Banner -->
+      <header class="dashboard-hero profile-hero">
+        <div class="dashboard-hero-copy">
+          <h1>Profile</h1>
+          <p>Manage your account information and farm details</p>
+        </div>
+      </header>
+
+      <!-- Flash Messages -->
+      {% if success %}
+        <div class="profile-flash profile-flash-success" id="profileFlash" role="alert">
+          <i class="fas fa-circle-check"></i>
+          <span>{{ success }}</span>
+          <button class="profile-flash-close" onclick="document.getElementById('profileFlash').remove()" aria-label="Dismiss">&times;</button>
+        </div>
+      {% endif %}
+      {% if error %}
+        <div class="profile-flash profile-flash-error" id="profileFlashErr" role="alert">
+          <i class="fas fa-triangle-exclamation"></i>
+          <span>{{ error }}</span>
+          <button class="profile-flash-close" onclick="document.getElementById('profileFlashErr').remove()" aria-label="Dismiss">&times;</button>
+        </div>
+      {% endif %}
+
+      <!-- Profile Body -->
+      <div class="profile-body">
+
+        <!-- LEFT: Avatar Card -->
+        <div class="profile-avatar-col">
+          <div class="profile-avatar-card">
+            <div class="profile-avatar-wrap" id="avatarWrap">
+              {% if user.profile_photo %}
+                <img id="avatarPreview" class="profile-avatar-img" src="/static/uploads/{{ user.profile_photo }}" alt="{{ user.name }}">
+              {% else %}
+                <div class="profile-avatar-placeholder" id="avatarPlaceholder">
+                  <i class="fas fa-user"></i>
+                </div>
+                <img id="avatarPreview" class="profile-avatar-img" src="" alt="{{ user.name }}" style="display:none;">
+              {% endif %}
+              <div class="profile-avatar-overlay" onclick="document.getElementById('photoInput').click()" title="Change Photo">
+                <i class="fas fa-camera"></i>
+              </div>
+            </div>
+            <p class="profile-avatar-name">{{ user.name }}</p>
+            <p class="profile-avatar-email">{{ user.email }}</p>
+            <button class="profile-change-photo-btn" type="button" onclick="document.getElementById('photoInput').click()">
+              <i class="fas fa-camera"></i> Change Photo
+            </button>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="profile-stats-card">
+            <div class="profile-stat-item">
+              <i class="fas fa-map-marker-alt profile-stat-icon"></i>
+              <div>
+                <span class="profile-stat-label">Location</span>
+                <strong class="profile-stat-value">{{ user.location or "Not set" }}</strong>
+              </div>
+            </div>
+            <div class="profile-stat-item">
+              <i class="fas fa-wheat-awn profile-stat-icon"></i>
+              <div>
+                <span class="profile-stat-label">Crop Type</span>
+                <strong class="profile-stat-value">{{ user.crop_type or "Not set" }}</strong>
+              </div>
+            </div>
+            <div class="profile-stat-item">
+              <i class="fas fa-ruler-combined profile-stat-icon"></i>
+              <div>
+                <span class="profile-stat-label">Farm Size</span>
+                <strong class="profile-stat-value">{{ user.farm_size or "Not set" }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Forms -->
+        <div class="profile-forms-col">
+
+          <!-- USER INFO FORM -->
+          <form class="profile-card" method="POST" action="/profile" enctype="multipart/form-data" id="profileForm" novalidate>
+            <input type="hidden" name="form_type" value="user_info">
+            <input type="file" id="photoInput" name="profile_photo" accept="image/*" style="display:none;" onchange="previewPhoto(this)">
+
+            <div class="profile-card-header">
+              <div class="profile-card-header-icon">
+                <i class="fas fa-user-pen"></i>
+              </div>
+              <h2>User Info</h2>
+            </div>
+
+            <div class="profile-fields">
+              <div class="profile-field-group">
+                <label for="fullName">FULL NAME</label>
+                <div class="profile-field-wrap">
+                  <i class="fas fa-user profile-field-icon"></i>
+                  <input type="text" id="fullName" name="name" value="{{ user.name }}" placeholder="Your full name" required>
+                </div>
+              </div>
+
+              <div class="profile-field-group">
+                <label for="emailAddr">EMAIL ADDRESS</label>
+                <div class="profile-field-wrap">
+                  <i class="fas fa-envelope profile-field-icon"></i>
+                  <input type="email" id="emailAddr" name="email" value="{{ user.email }}" placeholder="your@email.com" required>
+                </div>
+              </div>
+            </div>
+
+            <!-- Password Section -->
+            <div class="profile-password-section" id="passwordSection">
+              <div class="profile-password-toggle">
+                <span class="profile-section-label">PASSWORD</span>
+                <button type="button" class="profile-edit-pw-btn" id="editPwBtn" onclick="togglePasswordFields()">
+                  <i class="fas fa-lock-open"></i> Edit Password
+                </button>
+              </div>
+              <div class="profile-field-wrap profile-field-wrap-password" id="pwDisplayWrap">
+                <i class="fas fa-lock profile-field-icon"></i>
+                <input type="password" value="••••••••••" disabled>
+              </div>
+
+              <div class="profile-pw-fields" id="pwFields" style="display:none;">
+                <div class="profile-field-group">
+                  <label for="currentPw">CURRENT PASSWORD</label>
+                  <div class="profile-field-wrap">
+                    <i class="fas fa-lock profile-field-icon"></i>
+                    <input type="password" id="currentPw" name="current_password" placeholder="Enter current password" autocomplete="current-password">
+                    <button type="button" class="profile-pw-eye" onclick="toggleEye('currentPw', this)" aria-label="Toggle visibility">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="profile-field-group">
+                  <label for="newPw">NEW PASSWORD</label>
+                  <div class="profile-field-wrap">
+                    <i class="fas fa-key profile-field-icon"></i>
+                    <input type="password" id="newPw" name="new_password" placeholder="Minimum 6 characters" autocomplete="new-password">
+                    <button type="button" class="profile-pw-eye" onclick="toggleEye('newPw', this)" aria-label="Toggle visibility">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="profile-field-group">
+                  <label for="confirmPw">CONFIRM NEW PASSWORD</label>
+                  <div class="profile-field-wrap">
+                    <i class="fas fa-key profile-field-icon"></i>
+                    <input type="password" id="confirmPw" name="confirm_password" placeholder="Repeat new password" autocomplete="new-password">
+                    <button type="button" class="profile-pw-eye" onclick="toggleEye('confirmPw', this)" aria-label="Toggle visibility">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-card-footer">
+              <button type="submit" class="profile-save-btn" id="saveUserBtn">
+                <i class="fas fa-floppy-disk"></i>
+                <span>Save Changes</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- FARM INFO FORM -->
+          <form class="profile-card" method="POST" action="/profile" id="farmForm" novalidate>
+            <input type="hidden" name="form_type" value="farm_info">
+
+            <div class="profile-card-header">
+              <div class="profile-card-header-icon profile-card-header-icon-green">
+                <i class="fas fa-tractor"></i>
+              </div>
+              <h2>Farm Info</h2>
+            </div>
+
+            <div class="profile-fields profile-fields-3col">
+              <div class="profile-field-group">
+                <label for="farmLocation">LOCATION</label>
+                <div class="profile-field-wrap">
+                  <i class="fas fa-map-marker-alt profile-field-icon"></i>
+                  <input type="text" id="farmLocation" name="location" value="{{ user.location or '' }}" placeholder="City or village name">
+                </div>
+              </div>
+
+              <div class="profile-field-group">
+                <label for="farmSize">FARM SIZE</label>
+                <div class="profile-field-wrap profile-field-wrap-select">
+                  <i class="fas fa-ruler-combined profile-field-icon"></i>
+                  <select id="farmSize" name="farm_size">
+                    <option value="">Select size</option>
+                    {% for acres in ["< 2 acres", "2-5 acres", "5-10 acres", "10-15 acres", "15-25 acres", "25-50 acres", "> 50 acres"] %}
+                      <option value="{{ acres }}" {% if user.farm_size == acres %}selected{% endif %}>{{ acres }}</option>
+                    {% endfor %}
+                  </select>
+                  <i class="fas fa-chevron-down profile-select-arrow"></i>
+                </div>
+              </div>
+
+              <div class="profile-field-group">
+                <label for="cropType">CROP / TYPE</label>
+                <div class="profile-field-wrap profile-field-wrap-select">
+                  <i class="fas fa-wheat-awn profile-field-icon"></i>
+                  <select id="cropType" name="crop_type">
+                    <option value="">Select crop</option>
+                    {% for crop in ["Rice", "Wheat", "Maize", "Tomato", "Potato", "Soybean", "Cotton", "Sugarcane", "Groundnut", "Other"] %}
+                      <option value="{{ crop }}" {% if user.crop_type == crop %}selected{% endif %}>{{ crop }}</option>
+                    {% endfor %}
+                  </select>
+                  <i class="fas fa-chevron-down profile-select-arrow"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Soil & Disease Summary Widgets -->
+            <div class="profile-farm-widgets">
+              <div class="profile-widget profile-widget-soil">
+                <div class="profile-widget-head">
+                  <i class="fas fa-seedling"></i>
+                  <span>Soil Health</span>
+                </div>
+                <div class="profile-widget-bar-wrap">
+                  <div class="profile-widget-bar">
+                    <span data-style-width="{{ soil_score }}%"></span>
+                  </div>
+                  <strong>{{ soil_score_display }}</strong>
+                </div>
+              </div>
+
+              <div class="profile-widget profile-widget-disease">
+                <div class="profile-widget-head">
+                  <i class="fas fa-triangle-exclamation"></i>
+                  <span>Disease Detection</span>
+                </div>
+                <p class="profile-widget-msg">{{ disease_status }}</p>
+              </div>
+            </div>
+
+            <div class="profile-card-footer">
+              <button type="submit" class="profile-save-btn profile-save-btn-green" id="saveFarmBtn">
+                <i class="fas fa-floppy-disk"></i>
+                <span>Save Farm Info</span>
+              </button>
+            </div>
+          </form>
+
+        </div><!-- /profile-forms-col -->
+      </div><!-- /profile-body -->
+    </section>
+  </main>
+
+  <script>
+    /* ── Photo preview ── */
+    function previewPhoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const preview = document.getElementById('avatarPreview');
+        const placeholder = document.getElementById('avatarPlaceholder');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ── Password toggle ── */
+    function togglePasswordFields() {
+      const pwFields = document.getElementById('pwFields');
+      const displayWrap = document.getElementById('pwDisplayWrap');
+      const btn = document.getElementById('editPwBtn');
+      const isHidden = pwFields.style.display === 'none';
+
+      if (isHidden) {
+        pwFields.style.display = 'grid';
+        displayWrap.style.display = 'none';
+        btn.innerHTML = '<i class="fas fa-lock"></i> Cancel';
+        btn.classList.add('active');
+      } else {
+        pwFields.style.display = 'none';
+        displayWrap.style.display = 'flex';
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> Edit Password';
+        btn.classList.remove('active');
+        // clear fields
+        ['currentPw','newPw','confirmPw'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+      }
+    }
+
+    /* ── Eye toggle ── */
+    function toggleEye(fieldId, btn) {
+      const field = document.getElementById(fieldId);
+      const icon = btn.querySelector('i');
+      if (!field) return;
+      if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+      } else {
+        field.type = 'password';
+        icon.className = 'fas fa-eye';
+      }
+    }
+
+    /* ── Form submit animation ── */
+    document.querySelectorAll('.profile-save-btn').forEach(btn => {
+      btn.closest('form').addEventListener('submit', function() {
+        btn.disabled = true;
+        btn.querySelector('span').textContent = 'Saving…';
+        btn.querySelector('i').className = 'fas fa-spinner fa-spin';
+      });
+    });
+
+    /* ── Auto-dismiss flash after 5s ── */
+    ['profileFlash', 'profileFlashErr'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) setTimeout(() => el.remove(), 5000);
+    });
+  </script>
+
+  <!-- Theme Toggle Script -->
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      
+      // Check saved theme
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+
+  <!-- Mobile Sidebar JS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation(); // prevent immediate close on document click
+          sidebar.classList.toggle('sidebar-open');
+        });
+
+        // Close sidebar if clicking outside of it on mobile
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+
+  <!-- Fix IDE Parsing: Apply dynamic styles via JS -->
+  <script>
+    function applyDataStyles() {
+      document.querySelectorAll('*').forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+          if (attr.name.startsWith('data-style-')) {
+            const cssProp = attr.name.slice(11); // 'data-style-'.length == 11
+            el.style[cssProp] = attr.value;
+          }
+        });
+      });
+    }
+    document.addEventListener('DOMContentLoaded', applyDataStyles);
+  </script>
+</body>
+
+</html>

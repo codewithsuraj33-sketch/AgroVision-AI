@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farm Twin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page farm-twin-page">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell farm-twin-shell">
+    <aside class="dashboard-sidebar farm-twin-sidebar">
+      <div class="sidebar-brand">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <i class="fas fa-user dashboard-avatar"></i>
+          {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>{{ user.email }}</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Farm twin navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link is-active farm-twin-active" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main farm-twin-main">
+      <header class="farm-twin-hero-banner">
+        <div class="farm-twin-hero-top">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
+          {% endif %}
+
+          <nav class="weather-top-nav" aria-label="Farm twin utility navigation">
+            <a href="/dashboard">Your</a>
+            <span class="weather-divider"></span>
+            <a href="/dashboard">Farm</a>
+            <span class="weather-divider"></span>
+            <a href="#farm-twin-map">Location</a>
+            <span class="weather-divider"></span>
+            <a href="#farm-twin-insights">About</a>
+          </nav>
+        </div>
+
+        <div class="farm-twin-hero-copy">
+          <h1>Farm Twin</h1>
+          <p>Virtual replica of your farm for comprehensive management.</p>
+        </div>
+      </header>
+
+      <section class="farm-twin-workspace">
+        <div class="farm-twin-toolbar">
+          <div class="farm-twin-selector">
+            <span>{{ farm_twin.selector_label }}</span>
+            <i class="fas fa-angle-down" aria-hidden="true"></i>
+          </div>
+
+          <a class="farm-twin-update-button" href="/farm-twin?refresh={{ farm_twin.refresh_token }}">
+            <i class="fas fa-rotate-right" aria-hidden="true"></i>
+            <span>Update Data</span>
+          </a>
+        </div>
+
+        <div class="farm-twin-grid">
+          <div class="farm-twin-side-column">
+            <div class="farm-twin-mini-grid">
+              {% for card in farm_twin.overview_cards %}
+                <article class="agro-card farm-twin-mini-card farm-twin-mini-card-{{ card.tone }}">
+                  <img src="{{ card.image_url }}" alt="{{ card.title }}">
+                  <div class="farm-twin-mini-overlay"></div>
+                  <span class="farm-twin-mini-icon"><i class="{{ card.icon }}"></i></span>
+                  <div class="farm-twin-mini-copy">
+                    <strong>{{ card.title }}</strong>
+                    <small>{{ card.summary }}</small>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+
+            <article class="agro-card farm-twin-analysis-card">
+              <div class="farm-twin-card-head">
+                <h2>Crop Analysis</h2>
+                <span class="farm-twin-status-pill">{{ farm_twin.analysis.status_label }}</span>
+              </div>
+
+              <div class="farm-twin-analysis-stats">
+                <div class="farm-twin-analysis-stat">
+                  <span>Cluster Nodes</span>
+                  <strong>{{ farm_twin.analysis.cluster_nodes }}</strong>
+                </div>
+                <div class="farm-twin-analysis-stat">
+                  <span>Patches Visible</span>
+                  <div class="farm-twin-analysis-patches">
+                    <strong>{{ farm_twin.analysis.patches_visible }}</strong>
+                    <i class="fas fa-chart-simple" aria-hidden="true"></i>
+                  </div>
+                </div>
+              </div>
+
+              <div class="farm-twin-ndvi-block">
+                <span class="farm-twin-ndvi-label">NDVI Level</span>
+                <div class="farm-twin-ndvi-scale" data-style---ndvi-pos="{{ farm_twin.analysis.ndvi_percent }}%">
+                  <span class="farm-twin-ndvi-marker" aria-hidden="true"></span>
+                </div>
+                <div class="farm-twin-ndvi-meta">
+                  <small>0.1</small>
+                  <small>20%</small>
+                  <strong>{{ "%.2f"|format(farm_twin.analysis.ndvi_level) }}</strong>
+                </div>
+              </div>
+
+              <div class="farm-twin-analysis-metrics">
+                {% for metric in farm_twin.analysis.metrics %}
+                  <div class="farm-twin-analysis-metric">
+                    <span>{{ metric.label }}</span>
+                    <strong>{{ metric.value }}</strong>
+                  </div>
+                {% endfor %}
+              </div>
+            </article>
+          </div>
+
+          <article class="agro-card farm-twin-map-card" id="farm-twin-map">
+            <img src="{{ farm_twin.map.image_url }}" alt="Digital farm twin map for {{ farm_twin.location_label }}">
+
+            {% for label in farm_twin.map.labels %}
+              <span class="farm-twin-field-label" data-style-top="{{ label.top }}%" data-style-left="{{ label.left }}%">{{ label.name }}</span>
+            {% endfor %}
+
+            <div class="farm-twin-map-metrics">
+              {% for metric in farm_twin.map.metrics %}
+                <div class="farm-twin-map-metric">
+                  <span>{{ metric.label }}</span>
+                  <strong>{{ metric.value }}</strong>
+                </div>
+              {% endfor %}
+            </div>
+          </article>
+        </div>
+
+        <article class="agro-card farm-twin-insights-card" id="farm-twin-insights">
+          <div class="farm-twin-card-head">
+            <h2>Farm Insights</h2>
+            <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+          </div>
+
+          <div class="farm-twin-insights-grid">
+            {% for insight in farm_twin.insights %}
+              <article class="agro-card farm-twin-insight-card farm-twin-insight-card-{{ insight.tone }}">
+                <span class="farm-twin-insight-icon"><i class="{{ insight.icon }}"></i></span>
+                <div class="farm-twin-insight-copy">
+                  <strong>{{ insight.title }}</strong>
+                  <p>{{ insight.detail }}</p>
+                  <small>{{ insight.support }}</small>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <!-- Theme Toggle Script -->
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      
+      // Check saved theme
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+
+  <!-- Mobile Sidebar JS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation(); // prevent immediate close on document click
+          sidebar.classList.toggle('sidebar-open');
+        });
+
+        // Close sidebar if clicking outside of it on mobile
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+
+  <!-- Fix IDE Parsing: Apply dynamic styles via JS -->
+  <script>
+    function applyDataStyles() {
+      document.querySelectorAll('*').forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+          if (attr.name.startsWith('data-style-')) {
+            const cssProp = attr.name.slice(11); // 'data-style-'.length == 11
+            el.style[cssProp] = attr.value;
+          }
+        });
+      });
+    }
+    document.addEventListener('DOMContentLoaded', applyDataStyles);
+  </script>
+</body>
+
+</html>

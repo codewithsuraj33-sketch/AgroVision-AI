@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crop Disease Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page disease-monitor-page" data-recent-analysis="{{ 'true' if disease_page.has_upload else 'false' }}">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell disease-monitor-shell">
+    <aside class="dashboard-sidebar disease-sidebar">
+      <div class="sidebar-brand">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <i class="fas fa-user dashboard-avatar"></i>
+          {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>{{ user.email }}</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Disease detection navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link is-active disease-active" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main disease-monitor-main">
+      <header class="disease-hero-banner">
+        <div class="disease-hero-top">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
+          {% endif %}
+
+          <nav class="weather-top-nav" aria-label="Disease utility navigation">
+            <a href="/dashboard">Your</a>
+            <span class="weather-divider"></span>
+            <a href="/dashboard">Farm</a>
+            <span class="weather-divider"></span>
+            <a href="#disease-result-card">Location</a>
+            <span class="weather-divider"></span>
+            <a href="/">About</a>
+          </nav>
+        </div>
+
+        <div class="disease-hero-copy">
+          <h1>Crop Disease Detection</h1>
+          <p>Diagnose crop diseases by uploading an image for AI analysis.</p>
+        </div>
+      </header>
+
+      <section class="disease-monitor-grid">
+        <article class="agro-card disease-upload-card">
+          <div class="disease-card-head">
+            <h2>Upload Crop Image</h2>
+          </div>
+
+          <form class="disease-upload-form" method="post" enctype="multipart/form-data">
+            <div class="disease-upload-dropzone{% if disease_page.has_upload %} is-filled{% endif %}">
+              {% if disease_page.has_upload %}
+                <img class="disease-upload-preview" src="{{ disease_page.result.image_url }}" alt="Uploaded crop leaf preview">
+              {% else %}
+                <span class="disease-upload-icon">&#128247;</span>
+              {% endif %}
+
+              <div class="disease-upload-copy">
+                <strong>{{ disease_page.upload_name or "Upload a clear crop leaf image" }}</strong>
+                <span>PNG, JPG, JPEG or WEBP up to 6 MB</span>
+              </div>
+
+              <input id="crop-image" type="file" name="crop_image" accept="image/*" required>
+              <label class="disease-upload-button" for="crop-image">Upload Photo</label>
+
+              <div class="disease-upload-scanner" aria-hidden="true">
+                <span class="disease-upload-scanner-ring"></span>
+                <strong>Scanning leaf image...</strong>
+                <span>AI is checking color spots, texture, and stress markers.</span>
+              </div>
+            </div>
+
+            <button class="disease-analyze-button" type="submit">Analyze Crop</button>
+
+            {% if disease_page.error_message %}
+              <p class="disease-upload-message disease-upload-message-error">{{ disease_page.error_message }}</p>
+            {% else %}
+              <p class="disease-upload-message">Crop: {{ disease_page.result.crop }} | {{ disease_page.result.analysis_source }}</p>
+            {% endif %}
+          </form>
+        </article>
+
+        <article class="agro-card disease-result-card" id="disease-result-card" style="display: none;">
+            <div class="disease-card-head-result">
+              <div class="disease-head-main">
+                <h2>AI Analysis Result</h2>
+                <span class="disease-risk-tag" id="result-risk"></span>
+              </div>
+              <span class="disease-confidence-chip" id="result-confidence"></span>
+            </div>
+
+          <div class="disease-result-body">
+            <div class="disease-result-layout">
+              <div class="disease-result-copy">
+                <span class="disease-result-kicker">Detected disease.</span>
+                <strong class="disease-result-name" id="result-disease"></strong>
+
+                <div class="disease-result-section">
+                  <h3>Symptoms:</h3>
+                  <p id="result-symptoms"></p>
+                </div>
+
+                <div class="disease-result-section">
+                  <h3>Cause:</h3>
+                  <p id="result-cause"></p>
+                </div>
+
+                <div class="disease-result-grid-solutions">
+                  <div class="disease-result-section">
+                    <h3>Organic Solution:</h3>
+                    <p id="result-organic"></p>
+                  </div>
+                  <div class="disease-result-section">
+                    <h3>Chemical Solution:</h3>
+                    <p id="result-chemical"></p>
+                  </div>
+                </div>
+
+                <div class="disease-result-section">
+                  <h3>Prevention Tips:</h3>
+                  <ul class="disease-tips-list" id="result-tips">
+                  </ul>
+                </div>
+              </div>
+
+              <div class="disease-result-visual">
+               tipsList.appendChild(li);
+            });
+            
+            // Clean up UI state
+            form.classList.remove("is-submitting");
+            dropzone?.classList.remove("is-scanning");
+            resultCard.classList.remove("is-scanning");
+            if (analyzeButton) {
+              analyzeButton.textContent = "Analyze Crop";
+              analyzeButton.disabled = false;
+            }
+          } else {
+            alert(result.error || "An error occurred during analysis.");
+            form.classList.remove("is-submitting");
+            dropzone?.classList.remove("is-scanning");
+            resultCard.classList.remove("is-scanning");
+            resultCard.style.display = "none";
+            if (analyzeButton) {
+              analyzeButton.textContent = "Analyze Crop";
+              analyzeButton.disabled = false;
+            }
+          }
+        } catch (err) {
+            console.error(err);
+            alert("Network error occurred during analysis.");
+            form.classList.remove("is-submitting");
+            dropzone?.classList.remove("is-scanning");
+            resultCard.classList.remove("is-scanning");
+            resultCard.style.display = "none";
+            if (analyzeButton) {
+              analyzeButton.textContent = "Analyze Crop";
+              analyzeButton.disabled = false;
+            }
+        }
+      });
+
+      if (body.dataset.recentAnalysis === "true" && resultCard) {
+        resultCard.classList.add("is-scanning");
+        window.setTimeout(function () {
+          resultCard.classList.remove("is-scanning");
+        }, 2200);
+      }
+    });
+  </script>
+
+  <!-- Theme Toggle Script -->
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      
+      // Check saved theme
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+
+  <!-- Mobile Sidebar JS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation(); // prevent immediate close on document click
+          sidebar.classList.toggle('sidebar-open');
+        });
+
+        // Close sidebar if clicking outside of it on mobile
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>

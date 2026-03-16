@@ -1,0 +1,277 @@
+z<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AgroVision AI is a smart farming platform for crop monitoring, disease detection, climate insights, soil tracking, and modern farm management.">
+  <title>AgroVision AI | See Your Farm Smarter with AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="page-home public-page">
+  <div class="public-page__orb public-page__orb--one" aria-hidden="true"></div>
+  <div class="public-page__orb public-page__orb--two" aria-hidden="true"></div>
+
+  <main class="homeflow">
+    <header class="homeflow-nav">
+      <a class="brand-lockup" href="/" aria-label="AgroVision AI home">
+        <img class="brand-lockup__mark" src="/static/brand/agrovision-mark.svg" alt="AgroVision AI logo">
+        <div class="brand-lockup__text">
+          <strong>AgroVision AI</strong>
+          <span>Smart Farming Solutions</span>
+        </div>
+      </a>
+
+      <nav class="homeflow-nav__links" aria-label="Main navigation">
+        <a href="#about">About</a>
+        <a href="#features">Features</a>
+        <a href="#benefits">Benefits</a>
+        <a href="#contact-cta">Get Started</a>
+      </nav>
+
+      <div class="homeflow-nav__actions">
+        <a class="marketing-link" href="/login">Login</a>
+        <a class="marketing-button marketing-button--solid" href="/register">Create Account</a>
+      </div>
+    </header>
+
+    <section class="homeflow-hero">
+      <div class="homeflow-hero__content">
+        <span class="marketing-pill">AI-powered smart farming platform</span>
+        <h1>See Your Farm Smarter with AI</h1>
+        <p class="homeflow-hero__lead">
+          AgroVision AI helps modern farmers monitor crops, detect diseases early, understand climate
+          conditions, and take better farm decisions with one intelligent digital workspace.
+        </p>
+
+        <div class="homeflow-hero__actions">
+          <a class="marketing-button marketing-button--solid" href="/register">Start with AgroVision AI</a>
+          <a class="marketing-button marketing-button--ghost" href="/login">Open Login</a>
+        </div>
+
+        <div class="homeflow-hero__points">
+          <div>
+            <i class="fas fa-satellite-dish"></i>
+            <span>AI crop monitoring and farm visibility</span>
+          </div>
+          <div>
+            <i class="fas fa-leaf"></i>
+            <span>Disease detection from crop leaf images</span>
+          </div>
+          <div>
+            <i class="fas fa-cloud-sun-rain"></i>
+            <span>Weather, alerts, soil, and planning insights</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="homeflow-hero__visual">
+        <img class="homeflow-hero__logo" src="/static/brand/agrovision-logo.svg" alt="AgroVision AI Smart Farming Solutions">
+        <p class="homeflow-hero__tagline">
+          AI-powered crop monitoring, disease detection, and climate insights for modern farmers.
+        </p>
+      </div>
+    </section>
+
+    <section class="homeflow-band">
+      <div class="homeflow-band__item">
+        <strong>Crop Monitoring</strong>
+        <span>Track field health and vegetation response with smart visuals.</span>
+      </div>
+      <div class="homeflow-band__item">
+        <strong>Disease Detection</strong>
+        <span>Upload leaf photos and get practical diagnosis support.</span>
+      </div>
+      <div class="homeflow-band__item">
+        <strong>Climate Insights</strong>
+        <span>See weather risks before they affect crop performance.</span>
+      </div>
+      <div class="homeflow-band__item">
+        <strong>Farm Planning</strong>
+        <span>Manage farms, tasks, reminders, and alerts in one place.</span>
+      </div>
+    </section>
+
+    <section class="homeflow-section" id="about">
+      <div class="homeflow-section__intro">
+        <span class="section-kicker">About AgroVision AI</span>
+        <h2>A smart farming platform built for real crop decisions.</h2>
+      </div>
+
+      <div class="homeflow-about">
+        <div class="homeflow-about__copy">
+          <p>
+            AgroVision AI is designed for farmers, farm managers, and agri advisors who want a clearer
+            view of what is happening in the field. Instead of checking different tools for crop health,
+            weather, soil, disease, and operations, AgroVision AI brings everything together.
+          </p>
+          <p>
+            The goal is simple: help farmers take faster, smarter, and more confident decisions using AI,
+            modern monitoring, and practical recommendations that match real farming needs.
+          </p>
+        </div>
+
+        <div class="homeflow-about__stats">
+          <article>
+            <strong>1 Platform</strong>
+            <span>for crop, disease, soil, weather, alerts, and tasks</span>
+          </article>
+          <article>
+            <strong>Farmer-first</strong>
+            <span>simple UI and useful insights, not confusing data overload</span>
+          </article>
+          <article>
+            <strong>Built for action</strong>
+            <span>recommendations that support real field work and planning</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="homeflow-section" id="features">
+      <div class="homeflow-section__intro">
+        <span class="section-kicker">Core features</span>
+        <h2>Everything your website offers, clearly presented.</h2>
+      </div>
+
+      <div class="homeflow-featurelist">
+        <article class="homeflow-feature">
+          <div class="homeflow-feature__icon"><i class="fas fa-satellite-dish"></i></div>
+          <div class="homeflow-feature__content">
+            <h3>AI Crop Monitoring</h3>
+            <p>Visualize crop condition, stress zones, NDVI-style previews, and field response trends.</p>
+          </div>
+        </article>
+        <article class="homeflow-feature">
+          <div class="homeflow-feature__icon"><i class="fas fa-bug"></i></div>
+          <div class="homeflow-feature__content">
+            <h3>Crop Disease Detection</h3>
+            <p>Analyze leaf images and get disease name, cause, treatment suggestions, and prevention tips.</p>
+          </div>
+        </article>
+        <article class="homeflow-feature">
+          <div class="homeflow-feature__icon"><i class="fas fa-cloud-sun-rain"></i></div>
+          <div class="homeflow-feature__content">
+            <h3>Weather and Climate Alerts</h3>
+            <p>Check rainfall, temperature, humidity, wind, and field advisories before risk becomes damage.</p>
+          </div>
+        </article>
+        <article class="homeflow-feature">
+          <div class="homeflow-feature__icon"><i class="fas fa-flask-vial"></i></div>
+          <div class="homeflow-feature__content">
+            <h3>Soil Health Insights</h3>
+            <p>Review pH, moisture, nutrients, and soil-related recommendations for better crop care.</p>
+          </div>
+        </article>
+        <article class="homeflow-feature">
+          <div class="homeflow-feature__icon"><i class="fas fa-tractor"></i></div>
+          <div class="homeflow-feature__content">
+            <h3>Farm Management Tools</h3>
+            <p>Manage multiple farms, set priorities, create reminders, and stay organized through each season.</p>
+          </div>
+        </article>
+        <article class="homeflow-feature">
+          <div class="homeflow-feature__icon"><i class="fas fa-lightbulb"></i></div>
+          <div class="homeflow-feature__content">
+            <h3>AI Recommendations</h3>
+            <p>Get practical suggestions around irrigation, disease risk, farm operations, and crop performance.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="homeflow-section" id="benefits">
+      <div class="homeflow-section__intro">
+        <span class="section-kicker">Why farmers will use it</span>
+        <h2>AgroVision AI is useful because it turns farm data into decisions.</h2>
+      </div>
+
+      <div class="homeflow-columns">
+        <article class="homeflow-column">
+          <h3>For Farmers</h3>
+          <ul>
+            <li>Monitor crop condition without needing complex technical tools.</li>
+            <li>Detect disease signs early and act before spread becomes serious.</li>
+            <li>Understand weather risk and soil condition in a simple format.</li>
+          </ul>
+        </article>
+        <article class="homeflow-column">
+          <h3>For Farm Managers</h3>
+          <ul>
+            <li>Track multiple plots and daily work from one dashboard.</li>
+            <li>Improve task planning, reminders, and field-level visibility.</li>
+            <li>Make faster decisions using one connected system.</li>
+          </ul>
+        </article>
+        <article class="homeflow-column">
+          <h3>For Agri Advisors</h3>
+          <ul>
+            <li>Use AI-backed crop context while guiding farmers.</li>
+            <li>Review crop issues with better field and weather awareness.</li>
+            <li>Support recommendations with more practical, visual data.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="homeflow-section homeflow-section--final" id="contact-cta">
+      <div class="homeflow-final">
+        <div>
+          <span class="section-kicker">AgroVision AI</span>
+          <h2>Smart Farming Solutions for the next generation of agriculture.</h2>
+          <p>
+            Start using AgroVision AI to bring crop monitoring, disease detection, climate insights,
+            and smart farm planning into one powerful experience.
+          </p>
+        </div>
+
+        <div class="homeflow-final__actions">
+          <a class="marketing-button marketing-button--solid" href="/register">Create Account</a>
+          <a class="marketing-button marketing-button--ghost" href="/login">Login</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const isDark = localStorage.getItem('theme') === 'dark';
+
+      if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

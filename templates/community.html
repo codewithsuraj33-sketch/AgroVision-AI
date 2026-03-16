@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Hub | AgroVisionAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .community-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .post-creator {
+      background: var(--card-bg, #fff);
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      margin-bottom: 30px;
+    }
+    .post-creator textarea {
+      width: 100%;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 10px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 100px;
+    }
+    .post-creator input[type="text"] {
+       width: 100%;
+       padding: 10px;
+       border-radius: 8px;
+       border: 1px solid rgba(0,0,0,0.1);
+       margin-bottom: 10px;
+    }
+    .post-card {
+      background: var(--card-bg, #fff);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+      margin-bottom: 20px;
+      border-left: 4px solid #22b978;
+    }
+    .post-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .post-meta {
+      font-size: 0.85rem;
+      opacity: 0.7;
+    }
+    .post-category {
+      background: #e6f4ea;
+      color: #1e7e34;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .comment-section {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+    }
+    .comment-item {
+      font-size: 0.9rem;
+      padding: 8px 0;
+    }
+    .comment-form {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .comment-form input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .btn-submit {
+      background: #22b978;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+    <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <i class="fas fa-user dashboard-avatar"></i>
+          {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>Smart Farm AI</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link is-active" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main">
+      <header class="dashboard-hero">
+        <div class="dashboard-hero-copy">
+          <h1>Community Hub</h1>
+          <p>Discuss, Share, and Learn from fellow Farmers.</p>
+        </div>
+      </header>
+
+      <div class="community-container">
+        <!-- New Post Form -->
+        <div class="agro-card post-creator">
+          <h3>Create a Post</h3>
+          <form action="/community/post" method="POST">
+            <input type="text" name="title" placeholder="What's on your mind? (Title)" required>
+            <textarea name="content" placeholder="Describe your topic in detail..." required></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+              <select name="category" style="padding: 8px; border-radius: 8px;">
+                <option value="General">General</option>
+                <option value="Disease">Disease Help</option>
+                <option value="Market">Market News</option>
+                <option value="Tips">Farming Tips</option>
+              </select>
+              <button type="submit" class="btn-submit">Post to Community</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Posts List -->
+        <div class="posts-feed">
+          {% for post in posts %}
+            <article class="agro-card post-card">
+              <div class="post-header">
+                <span class="post-category">{{ post.category }}</span>
+                <span class="post-meta">{{ post.date.strftime('%d %b, %H:%M') }}</span>
+              </div>
+              <h2 style="margin: 0 0 10px 0; font-size: 1.25rem;">{{ post.title }}</h2>
+              <p style="opacity: 0.9; line-height: 1.6;">{{ post.content }}</p>
+              
+              <div class="comment-section">
+                <div class="post-meta">Comments ({{ post.comments|length }})</div>
+                {% for comment in post.comments %}
+                  <div class="comment-item">
+                    <strong>Farmer #{{ comment.user_id }}:</strong> {{ comment.content }}
+                  </div>
+                {% endfor %}
+                
+                <form class="comment-form" action="/community/comment/{{ post.id }}" method="POST">
+                  <input type="text" name="content" placeholder="Write a comment..." required>
+                  <button type="submit" class="btn-submit"><i class="fas fa-paper-plane"></i></button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+          
+          {% if not posts %}
+            <div style="text-align: center; padding: 40px; opacity: 0.5;">
+              <i class="fas fa-comments" style="font-size: 3rem; display: block; margin-bottom: 20px;"></i>
+              <p>No posts yet. Be the first to share something!</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          sidebar.classList.toggle('sidebar-open');
+        });
+
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

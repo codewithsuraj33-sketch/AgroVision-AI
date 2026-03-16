@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farm Operations Hub - AgroVisionAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    .farms-workspace {
+      display: grid;
+      gap: 20px;
+    }
+    .farms-notice {
+      padding: 14px 18px;
+      border-radius: 16px;
+      font-weight: 600;
+      background: rgba(34, 185, 120, 0.14);
+      color: #0f5132;
+      border: 1px solid rgba(15, 81, 50, 0.12);
+    }
+    .farms-notice-warning {
+      background: rgba(255, 193, 7, 0.16);
+      color: #8a6100;
+    }
+    .farms-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      padding: 20px 24px;
+    }
+    .farms-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+      gap: 24px;
+      align-items: start;
+      padding: 0 24px 40px;
+    }
+    .farms-main,
+    .farms-side {
+      display: grid;
+      gap: 20px;
+    }
+    .farms-panel {
+      padding: 22px;
+    }
+    .farms-panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .farms-panel-head p,
+    .farm-note,
+    .activity-item small,
+    .task-card small {
+      color: #607087;
+    }
+    .primary-panel-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(280px, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+    .primary-summary {
+      display: grid;
+      gap: 14px;
+    }
+    .primary-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(34, 185, 120, 0.16);
+      color: #157347;
+      font-weight: 700;
+      width: fit-content;
+    }
+    .primary-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .primary-detail {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .primary-detail span {
+      display: block;
+      font-size: 0.82rem;
+      color: #607087;
+      margin-bottom: 6px;
+    }
+    .primary-map {
+      min-height: 320px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .farm-cards-grid,
+    .activity-list,
+    .task-list {
+      display: grid;
+      gap: 14px;
+    }
+    .agro-card {
+      border-radius: 18px;
+      padding: 18px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .farm-card-top,
+    .task-card-top,
+    .task-card-meta,
+    .task-card-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .farm-chip,
+    .task-chip {
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(22, 163, 74, 0.14);
+      color: #166534;
+    }
+    .farm-chip.secondary {
+      background: rgba(59, 130, 246, 0.12);
+      color: #1d4ed8;
+    }
+    .farm-card-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+    .farm-mini-stat {
+      background: rgba(255, 255, 255, 0.84);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .farm-mini-stat span {
+      display: block;
+      font-size: 0.78rem;
+      color: #607087;
+      margin-bottom: 4px;
+    }
+    .farm-card-actions,
+    .inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .farm-action-btn,
+    .task-action-btn,
+    .submit-btn {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, opacity 0.18s ease;
+    }
+    .farm-action-btn:hover,
+    .task-action-btn:hover,
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+    .farm-action-btn.primary,
+    .task-action-btn.primary,
+    .submit-btn {
+      background: linear-gradient(135deg, #14b86f, #0f9f5e);
+      color: #fff;
+    }
+    .farm-action-btn.secondary,
+    .task-action-btn.secondary {
+      background: rgba(59, 130, 246, 0.12);
+      color: #1d4ed8;
+    }
+    .farm-action-btn.ghost,
+    .task-action-btn.ghost {
+      background: rgba(220, 53, 69, 0.1);
+      color: #b42318;
+    }
+    .form-grid,
+    .task-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .form-grid .full,
+    .task-form-grid .full {
+      grid-column: 1 / -1;
+    }
+    .field-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #334155;
+    }
+    .field-input,
+    .field-select,
+    .field-textarea {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      padding: 12px 14px;
+      font: inherit;
+      background: #fff;
+    }
+    .field-textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 18px;
+      font-weight: 600;
+      color: #334155;
+    }
+    .task-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .task-form {
+      background: #f8fafc;
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .task-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: rgba(255, 255, 255, 0.92);
+    }
+    .task-card.overdue {
+      border-color: rgba(220, 53, 69, 0.22);
+      background: rgba(255, 245, 245, 0.94);
+    }
+    .task-card.done {
+      background: rgba(240, 253, 244, 0.96);
+    }
+    .task-card-meta {
+      margin: 10px 0;
+      color: #475467;
+      font-size: 0.9rem;
+    }
+    .activity-item {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .activity-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .activity-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(22, 163, 74, 0.14);
+      color: #166534;
+    }
+    .activity-time {
+      color: #64748b;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    .empty-state {
+      padding: 24px 18px;
+      text-align: center;
+      border-radius: 18px;
+      background: #f8fafc;
+      color: #607087;
+    }
+    @media (max-width: 1180px) {
+      .farms-stats-grid,
+      .farms-layout,
+      .primary-panel-grid,
+      .task-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 720px) {
+      .farms-stats-grid,
+      .form-grid,
+      .task-form-grid,
+      .primary-detail-grid,
+      .farm-card-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+<body class="dashboard-page farm-operations-page">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell farm-shell">
+    <aside class="dashboard-sidebar farm-sidebar">
+      <div class="sidebar-brand">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <i class="fas fa-user dashboard-avatar"></i>
+          {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>{{ user.email }}</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Farms navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link is-active farm-active" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main farms-workspace">
+      <header class="dashboard-hero">
+        <div class="dashboard-hero-top">
+          <div style="display: flex; align-items: center;">
+            {% if user and user.profile_photo %}
+              <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+            {% else %}
+              <i class="fas fa-user-circle" style="font-size: 24px; color: var(--text-muted); margin-right: 8px;"></i>
+            {% endif %}
+            <span style="font-weight: 700; color: var(--text-dark);">{{ user.name }}</span>
+          </div>
+
+          <nav class="weather-top-nav" aria-label="Farm utility navigation">
+            <a href="/dashboard">Dashboard</a>
+            <span class="weather-divider"></span>
+            <a href="/farms">Farms</a>
+            <span class="weather-divider"></span>
+            <a href="/settings">Settings</a>
+          </nav>
+        </div>
+
+        <div class="dashboard-hero-copy">
+          <h1>Farm Operations Hub</h1>
+          <p>Manage multiple plots, keep one primary farm in sync, and plan field work from one place.</p>
+        </div>
+      </header>
+
+      {% if notice %}
+        <div class="farms-notice farms-notice-{{ notice.tone|default('success') }}">
+          {{ notice.text }}
+        </div>
+      {% endif %}
+
+      <section class="farms-stats-grid">
+        <article class="agro-card farms-stat-card">
+          <span>Total Farms</span>
+          <strong>{{ farms_page.farm_cards|length }}</strong>
+          <small>{{ farms_page.primary_farm.name if farms_page.primary_farm else 'Primary farm pending' }}</small>
+        </article>
+        <article class="agro-card farms-stat-card">
+          <span>Open Tasks</span>
+          <strong>{{ farms_page.task_summary.open_count }}</strong>
+          <small>{{ farms_page.task_summary.due_today_count }} due today</small>
+        </article>
+        <article class="agro-card farms-stat-card">
+          <span>Overdue Work</span>
+          <strong>{{ farms_page.task_summary.overdue_count }}</strong>
+          <small>Keep high-priority work on track</small>
+        </article>
+        <article class="agro-card farms-stat-card">
+          <span>Weather Sync</span>
+          <strong>{{ farms_page.weather.temp }}&deg;C</strong>
+          <small>{{ farms_page.weather.city }}</small>
+        </article>
+      </section>
+
+      <section class="farms-layout">
+        <div class="farms-main">
+          <article class="agro-card farms-panel">
+            <div class="farms-panel-head">
+              <div>
+                <h2>Primary Farm Snapshot</h2>
+                <p>Your main farm drives the live dashboard, weather, and AI recommendations.</p>
+              </div>
+              <span class="primary-badge"><i class="fas fa-location-crosshairs"></i> Active farm</span>
+            </div>
+
+            <div class="primary-panel-grid">
+              <div class="primary-summary">
+                <div>
+                  <h3 style="margin-bottom:8px;">{{ farms_page.primary_farm.name if farms_page.primary_farm else 'Primary Farm' }}</h3>
+                  <p class="farm-note">{{ farms_page.primary_farm.notes if farms_page.primary_farm and farms_page.primary_farm.notes else 'This farm is currently synced across your dashboard, alerts, and AI assistant.' }}</p>
+                </div>
+
+                <div class="primary-detail-grid">
+                  <div class="primary-detail">
+                    <span>Location</span>
+                    <strong>{{ farms_page.primary_farm.location if farms_page.primary_farm else user.location or 'Not set' }}</strong>
+                  </div>
+                  <div class="primary-detail">
+                    <span>Crop</span>
+                    <strong>{{ farms_page.primary_farm.crop_type if farms_page.primary_farm else user.crop_type or 'Not set' }}</strong>
+                  </div>
+                  <div class="primary-detail">
+                    <span>Farm Size</span>
+                    <strong>{{ farms_page.primary_farm.farm_size if farms_page.primary_farm else user.farm_size or 'Not set' }}</strong>
+                  </div>
+                  <div class="primary-detail">
+                    <span>Live Weather</span>
+                    <strong>{{ farms_page.weather.description }} • {{ farms_page.weather.temp }}&deg;C</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div id="primaryFarmMap" class="primary-map"></div>
+            </div>
+          </article>
+
+          <article class="agro-card farms-panel">
+            <div class="farms-panel-head">
+              <div>
+                <h2>Farm Portfolio</h2>
+                <p>Switch your primary farm anytime and keep separate task queues for each plot.</p>
+              </div>
+              <a class="farm-action-btn secondary" href="#add-farm-form" style="text-decoration:none;">Add New Farm</a>
+            </div>
+
+            <div class="farm-cards-grid">
+              {% for farm in farms_page.farm_cards %}
+                <article class="agro-card farm-card">
+                  <div class="farm-card-top">
+                    <div>
+                      <h3 style="margin:0 0 6px;">{{ farm.name }}</h3>
+                      <span class="farm-note">{{ farm.location }}</span>
+                    </div>
+                    <span class="farm-chip{% if not farm.is_primary %} secondary{% endif %}">
+                      {% if farm.is_primary %}Primary{% else %}Secondary{% endif %}
+                    </span>
+                  </div>
+
+                  <div class="farm-card-stats">
+                    <div class="farm-mini-stat">
+                      <span>Crop</span>
+                      <strong>{{ farm.crop_type }}</strong>
+                    </div>
+                    <div class="farm-mini-stat">
+                      <span>Size</span>
+                      <strong>{{ farm.farm_size }}</strong>
+                    </div>
+                    <div class="farm-mini-stat">
+                      <span>Tasks</span>
+                      <strong>{{ farm.open_tasks }} open / {{ farm.completed_tasks }} done</strong>
+                    </div>
+                  </div>
+
+                  <p class="farm-note">{{ farm.notes }}</p>
+
+                  {% if farm.upcoming_task %}
+                    <div class="farm-mini-stat" style="margin-top:12px;">
+                      <span>Next task</span>
+                      <strong>{{ farm.upcoming_task.title }}</strong>
+                      <small>{{ farm.upcoming_task.due_label }}</small>
+                    </div>
+                  {% endif %}
+
+                  <div class="farm-card-actions">
+                    {% if not farm.is_primary %}
+                      <form method="POST" action="/farms/set-primary/{{ farm.id }}">
+                        <button type="submit" class="farm-action-btn primary">Make Primary</button>
+                      </form>
+                    {% endif %}
+                    <form method="POST" action="/farms/delete/{{ farm.id }}">
+                      <button type="submit" class="farm-action-btn ghost">Delete</button>
+                    </form>
+                    <span class="farm-note" style="align-self:center;">Saved {{ farm.created_label }}</span>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          </article>
+
+          <article class="farms-panel" id="task-planner">
+            <div class="farms-panel-head">
+              <div>
+                <h2>Task Planner</h2>
+                <p>Track irrigation, fertilizer, spray, harvest, and field inspections in one queue.</p>
+              </div>
+              <span class="primary-badge"><i class="fas fa-list-check"></i> {{ farms_page.task_summary.open_count }} active</span>
+            </div>
+
+            <div class="task-layout">
+              <form class="task-form" method="POST" action="/farms/tasks/add">
+                <div class="task-form-grid">
+                  <div class="full">
+                    <label class="field-label" for="taskTitle">Task Title</label>
+                    <input class="field-input" id="taskTitle" name="title" placeholder="Irrigate tomato plot, spray preventive fungicide..." required>
+                  </div>
+
+                  <div>
+                    <label class="field-label" for="taskFarm">Farm</label>
+                    <select class="field-select" id="taskFarm" name="farm_id">
+                      <option value="">All farms</option>
+                      {% for farm in farms_page.farm_cards %}
+                        <option value="{{ farm.id }}">{{ farm.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="field-label" for="taskDueDate">Due Date</label>
+                    <input class="field-input" id="taskDueDate" type="date" name="due_date">
+                  </div>
+
+                  <div>
+                    <label class="field-label" for="taskCategory">Category</label>
+                    <select class="field-select" id="taskCategory" name="category">
+                      <option>Irrigation</option>
+                      <option>Fertilizer</option>
+                      <option>Spray</option>
+                      <option>Monitoring</option>
+                      <option>Harvest</option>
+                      <option>General</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="field-label" for="taskPriority">Priority</label>
+                    <select class="field-select" id="taskPriority" name="priority">
+                      <option value="high">High</option>
+                      <option value="medium" selected>Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+
+                  <div class="full">
+                    <label class="field-label" for="taskDetails">Notes</label>
+                    <textarea class="field-textarea" id="taskDetails" name="details" placeholder="Add instructions, product name, water quantity, or inspection notes."></textarea>
+                  </div>
+                </div>
+
+                <button type="submit" class="submit-btn" style="margin-top:16px;width:100%;">
+                  <i class="fas fa-plus"></i> Add Planner Task
+                </button>
+              </form>
+
+              <div class="task-list">
+                {% for task in farms_page.task_summary.all %}
+                  <article class="task-card{% if task.overdue %} overdue{% endif %}{% if task.status == 'done' %} done{% endif %}">
+                    <div class="task-card-top">
+                      <div>
+                        <strong>{{ task.title }}</strong>
+                        <small>{{ task.farm_name }} • {{ task.category }}</small>
+                      </div>
+                      <span class="task-chip">{{ task.status_label }}</span>
+                    </div>
+
+                    <div class="task-card-meta">
+                      <span>{{ task.priority_label }} priority</span>
+                      <span>{{ task.due_label }}</span>
+                    </div>
+
+                    <p class="farm-note" style="margin:0;">{{ task.details }}</p>
+
+                    <div class="task-card-actions" style="margin-top:14px;">
+                      {% if task.status != 'in_progress' and task.status != 'done' %}
+                        <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="status" value="in_progress">
+                          <button type="submit" class="task-action-btn secondary">Start</button>
+                        </form>
+                      {% endif %}
+
+                      {% if task.status != 'done' %}
+                        <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="status" value="done">
+                          <button type="submit" class="task-action-btn primary">Mark Done</button>
+                        </form>
+                      {% else %}
+                        <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="status" value="todo">
+                          <button type="submit" class="task-action-btn secondary">Reopen</button>
+                        </form>
+                      {% endif %}
+
+                      <form method="POST" action="/tasks/{{ task.id }}/delete">
+                        <button type="submit" class="task-action-btn ghost">Delete</button>
+                      </form>
+                    </div>
+                  </article>
+                {% else %}
+                  <div class="empty-state">
+                    No planner tasks yet. Add irrigation, spray, or harvest reminders to start tracking daily work.
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="farms-side">
+          <article class="farms-panel" id="add-farm-form">
+            <div class="farms-panel-head">
+              <div>
+                <h2>Add Farm / Plot</h2>
+                <p>Create separate farm records for different villages, crops, or fields.</p>
+              </div>
+            </div>
+
+            <form method="POST" action="/farms/add">
+              <div class="form-grid">
+                <div>
+                  <label class="field-label" for="farmName">Farm Name</label>
+                  <input class="field-input" id="farmName" name="name" placeholder="North Plot, Tomato Field 2">
+                </div>
+
+                <div>
+                  <label class="field-label" for="farmLocation">Location</label>
+                  <input class="field-input" id="farmLocation" name="location" placeholder="Village, District">
+                </div>
+
+                <div>
+                  <label class="field-label" for="farmCropType">Crop Type</label>
+                  <input class="field-input" id="farmCropType" name="crop_type" placeholder="Rice, Wheat, Tomato">
+                </div>
+
+                <div>
+                  <label class="field-label" for="farmSize">Farm Size</label>
+                  <input class="field-input" id="farmSize" name="farm_size" placeholder="5 acres / 2 hectares">
+                </div>
+
+                <div class="full">
+                  <label class="field-label" for="farmNotes">Notes</label>
+                  <textarea class="field-textarea" id="farmNotes" name="notes" placeholder="Soil condition, water source, crop stage, or anything you want to remember."></textarea>
+                </div>
+              </div>
+
+              <label class="checkbox-row">
+                <input type="checkbox" name="is_primary">
+                <span>Set this as primary farm and sync the main dashboard</span>
+              </label>
+
+              <button type="submit" class="submit-btn" style="width:100%;">
+                <i class="fas fa-tractor"></i> Save Farm
+              </button>
+            </form>
+          </article>
+
+          <article class="farms-panel">
+            <div class="farms-panel-head">
+              <div>
+                <h2>Recent Activity</h2>
+                <p>Quick log of what you recently added, scanned, or updated.</p>
+              </div>
+            </div>
+
+            <div class="activity-list">
+              {% for item in farms_page.recent_activity %}
+                <div class="activity-item">
+                  <div class="activity-icon">
+                    <i class="fas {{ item.icon }}"></i>
+                  </div>
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <small>{{ item.detail }}</small>
+                  </div>
+                  <span class="activity-time">{{ item.time_ago }}</span>
+                </div>
+              {% else %}
+                <div class="empty-state">Your recent farm activity will appear here.</div>
+              {% endfor %}
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var mapEl = document.getElementById('primaryFarmMap');
+      if (!mapEl) return;
+      var lat = parseFloat("{{ farms_page.weather.lat|default(20.296) }}");
+      var lng = parseFloat("{{ farms_page.weather.lon|default(85.824) }}");
+      var map = L.map('primaryFarmMap').setView([lat, lng], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map);
+      L.marker([lat, lng]).addTo(map).bindPopup('{{ farms_page.primary_farm.name if farms_page.primary_farm else "Primary Farm" }}');
+      setTimeout(function() { map.invalidateSize(); }, 300);
+    });
+  </script>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          sidebar.classList.toggle('sidebar-open');
+        });
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+  </main>
+</body>
+</html>

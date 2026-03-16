@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create your AgroVision AI account and start using AI-powered crop monitoring, disease detection, climate insights, and smart farm planning tools.">
+  <title>Create Account | AgroVision AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body class="page-register auth-page-shell">
+  <div class="auth-page-shell__glow auth-page-shell__glow--one" aria-hidden="true"></div>
+  <div class="auth-page-shell__glow auth-page-shell__glow--two" aria-hidden="true"></div>
+
+  <main class="auth-shell auth-shell--register">
+    <section class="auth-hero-card auth-hero-card--register">
+      <a class="brand-lockup brand-lockup--light" href="/" aria-label="Back to AgroVision AI home">
+        <img class="brand-lockup__mark" src="/static/brand/agrovision-mark.svg" alt="AgroVision AI mark">
+        <div class="brand-lockup__text">
+          <strong>AgroVision AI</strong>
+          <span>Smart Farming Solutions</span>
+        </div>
+      </a>
+
+      <div class="auth-hero-card__copy">
+        <span class="marketing-pill">Build your smart farm workspace</span>
+        <h1>Create an account and start managing your farm with AI.</h1>
+        <p>
+          Add your location, crop, and contact details once. AgroVision AI will personalize dashboards,
+          weather context, disease checks, alerts, and farm planning around your setup.
+        </p>
+      </div>
+
+      <div class="auth-hero-card__stack">
+        <article>
+          <strong>Step 1</strong>
+          <span>Add your farmer profile and crop details.</span>
+        </article>
+        <article>
+          <strong>Step 2</strong>
+          <span>Verify with OTP for secure account access.</span>
+        </article>
+        <article>
+          <strong>Step 3</strong>
+          <span>Open your dashboard with weather, soil, crop, and AI modules ready.</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="auth-form-panel auth-form-panel--modern auth-form-panel--register">
+      <div class="auth-form-panel__top">
+        <span class="section-kicker">Farmer onboarding</span>
+        <h2>Create your AgroVision AI account</h2>
+        <p>Email and phone are required so OTP verification and alerts can work properly.</p>
+      </div>
+
+      {% if error %}
+      <div class="auth-alert auth-alert--error">
+        <i class="fas fa-circle-exclamation"></i>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form class="auth-form-modern auth-form-modern--register" method="POST" enctype="multipart/form-data">
+        <div class="auth-grid auth-grid--two">
+          <label class="auth-field-group" for="reg-name">
+            <span>Full name</span>
+            <div class="auth-input">
+              <i class="fas fa-user"></i>
+              <input id="reg-name" name="name" value="{{ request.form.get('name', '') }}" placeholder="Your full name" autocomplete="name" required>
+            </div>
+          </label>
+
+          <label class="auth-field-group" for="reg-phone">
+            <span>Phone number</span>
+            <div class="auth-input">
+              <i class="fas fa-mobile-screen"></i>
+              <input id="reg-phone" name="phone" type="tel" value="{{ request.form.get('phone', '') }}" placeholder="+91 9876543210" autocomplete="tel" required>
+            </div>
+          </label>
+        </div>
+
+        <div class="auth-grid auth-grid--two">
+          <label class="auth-field-group" for="reg-email">
+            <span>Email address</span>
+            <div class="auth-input">
+              <i class="fas fa-envelope"></i>
+              <input id="reg-email" name="email" type="email" value="{{ request.form.get('email', '') }}" placeholder="you@example.com" autocomplete="email" required>
+            </div>
+          </label>
+
+          <label class="auth-field-group" for="reg-password">
+            <span>Password</span>
+            <div class="auth-input">
+              <i class="fas fa-lock"></i>
+              <input id="reg-password" name="password" type="password" placeholder="Minimum 8 characters" autocomplete="new-password" required>
+            </div>
+          </label>
+        </div>
+
+        <div class="auth-grid auth-grid--two">
+          <label class="auth-field-group" for="reg-location">
+            <span>Farm location</span>
+            <div class="auth-input">
+              <i class="fas fa-location-dot"></i>
+              <input id="reg-location" name="location" value="{{ request.form.get('location', '') }}" placeholder="Village, district, or state">
+            </div>
+          </label>
+
+          <label class="auth-field-group" for="reg-crop">
+            <span>Primary crop</span>
+            <div class="auth-input">
+              <i class="fas fa-seedling"></i>
+              <input id="reg-crop" name="crop" value="{{ request.form.get('crop', '') }}" placeholder="Rice, Wheat, Tomato, Maize">
+            </div>
+          </label>
+        </div>
+
+        <label class="auth-field-group" for="reg-photo">
+          <span>Profile photo (optional)</span>
+          <div class="auth-input auth-input--file">
+            <i class="fas fa-image"></i>
+            <input id="reg-photo" name="profile_photo" type="file" accept="image/*">
+          </div>
+        </label>
+
+        <section class="map-picker-card">
+          <div class="map-picker-card__top">
+            <div>
+              <strong>Select farm location on map</strong>
+              <p>Click once and we will auto-fill the nearest location name when possible.</p>
+            </div>
+            <span class="map-picker-card__badge">Optional</span>
+          </div>
+          <div id="reg-map" class="reg-map"></div>
+        </section>
+
+        <button class="marketing-button marketing-button--solid marketing-button--full" type="submit">
+          <i class="fas fa-user-plus"></i>
+          <span>Create Account</span>
+        </button>
+      </form>
+
+      <div class="auth-note-row">
+        <div class="auth-note-chip">
+          <i class="fas fa-shield-halved"></i>
+          <span>OTP verification enabled</span>
+        </div>
+        <div class="auth-note-chip">
+          <i class="fas fa-satellite-dish"></i>
+          <span>Smart farm setup ready</span>
+        </div>
+      </div>
+
+      <div class="auth-footer-links">
+        <a href="/">Back to home</a>
+        <a href="/login">Already have an account?</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const mapEl = document.getElementById('reg-map');
+      if (!mapEl) return;
+
+      const map = L.map('reg-map').setView([20.5937, 78.9629], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      let marker = null;
+
+      map.on('click', function (e) {
+        const { lat, lng } = e.latlng;
+
+        if (marker) {
+          marker.setLatLng(e.latlng);
+        } else {
+          marker = L.marker(e.latlng).addTo(map);
+        }
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`)
+          .then(r => r.json())
+          .then(data => {
+            const loc = data.address || {};
+            let name = '';
+            if (loc.city) name = loc.city;
+            else if (loc.town) name = loc.town;
+            else if (loc.village) name = loc.village;
+            else if (loc.county) name = loc.county;
+
+            if (loc.state) name += (name ? ', ' : '') + loc.state;
+
+            const locationInput = document.getElementById('reg-location');
+            if (locationInput) {
+              locationInput.value = name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            }
+          })
+          .catch(() => {
+            const locationInput = document.getElementById('reg-location');
+            if (locationInput) {
+              locationInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            }
+          });
+      });
+
+      setTimeout(() => map.invalidateSize(), 300);
+    });
+  </script>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const isDark = localStorage.getItem('theme') === 'dark';
+
+      if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

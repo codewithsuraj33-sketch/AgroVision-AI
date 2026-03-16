@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerts – AgroVisionAI</title>
+  <meta name="description" content="Stay updated with important notifications for your farm.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+
+    <!-- ── Sidebar ── -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+        {% if user and user.profile_photo %}
+          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+        {% else %}
+          <i class="fas fa-user dashboard-avatar"></i>
+        {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>Smart Farm AI</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link is-active" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <section class="dashboard-main">
+
+      <!-- Hero Banner -->
+      <header class="dashboard-hero alerts-hero">
+        <div class="dashboard-hero-copy">
+          <h1>Alerts</h1>
+          <p>Stay updated with important notifications for your farm</p>
+        </div>
+      </header>
+
+      <!-- Location Bar + Mark Read -->
+      <div class="alerts-toolbar">
+        <div class="settings-location-select">
+          <i class="fas fa-map-marker-alt"></i>
+          <span>Your Farm, {{ user.location or "Bhubaneswar" }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <button class="alerts-mark-read-btn" onclick="this.innerHTML='<i class=\'fas fa-check-double\'></i> Done!'">
+          <i class="fas fa-check-double"></i> Mark all Read
+        </button>
+      </div>
+
+      <!-- Alert Cards Grid -->
+      <div class="alerts-cards-grid">
+        {% for alert in alerts_page.alert_cards %}
+        <div class="agro-card alerts-card alerts-card-{{ alert.severity }}">
+          <div class="alerts-card-icon">
+            {% if alert.severity == 'heat' %}
+              <i class="fas fa-temperature-high"></i>
+            {% elif alert.severity == 'rain' %}
+              <i class="fas fa-cloud-showers-heavy"></i>
+            {% elif alert.severity == 'disease' %}
+              <i class="fas fa-bug"></i>
+            {% else %}
+              <i class="fas fa-triangle-exclamation"></i>
+            {% endif %}
+          </div>
+          <h3>{{ alert.title }}</h3>
+          <p>{{ alert.detail }}</p>
+          <div class="alerts-card-footer">
+            <button class="alerts-view-btn alerts-view-btn-{{ alert.severity }}">View Details</button>
+            <span class="alerts-card-time">{{ alert.time_ago }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Bottom Section: Recommendations + Recent History -->
+      <div class="alerts-bottom-grid">
+
+        <!-- Recommendations -->
+        <div class="alerts-recommendations-section">
+          <h2 class="alerts-section-title">Recommendations</h2>
+          <div class="alerts-rec-cards">
+            {% for rec in alerts_page.recommendations %}
+            <div class="alerts-rec-card">
+              <div class="alerts-rec-icon">
+                {% if loop.index == 1 %}
+                  <i class="fas fa-temperature-high"></i>
+                {% else %}
+                  <i class="fas fa-cloud-rain"></i>
+                {% endif %}
+              </div>
+              <div class="alerts-rec-info">
+                <strong>{{ rec.title }}</strong>
+                <span>{{ rec.detail }}</span>
+              </div>
+              <i class="fas fa-chevron-down alerts-rec-chevron"></i>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Recent History -->
+        <div class="alerts-recent-history">
+          <h2 class="alerts-section-title"><i class="fas fa-clock-rotate-left"></i> Recent History</h2>
+          <div class="alerts-history-chart">
+            <canvas id="alertsHistoryChart" width="320" height="180"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Timeline -->
+      <div class="alerts-timeline">
+        <h2 class="alerts-section-title">Recent History</h2>
+        <div class="alerts-timeline-grid">
+          {% for item in alerts_page.history %}
+          <div class="alerts-timeline-item alerts-timeline-{{ item.severity }}">
+            <span class="alerts-timeline-icon">
+              {% if item.severity == 'heat' %}
+                <i class="fas fa-triangle-exclamation"></i>
+              {% elif item.severity == 'disease' %}
+                <i class="fas fa-bug"></i>
+              {% elif item.severity == 'rain' %}
+                <i class="fas fa-cloud-rain"></i>
+              {% else %}
+                <i class="fas fa-seedling"></i>
+              {% endif %}
+            </span>
+            <strong>{{ item.title }}</strong>
+            <span class="alerts-timeline-time">{{ item.time_ago }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script>
+    // Recent History Line Chart
+    const ctx = document.getElementById('alertsHistoryChart');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Apr', 'May', 'June', 'July'],
+          datasets: [{
+            label: 'Alert Frequency',
+            data: [3, 5, 2, 4],
+            borderColor: '#5b9a3c',
+            backgroundColor: 'rgba(91,154,60,0.12)',
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#5b9a3c',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 2.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#546b89', font: { family: 'Manrope', weight: 600 } } },
+            y: { grid: { color: 'rgba(84,107,137,0.12)' }, ticks: { color: '#546b89', font: { family: 'Manrope', weight: 600 } } }
+          }
+        }
+      });
+    }
+  </script>
+
+  <!-- Theme Toggle Script -->
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      
+      // Check saved theme
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+
+  <!-- Mobile Sidebar JS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation(); // prevent immediate close on document click
+          sidebar.classList.toggle('sidebar-open');
+        });
+
+        // Close sidebar if clicking outside of it on mobile
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>

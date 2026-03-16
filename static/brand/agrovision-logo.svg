@@ -1,0 +1,69 @@
+<svg width="920" height="320" viewBox="0 0 920 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wordGradient" x1="190" y1="188" x2="713" y2="188" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7DFF2E"/>
+      <stop offset="0.55" stop-color="#F8FDFF"/>
+      <stop offset="1" stop-color="#28C2FF"/>
+    </linearGradient>
+    <linearGradient id="subGradient" x1="262" y1="244" x2="654" y2="244" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E7F0FF"/>
+      <stop offset="1" stop-color="#C3D5EF"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(26 12) scale(0.58)">
+    <defs>
+      <linearGradient id="ringGradient2" x1="78" y1="78" x2="434" y2="434" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#9BFF31"/>
+        <stop offset="0.5" stop-color="#23E7B8"/>
+        <stop offset="1" stop-color="#2AB8FF"/>
+      </linearGradient>
+      <linearGradient id="leafGradient2" x1="86" y1="220" x2="224" y2="386" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#D9FF3F"/>
+        <stop offset="1" stop-color="#38C124"/>
+      </linearGradient>
+      <linearGradient id="faceGradient2" x1="238" y1="132" x2="392" y2="332" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#F9FDFF"/>
+        <stop offset="0.55" stop-color="#DDEBFF"/>
+        <stop offset="1" stop-color="#AFC4E6"/>
+      </linearGradient>
+    </defs>
+    <circle cx="256" cy="256" r="186" stroke="url(#ringGradient2)" stroke-width="14"/>
+    <path d="M108 170C154 110 223 76 303 82" stroke="url(#ringGradient2)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M119 355C90 315 76 267 82 216" stroke="url(#ringGradient2)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M329 82C375 91 414 118 442 157" stroke="url(#ringGradient2)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M442 349C414 389 373 419 321 429" stroke="url(#ringGradient2)" stroke-width="13" stroke-linecap="round"/>
+    <g opacity="0.96">
+      <circle cx="155" cy="165" r="12" fill="#63FF57"/>
+      <circle cx="339" cy="110" r="12" fill="#23E7B8"/>
+      <circle cx="407" cy="205" r="12" fill="#2AB8FF"/>
+      <circle cx="411" cy="286" r="12" fill="#2AB8FF"/>
+    </g>
+    <g transform="translate(52 82)">
+      <path d="M61 246C57 166 112 109 179 114C175 197 128 269 61 246Z" fill="url(#leafGradient2)"/>
+      <path d="M128 248C119 187 148 139 194 126C200 188 177 242 128 248Z" fill="url(#leafGradient2)"/>
+      <path d="M132 140C112 167 93 196 73 226" stroke="#123F1A" stroke-width="6" stroke-linecap="round"/>
+      <path d="M168 151C152 181 144 204 132 234" stroke="#123F1A" stroke-width="6" stroke-linecap="round"/>
+      <g transform="translate(122 16)">
+        <path d="M121 45C172 31 217 53 239 89C253 112 260 139 260 171C260 222 231 265 184 291C154 307 116 309 90 300C123 284 145 257 152 223C158 193 149 165 124 142C102 122 70 112 42 114C56 84 82 57 121 45Z" fill="url(#faceGradient2)"/>
+        <path d="M67 136C102 120 136 127 157 148C176 167 185 194 180 223C174 258 148 286 107 301C70 315 33 308 4 281C20 250 28 209 30 171C31 139 43 116 67 136Z" fill="#07152D"/>
+        <path d="M83 117L132 69" stroke="#18D7A8" stroke-width="12" stroke-linecap="round"/>
+        <path d="M52 155H115" stroke="#18D7A8" stroke-width="12" stroke-linecap="round"/>
+        <path d="M52 193H126" stroke="#18D7A8" stroke-width="12" stroke-linecap="round"/>
+        <circle cx="110" cy="155" r="30" fill="#06112A" stroke="#26E3C5" stroke-width="8"/>
+        <circle cx="110" cy="155" r="13" fill="#8CFF3B"/>
+        <path d="M163 165C179 155 199 154 214 163" stroke="#8DFF31" stroke-width="9" stroke-linecap="round"/>
+        <path d="M132 93C165 70 210 71 239 95" stroke="#17365A" stroke-width="10" stroke-linecap="round"/>
+      </g>
+    </g>
+  </g>
+
+  <text x="230" y="186" fill="url(#wordGradient)" font-family="Space Grotesk, Manrope, Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="-2.6">
+    AgroVision AI
+  </text>
+  <path d="M230 234H312" stroke="#EAF1FF" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+  <path d="M634 234H716" stroke="#EAF1FF" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+  <text x="332" y="248" fill="url(#subGradient)" font-family="Manrope, Arial, sans-serif" font-size="32" font-weight="800" letter-spacing="9">
+    SMART FARMING SOLUTIONS
+  </text>
+</svg>

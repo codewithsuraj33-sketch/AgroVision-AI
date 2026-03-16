@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - AgroVisionAI</title>
+  <meta name="description" content="Manage your AgroVisionAI account and application preferences.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .settings-shell {
+      display: grid;
+      gap: 20px;
+    }
+    .settings-flash {
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: rgba(34, 185, 120, 0.16);
+      color: #0f5132;
+      font-weight: 700;
+      border: 1px solid rgba(15, 81, 50, 0.12);
+    }
+    .settings-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .settings-summary-card,
+    .settings-card {
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: 22px;
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+    }
+    .settings-summary-card {
+      padding: 18px;
+    }
+    .settings-summary-card span {
+      color: #607087;
+      font-size: 0.9rem;
+    }
+    .settings-summary-card strong {
+      display: block;
+      margin: 10px 0 6px;
+      font-size: 1.9rem;
+      color: #162032;
+    }
+    .settings-layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+    .settings-nav,
+    .settings-panel {
+      display: grid;
+      gap: 12px;
+    }
+    .settings-card {
+      padding: 22px;
+    }
+    .settings-nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      text-decoration: none;
+      color: #334155;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+    }
+    .settings-nav-link.is-active {
+      background: linear-gradient(135deg, rgba(20, 184, 111, 0.14), rgba(52, 211, 153, 0.22));
+      color: #0f5132;
+      border-color: rgba(20, 184, 111, 0.22);
+    }
+    .settings-panel {
+      display: none;
+    }
+    .settings-panel.is-active {
+      display: grid;
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+    .panel-head p,
+    .muted-text,
+    .history-item small,
+    .task-preview small {
+      color: #607087;
+    }
+    .settings-form-grid,
+    .farm-summary-grid,
+    .security-grid,
+    .account-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .settings-form-grid .full {
+      grid-column: 1 / -1;
+    }
+    .field-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #334155;
+    }
+    .field-input,
+    .field-textarea {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      padding: 12px 14px;
+      font: inherit;
+      background: #fff;
+    }
+    .toggle-list,
+    .history-list,
+    .task-preview-list {
+      display: grid;
+      gap: 12px;
+    }
+    .toggle-row,
+    .history-item,
+    .task-preview,
+    .mini-info-card {
+      border-radius: 18px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: #f8fafc;
+    }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 16px;
+    }
+    .toggle-row strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .toggle-pill {
+      appearance: none;
+      width: 52px;
+      height: 30px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.35);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .toggle-pill::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
+      transition: transform 0.2s ease;
+    }
+    .toggle-pill:checked {
+      background: #14b86f;
+    }
+    .toggle-pill:checked::after {
+      transform: translateX(22px);
+    }
+    .save-btn,
+    .ghost-link {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+    }
+    .save-btn {
+      background: linear-gradient(135deg, #14b86f, #0f9f5e);
+      color: #fff;
+    }
+    .ghost-link {
+      background: rgba(59, 130, 246, 0.12);
+      color: #1d4ed8;
+    }
+    .history-item {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 16px;
+      align-items: start;
+    }
+    .history-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(20, 184, 111, 0.16);
+      color: #0f5132;
+    }
+    .history-time {
+      color: #64748b;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    .mini-info-card,
+    .task-preview {
+      padding: 16px;
+    }
+    .mini-info-card span,
+    .task-preview span {
+      display: block;
+      color: #607087;
+      font-size: 0.82rem;
+      margin-bottom: 6px;
+    }
+    .task-preview-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .task-tag {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(20, 184, 111, 0.15);
+      color: #0f5132;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .empty-state {
+      padding: 24px 18px;
+      border-radius: 18px;
+      background: #f8fafc;
+      color: #607087;
+      text-align: center;
+    }
+    @media (max-width: 1100px) {
+      .settings-summary-grid,
+      .settings-layout,
+      .settings-form-grid,
+      .farm-summary-grid,
+      .security-grid,
+      .account-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+    <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+        {% if user and user.profile_photo %}
+          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+        {% else %}
+          <i class="fas fa-user dashboard-avatar"></i>
+        {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>Smart Farm AI</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link is-active" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main settings-shell">
+      <header class="dashboard-hero settings-hero">
+        <div class="dashboard-hero-copy">
+          <h1>Settings</h1>
+          <p>Save notification preferences, review your farm activity, and keep operations organized.</p>
+        </div>
+      </header>
+
+      {% if success %}
+        <div class="settings-flash">{{ success }}</div>
+      {% endif %}
+
+      <section class="settings-summary-grid">
+        <article class="settings-summary-card">
+          <span>Enabled Alerts</span>
+          <strong>{{ settings_page.enabled_alert_count }}</strong>
+          <small>Crop, disease, weather, and data triggers</small>
+        </article>
+        <article class="settings-summary-card">
+          <span>Notification Channels</span>
+          <strong>{{ settings_page.enabled_channel_count }}</strong>
+          <small>Email, SMS, and daily briefing options</small>
+        </article>
+        <article class="settings-summary-card">
+          <span>Farm Records</span>
+          <strong>{{ settings_page.farm_count }}</strong>
+          <small>{{ settings_page.primary_farm.name if settings_page.primary_farm else 'Primary farm pending' }}</small>
+        </article>
+        <article class="settings-summary-card">
+          <span>Open Tasks</span>
+          <strong>{{ settings_page.task_summary.open_count }}</strong>
+          <small>{{ settings_page.task_summary.overdue_count }} overdue now</small>
+        </article>
+      </section>
+
+      <section class="settings-layout">
+        <div class="settings-nav">
+          <a href="#" class="settings-nav-link is-active" data-tab="notifications">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+          </a>
+          <a href="#" class="settings-nav-link" data-tab="history">
+            <i class="fas fa-clock-rotate-left"></i>
+            <span>History</span>
+          </a>
+          <a href="#" class="settings-nav-link" data-tab="account">
+            <i class="fas fa-user"></i>
+            <span>Account</span>
+          </a>
+          <a href="#" class="settings-nav-link" data-tab="farm">
+            <i class="fas fa-tractor"></i>
+            <span>Farm Ops</span>
+          </a>
+          <a href="#" class="settings-nav-link" data-tab="security">
+            <i class="fas fa-shield-halved"></i>
+            <span>Security</span>
+          </a>
+        </div>
+
+        <div class="settings-card">
+          <section class="settings-panel is-active" id="panel-notifications">
+            <div class="panel-head">
+              <div>
+                <h2>Notification Preferences</h2>
+                <p>Choose which alerts you want and where SmartFarm AI should reach you.</p>
+              </div>
+            </div>
+
+            <form method="POST">
+              <div class="toggle-list">
+                <label class="toggle-row">
+                  <div>
+                    <strong>Crop alerts</strong>
+                    <span class="muted-text">Growth, stage, and crop-specific nudges</span>
+                  </div>
+                  <input class="toggle-pill" type="checkbox" name="crop_alerts" {% if settings_page.preferences.crop_alerts %}checked{% endif %}>
+                </label>
+
+                <label class="toggle-row">
+                  <div>
+                    <strong>Disease alerts</strong>
+                    <span class="muted-text">Follow-up reminders after scans and disease risk notices</span>
+                  </div>
+                  <input class="toggle-pill" type="checkbox" name="disease_alerts" {% if settings_page.preferences.disease_alerts %}checked{% endif %}>
+                </label>
+
+                <label class="toggle-row">
+                  <div>
+                    <strong>Weather alerts</strong>
+                    <span class="muted-text">Rain, heat, and sudden condition changes</span>
+                  </div>
+                  <input class="toggle-pill" type="checkbox" name="weather_alerts" {% if settings_page.preferences.weather_alerts %}checked{% endif %}>
+                </label>
+
+                <label class="toggle-row">
+                  <div>
+                    <strong>Data update alerts</strong>
+                    <span class="muted-text">Fresh insights when dashboard data refreshes</span>
+                  </div>
+                  <input class="toggle-pill" type="checkbox" name="data_updates" {% if settings_page.preferences.data_updates %}checked{% endif %}>
+                </label>
+              </div>
+
+              <div class="settings-form-grid" style="margin-top:18px;">
+                <div>
+                  <label class="field-label" for="alertEmail">Alert Email</label>
+                  <input class="field-input" id="alertEmail" name="alert_email" type="email" value="{{ settings_page.preferences.alert_email or user.email or '' }}" placeholder="you@example.com">
+                </div>
+                <div>
+                  <label class="field-label" for="alertPhone">Alert Phone</label>
+                  <input class="field-input" id="alertPhone" name="alert_phone" type="tel" value="{{ settings_page.preferences.alert_phone or user.phone or '' }}" placeholder="+91 9876543210">
+                </div>
+
+                <label class="toggle-row full">
+                  <div>
+                    <strong>Email delivery</strong>
+                    <span class="muted-text">Send important alerts and summaries to email</span>
+                  </div>
+                  <input class="toggle-pill" type="checkbox" name="email_alerts" {% if settings_page.preferences.email_alerts %}checked{% endif %}>
+                </label>
+
+                <label class="toggle-row full">
+                  <div>
+                    <strong>SMS delivery</strong>
+                    <span class="muted-text">Receive urgent messages on your phone</span>
+                  </div>
+                  <input class="toggle-pill" type="checkbox" name="sms_alerts" {% if settings_page.preferences.sms_alerts %}checked{% endif %}>
+                </label>
+
+                <label class="toggle-row full">
+                  <div>
+                    <strong>Daily briefing</strong>
+                    <span class="muted-text">Compact daily summary of tasks, alerts, and crop conditions</span>
+                  </div>
+                  <input class="toggle-pill" type="checkbox" name="daily_briefing" {% if settings_page.preferences.daily_briefing %}checked{% endif %}>
+                </label>
+              </div>
+
+              <button type="submit" class="save-btn" style="margin-top:18px;">
+                <i class="fas fa-floppy-disk"></i> Save Settings
+              </button>
+            </form>
+          </section>
+
+          <section class="settings-panel" id="panel-history">
+            <div class="panel-head">
+              <div>
+                <h2>Recent Activity</h2>
+                <p>Farm events, tasks, disease scans, and your latest actions appear here.</p>
+              </div>
+            </div>
+
+            <div class="history-list">
+              {% for item in settings_page.history %}
+                <article class="history-item">
+                  <div class="history-icon">
+                    <i class="fas {{ item.icon }}"></i>
+                  </div>
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <small>{{ item.detail }}</small>
+                  </div>
+                  <span class="history-time">{{ item.time_ago }}</span>
+                </article>
+              {% else %}
+                <div class="empty-state">No recent activity yet.</div>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="settings-panel" id="panel-account">
+            <div class="panel-head">
+              <div>
+                <h2>Account Overview</h2>
+                <p>Quick access to your personal details and account ownership info.</p>
+              </div>
+              <a href="/profile" class="ghost-link"><i class="fas fa-pen-to-square"></i> Open Profile</a>
+            </div>
+
+            <div class="account-grid">
+              <article class="mini-info-card">
+                <span>Full Name</span>
+                <strong>{{ user.name }}</strong>
+              </article>
+              <article class="mini-info-card">
+                <span>Email</span>
+                <strong>{{ user.email }}</strong>
+              </article>
+              <article class="mini-info-card">
+                <span>Phone</span>
+                <strong>{{ user.phone or settings_page.preferences.alert_phone or 'Not set' }}</strong>
+              </article>
+              <article class="mini-info-card">
+                <span>Primary Farm</span>
+                <strong>{{ settings_page.primary_farm.name if settings_page.primary_farm else 'Not set' }}</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="settings-panel" id="panel-farm">
+            <div class="panel-head">
+              <div>
+                <h2>Farm Operations Summary</h2>
+                <p>View the main farm record and upcoming field work in one glance.</p>
+              </div>
+              <a href="/farms#task-planner" class="ghost-link"><i class="fas fa-tractor"></i> Manage Farms</a>
+            </div>
+
+            <div class="farm-summary-grid">
+              <article class="mini-info-card">
+                <span>Primary Farm</span>
+                <strong>{{ settings_page.primary_farm.name if settings_page.primary_farm else 'Not set' }}</strong>
+                <small class="muted-text">{{ settings_page.primary_farm.location if settings_page.primary_farm else 'Add a farm to start syncing operations.' }}</small>
+              </article>
+              <article class="mini-info-card">
+                <span>Farm Count</span>
+                <strong>{{ settings_page.farm_count }}</strong>
+                <small class="muted-text">Use multiple plots for different villages or crops.</small>
+              </article>
+            </div>
+
+            <div class="task-preview-list" style="margin-top:16px;">
+              {% for task in settings_page.task_summary.preview %}
+                <article class="task-preview">
+                  <div class="task-preview-top">
+                    <div>
+                      <strong>{{ task.title }}</strong>
+                      <small>{{ task.farm_name }} • {{ task.category }}</small>
+                    </div>
+                    <span class="task-tag">{{ task.due_label }}</span>
+                  </div>
+                  <span>{{ task.priority_label }} priority</span>
+                  <small>{{ task.details }}</small>
+                </article>
+              {% else %}
+                <div class="empty-state">No active planner tasks. Add reminders from the Farms page.</div>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="settings-panel" id="panel-security">
+            <div class="panel-head">
+              <div>
+                <h2>Security Summary</h2>
+                <p>Review basic account health signals and where to update sensitive details.</p>
+              </div>
+              <a href="/profile" class="ghost-link"><i class="fas fa-lock"></i> Update Password</a>
+            </div>
+
+            <div class="security-grid">
+              {% for item in settings_page.security_items %}
+                <article class="mini-info-card">
+                  <span>{{ item.label }}</span>
+                  <strong>{{ item.value }}</strong>
+                </article>
+              {% endfor %}
+            </div>
+          </section>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const navLinks = Array.from(document.querySelectorAll('.settings-nav-link'));
+      const panels = {
+        notifications: document.getElementById('panel-notifications'),
+        history: document.getElementById('panel-history'),
+        account: document.getElementById('panel-account'),
+        farm: document.getElementById('panel-farm'),
+        security: document.getElementById('panel-security')
+      };
+
+      function activateTab(tabKey) {
+        navLinks.forEach((link) => link.classList.toggle('is-active', link.dataset.tab === tabKey));
+        Object.entries(panels).forEach(([key, panel]) => {
+          if (!panel) return;
+          panel.classList.toggle('is-active', key === tabKey);
+        });
+      }
+
+      navLinks.forEach((link) => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          activateTab(link.dataset.tab || 'notifications');
+        });
+      });
+    });
+  </script>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          sidebar.classList.toggle('sidebar-open');
+        });
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

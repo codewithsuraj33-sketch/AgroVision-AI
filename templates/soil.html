@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soil Health Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page soil-monitor-page">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell soil-monitor-shell">
+    <aside class="dashboard-sidebar soil-sidebar">
+      <div class="sidebar-brand">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <i class="fas fa-user dashboard-avatar"></i>
+          {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>{{ user.email }}</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Soil monitoring navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link is-active soil-active" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main soil-monitor-main">
+      <header class="soil-hero-banner">
+        <div class="soil-hero-top">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
+          {% endif %}
+
+          <nav class="weather-top-nav" aria-label="Soil utility navigation">
+            <a href="/dashboard">{{ user.name }}</a>
+            <span class="weather-divider"></span>
+            <a href="#">Farm</a>
+            <span class="weather-divider"></span>
+            <a href="#soil-map-card">Location</a>
+            <span class="weather-divider"></span>
+            <a href="/">About</a>
+          </nav>
+        </div>
+
+        <div class="soil-hero-copy">
+          <h1>Soil Health Monitoring</h1>
+          <strong>Your Farm, Location: {{ soil_page.location.name }}</strong>
+          <p>Analyze soil data to optimize crop growth and field health.</p>
+        </div>
+      </header>
+
+      <section class="soil-monitor-grid">
+        <article class="agro-card soil-toolbar-card">
+          <div class="soil-toolbar-group">
+            {% for item in soil_page.toolbar_items %}
+              <span class="soil-toolbar-chip">
+                <strong>{{ item.label }}</strong>
+                <span>{{ item.value }}</span>
+              </span>
+            {% endfor %}
+          </div>
+
+          <a class="soil-toolbar-button" href="{{ soil_page.location.maps_search_url }}" target="_blank" rel="noreferrer">Change Location</a>
+        </article>
+
+        <article class="agro-card soil-gauge-card">
+          <div class="soil-card-head">
+            <h2>Soil pH</h2>
+            <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+          </div>
+
+          <div class="soil-gauge-wrap" data-style---soil-gauge-fill="{{ soil_page.gauge.fill }}%">
+            <div class="soil-gauge-ring">
+              <div class="soil-gauge-core">
+                <strong>{{ "%.1f"|format(soil_page.gauge.value) }}</strong>
+                <span>{{ soil_page.gauge.label }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="soil-gauge-foot soil-gauge-foot-{{ soil_page.gauge.tone }}">
+            <span>{{ soil_page.gauge.footnote }}</span>
+          </div>
+        </article>
+
+        {% for card in soil_page.nutrient_cards %}
+          <article class="agro-card soil-nutrient-card soil-nutrient-card-{{ card.tone }} soil-nutrient-slot-{{ loop.index }}">
+            <div class="soil-card-head">
+              <h2>{{ card.title }}</h2>
+              <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+            </div>
+
+            <span class="soil-nutrient-status">{{ card.label }}</span>
+            <div class="soil-nutrient-value">
+              <strong>{{ card.value }}</strong>
+              <span>{{ card.unit }}</span>
+            </div>
+
+            <div class="soil-nutrient-footer">
+              <span>{{ card.label }}</span>
+            </div>
+          </article>
+        {% endfor %}
+
+        <article class="agro-card soil-health-panel">
+          <div class="soil-card-head">
+            <h2>Soil Health</h2>
+            <span class="soil-health-score">{{ soil_page.health_panel.score }}%</span>
+          </div>
+
+          <div class="soil-health-visual" aria-hidden="true">
+            <span class="soil-bag soil-bag-n">N</span>
+            <span class="soil-sprout"></span>
+            <span class="soil-bag soil-bag-p">P</span>
+          </div>
+
+          <div class="soil-health-recommendations">
+            {% for item in soil_page.health_panel.recommendations %}
+              <div class="soil-health-recommendation">
+                <span class="soil-health-bullet"></span>
+                <span>{{ item }}</span>
+              </div>
+            {% endfor %}
+          </div>
+
+          <a class="soil-health-button" href="/dashboard">{{ soil_page.health_panel.button_label }}</a>
+        </article>
+
+        <article class="agro-card soil-history-card">
+          <div class="soil-card-head">
+            <h2>Soil Health History</h2>
+            <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+          </div>
+
+          <div class="soil-history-grid">
+            {% for item in soil_page.history_cards %}
+              <section class="soil-history-panel">
+                <div class="soil-history-head">
+                  <h3>{{ item.title }}</h3>
+                </div>
+
+                <div class="soil-history-chart soil-history-chart-{{ item.tone }}">
+                  <div class="soil-history-yaxis">
+                    {% for axis in item.chart.y_axis %}
+                      <span>{{ axis }}</span>
+                    {% endfor %}
+                  </div>
+
+                  <div class="soil-history-surface">
+                    <svg class="soil-history-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                      <polyline points="{{ item.chart.polyline }}"></polyline>
+                    </svg>
+
+                    <div class="soil-history-dots">
+                      {% for point in item.chart.points %}
+                        <i data-style-left="{{ point.left }}%" data-style-bottom="{{ point.line_bottom }}%"></i>
+                      {% endfor %}
+                    </div>
+
+                    <div class="soil-history-labels">
+                      {% for label in item.chart.labels %}
+                        <span>{{ label }}</span>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            {% endfor %}
+          </div>
+        </article>
+
+        <article class="agro-card soil-map-card" id="soil-map-card">
+          <div class="soil-card-head">
+            <h2>Soil Data Map</h2>
+          </div>
+
+          <div class="soil-map-preview">
+            <img src="{{ soil_page.map_card.image_url }}" alt="Soil data preview for {{ soil_page.location.name }}">
+          </div>
+
+          <div class="soil-map-legend">
+            {% for item in soil_page.map_card.legend %}
+              <div class="soil-map-legend-item">
+                <span class="soil-map-dot soil-map-dot-{{ item.tone }}"></span>
+                <strong>{{ item.label }}</strong>
+                <span>{{ item.value }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </article>
+
+        <article class="soil-summary-card">
+          <div class="soil-card-head">
+            <h2>Soil Interpreter</h2>
+          </div>
+
+          <div class="soil-summary-list">
+            {% for item in soil_page.summary_metrics %}
+              <div class="soil-summary-item">
+                <span class="soil-summary-dot soil-summary-dot-{{ item.tone }}"></span>
+                <strong>{{ item.label }}</strong>
+                <span>{{ item.value }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <!-- Theme Toggle Script -->
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      
+      // Check saved theme
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+
+  <!-- Mobile Sidebar JS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation(); // prevent immediate close on document click
+          sidebar.classList.toggle('sidebar-open');
+        });
+
+        // Close sidebar if clicking outside of it on mobile
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+
+  <!-- Fix IDE Parsing: Apply dynamic styles via JS -->
+  <script>
+    function applyDataStyles() {
+      document.querySelectorAll('*').forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+          if (attr.name.startsWith('data-style-')) {
+            const cssProp = attr.name.slice(11); // 'data-style-'.length == 11
+            el.style[cssProp] = attr.value;
+          }
+        });
+      });
+    }
+    document.addEventListener('DOMContentLoaded', applyDataStyles);
+  </script>
+</body>
+
+</html>

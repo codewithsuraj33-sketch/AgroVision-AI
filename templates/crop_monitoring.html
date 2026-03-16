@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Satellite Crop Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page crop-monitor-page">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell crop-monitor-shell">
+    <aside class="dashboard-sidebar crop-sidebar">
+      <div class="sidebar-brand">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <i class="fas fa-user dashboard-avatar"></i>
+          {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>{{ user.email }}</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Crop monitoring navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link is-active crop-active" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main crop-monitor-main">
+      <header class="crop-hero-banner">
+        <div class="crop-hero-top">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
+          {% endif %}
+
+          <nav class="weather-top-nav" aria-label="Crop utility navigation">
+            <a href="/dashboard">{{ user.name }}</a>
+            <span class="weather-divider"></span>
+            <a href="/dashboard">Home</a>
+            <span class="weather-divider"></span>
+            <a href="#crop-image-card">Location</a>
+            <span class="weather-divider"></span>
+            <a href="/">About</a>
+          </nav>
+        </div>
+
+        <div class="crop-hero-copy">
+          <h1>Satellite Crop Monitoring</h1>
+          <p>Monitor crop health and growth using satellite imagery.</p>
+          <strong>Your Farm, Location: {{ crop_page.location_label }}</strong>
+        </div>
+      </header>
+
+      <section class="crop-monitor-grid">
+        <article class="agro-card crop-toolbar-card">
+          <div class="crop-toolbar-pill">
+            <span class="crop-toolbar-icon">&#128269;</span>
+            <span>Your Farm, Location: {{ crop_page.location_label }}</span>
+          </div>
+          <div class="crop-toolbar-status">
+            <span class="crop-toolbar-status-icon">&#10004;</span>
+            <span>Satellite Data: {{ crop_page.satellite_age_days }} days ago</span>
+          </div>
+        </article>
+
+        <article class="agro-card crop-image-card" id="crop-image-card">
+          <img src="{{ crop_page.image_url }}" alt="Satellite crop monitoring view for {{ crop_page.location_label }}">
+
+          <div class="crop-image-badge">
+            <strong>NDVI Index:</strong>
+            <span>{{ "%.2f"|format(crop_page.ndvi_index) }}</span>
+            <small>{{ crop_page.ndvi_snapshot_score }}</small>
+          </div>
+
+          <div class="crop-image-pin" aria-hidden="true">
+            <span class="crop-image-pin-core"></span>
+          </div>
+
+          <div class="crop-image-legend">
+            <span class="crop-legend-item crop-legend-item-healthy">Healthy {{ crop_page.zones.healthy }}%</span>
+            <span class="crop-legend-item crop-legend-item-medium">Moderate Stress {{ crop_page.zones.moderate }}%</span>
+            <span class="crop-legend-item crop-legend-item-high">High Stress {{ crop_page.zones.high }}%</span>
+          </div>
+        </article>
+
+        <article class="agro-card crop-alert-card">
+          <div class="crop-card-head">
+            <h2>Alert History</h2>
+            <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+          </div>
+
+          <div class="crop-alert-list">
+            {% for item in crop_page.alert_history %}
+              <div class="crop-alert-item crop-alert-item-{{ item.tone }}">
+                <span class="crop-alert-dot"></span>
+                <div class="crop-alert-copy">
+                  <div class="crop-alert-topline">
+                    <strong>{{ item.title }}</strong>
+                    <small>{{ item.days_ago }} days ago</small>
+                  </div>
+                  <span>{{ item.detail }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </article>
+
+        <article class="agro-card crop-history-card">
+          <div class="crop-card-head">
+            <h2>Soil Health History</h2>
+            <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+          </div>
+
+          <div class="crop-history-grid">
+            <section class="crop-history-panel">
+              <div class="crop-history-head">
+                <h3>Soil pH</h3>
+              </div>
+
+              <div class="crop-history-chart crop-history-chart-line">
+                <div class="crop-history-yaxis">
+                  {% for axis in crop_page.ph_history.y_axis %}
+                    <span>{{ axis }}</span>
+                  {% endfor %}
+                </div>
+
+                <div class="crop-history-surface">
+                  <svg class="crop-history-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline points="{{ crop_page.ph_history.polyline }}"></polyline>
+                  </svg>
+
+                  <div class="crop-history-dots">
+                    {% for point in crop_page.ph_history.points %}
+                      <i data-style-left="{{ point.left }}%" data-style-bottom="{{ point.line_bottom }}%"></i>
+                    {% endfor %}
+                  </div>
+
+                  <div class="crop-history-labels">
+                    {% for label in crop_page.ph_history.labels %}
+                      <span>{{ label }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="crop-history-panel">
+              <div class="crop-history-head">
+                <h3>Moisture</h3>
+              </div>
+
+              <div class="crop-history-chart crop-history-chart-bars">
+                <div class="crop-history-yaxis">
+                  {% for axis in crop_page.moisture_history.y_axis %}
+                    <span>{{ axis }}</span>
+                  {% endfor %}
+                </div>
+
+                <div class="crop-history-surface">
+                  <div class="crop-moisture-bars">
+                    {% for point in crop_page.moisture_history.points %}
+                      <span data-style-height="{{ point.bar_height }}%"></span>
+                    {% endfor %}
+                  </div>
+
+                  <div class="crop-history-labels">
+                    {% for label in crop_page.moisture_history.labels %}
+                      <span>{{ label }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="crop-history-footer">
+            <div class="crop-history-tags">
+              {% for item in crop_page.analysis_footer %}
+                <span class="crop-history-tag crop-history-tag-{{ item.tone }}">{{ item.label }}</span>
+              {% endfor %}
+            </div>
+
+            <a class="crop-history-button" href="/soil-health">View Details</a>
+          </div>
+        </article>
+
+        <article class="agro-card crop-actions-card">
+          <div class="crop-card-head">
+            <h2>Recommended Actions</h2>
+            <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+          </div>
+
+          <div class="crop-actions-list">
+            {% for item in crop_page.recommended_actions %}
+              <div class="crop-action-item">
+                <span class="crop-action-step crop-action-step-{{ item.tone }}">{{ item.step }}</span>
+                <span>{{ item.text }}</span>
+              </div>
+            {% endfor %}
+          </div>
+
+          <a class="crop-actions-button" href="/dashboard">View Report</a>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <!-- Theme Toggle Script -->
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      
+      // Check saved theme
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+
+  <!-- Mobile Sidebar JS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation(); // prevent immediate close on document click
+          sidebar.classList.toggle('sidebar-open');
+        });
+
+        // Close sidebar if clicking outside of it on mobile
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+
+  <!-- Fix IDE Parsing: Apply dynamic styles via JS -->
+  <script>
+    function applyDataStyles() {
+      document.querySelectorAll('*').forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+          if (attr.name.startsWith('data-style-')) {
+            const cssProp = attr.name.slice(11); // 'data-style-'.length == 11
+            el.style[cssProp] = attr.value;
+          }
+        });
+      });
+    }
+    document.addEventListener('DOMContentLoaded', applyDataStyles);
+  </script>
+</body>
+
+</html>

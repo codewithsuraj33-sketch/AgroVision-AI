@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgroVisionAI Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/introjs.min.css">
+  <style>
+    .operations-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .operation-stat {
+      background: rgba(10, 92, 58, 0.08);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .operation-stat strong {
+      display: block;
+      font-size: 1.1rem;
+      color: #0f5132;
+      margin-top: 4px;
+    }
+    .operation-list {
+      display: grid;
+      gap: 10px;
+    }
+    .operation-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(16, 24, 40, 0.06);
+    }
+    .operation-item-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+      align-items: center;
+    }
+    .operation-item small {
+      display: block;
+      color: #607087;
+      margin-top: 4px;
+    }
+    .operation-chip {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(34, 185, 120, 0.15);
+      color: #157347;
+    }
+    .operation-chip.overdue {
+      background: rgba(220, 53, 69, 0.14);
+      color: #b02a37;
+    }
+    .operation-empty {
+      padding: 20px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.72);
+      color: #607087;
+      text-align: center;
+    }
+    @media (max-width: 640px) {
+      .operations-summary {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+
+  <!-- Mobile Menu Toggle Button -->
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <i class="fas fa-user dashboard-avatar"></i>
+          {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>Smart Farm AI</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <a class="sidebar-link is-active" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+        <a class="sidebar-logout" href="/logout">
+          <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+          <span>Logout</span>
+        </a>
+    </aside>
+
+    <section class="dashboard-main">
+      <header class="dashboard-hero">
+        <div class="dashboard-hero-copy">
+          <h1 id="welcome-title">Welcome, {{ user.name }}</h1>
+          <p>{{ dashboard.primary_farm_name }} • {{ user.location or "Bhubaneswar" }}</p>
+          <div class="hero-meta">
+            <span class="hero-chip">{{ user.crop_type or "Mixed Crop" }}</span>
+            <span class="hero-chip">Updated {{ dashboard.weather.updated_at }}</span>
+            <span class="hero-chip">{{ dashboard.farm_stats.count }} farm{% if dashboard.farm_stats.count != 1 %}s{% endif %}</span>
+            <span class="hero-chip">{{ dashboard.task_summary.open_count }} open tasks</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="dashboard-content-area" style="padding: 14px 24px;">
+        <!-- Toast Container -->
+        <div id="toast-container"></div>
+
+        <!-- Quick Actions Panel -->
+        <div class="quick-actions-bar" id="step1-quick-actions">
+          <a href="/disease-detection" class="quick-action-btn"><i class="fas fa-camera"></i> Detect Disease</a>
+          <a href="/weather" class="quick-action-btn"><i class="fas fa-cloud-sun"></i> Check Weather</a>
+          <a href="/soil-health" class="quick-action-btn"><i class="fas fa-vial"></i> Soil Report</a>
+          <a href="/farms" class="quick-action-btn"><i class="fas fa-plus"></i> Add Farm</a>
+        </div>
+
+        <!-- Contextual AI Daily Tips -->
+        <div class="ai-tips-banner" id="step2-ai-tip">
+          <div class="ai-tips-icon"><i class="fas fa-lightbulb"></i></div>
+          <div class="ai-tips-content">
+            <h4>AI Daily Recommendation</h4>
+            <p id="dynamic-ai-tip">Checking field conditions... Optimization suggestion loading.</p>
+          </div>
+        </div>
+
+        <section class="dashboard-grid">
+          <a href="/weather" class="dash-card-link">
+            <article class="agro-card weather-card">
+              <div class="weather-top">
+                <div class="weather-icon-cluster">
+                  <i class="fas fa-sun weather-sun"></i>
+                  <i class="fas fa-cloud weather-cloud"></i>
+                </div>
+                <div class="weather-meta">
+                  <span class="weather-city">{{ dashboard.weather.city }}</span>
+                  <strong>{{ dashboard.weather.temp }}&deg;C</strong>
+                  <small>{{ dashboard.weather.description }}</small>
+                </div>
+                <div class="weather-rain-icon"><i class="fas fa-cloud-rain"></i></div>
+              </div>
+              <div class="weather-slider">
+                <span data-style-width="{{ dashboard.weather.slider_percent }}%"></span>
+              </div>
+              <div class="weather-stats">
+                <div><span class="mini-icon">&#9684;</span>{{ dashboard.weather.rainfall_mm }} mm</div>
+                <div><span class="mini-icon">&#10047;</span>{{ dashboard.weather.humidity }}%</div>
+              </div>
+            </article>
+          </a>
+
+          <a href="/soil-health" class="dash-card-link">
+            <article class="agro-card soil-card">
+              <div class="card-title-row">
+                <h2>Soil Data</h2>
+              </div>
+              {% for metric in dashboard.soil.metrics %}
+                <div class="soil-metric">
+                  <span>{{ metric.label }}</span>
+                  <div class="metric-bar{% if metric.tone == 'blue' %} metric-bar-blue{% endif %}">
+                    <i data-style-width="{{ metric.fill }}%"></i>
+                  </div>
+                  <strong>{{ metric.value_display }}</strong>
+                </div>
+              {% endfor %}
+            </article>
+          </a>
+
+          <a href="/crop-monitoring" class="dash-card-link">
+            <article class="agro-card crop-health-card">
+              <div class="card-title-row">
+                <h2>Crop Health</h2>
+                <span class="health-score">{{ dashboard.crop_health.score }}%</span>
+              </div>
+              <div class="health-scale">
+                <span class="health-indicator" data-style-width="{{ dashboard.crop_health.score }}%"></span>
+              </div>
+              <div class="health-summary">
+                <span>{{ dashboard.crop_health.label }}</span>
+                <strong>{{ dashboard.crop_health.crop_name }}</strong>
+              </div>
+              <div class="crop-preview">
+                <img src="{{ dashboard.ndvi_preview_url }}" alt="NDVI preview for {{ user.location or 'farm' }}">
+              </div>
+            </article>
+          </a>
+
+          <article class="agro-card mandi-card">
+            <div class="card-title-row">
+              <h2>Market Rates (Mandi)</h2>
+              <span class="dot-menu" id="mandi-location">{{ user.location or "Bhubaneswar" }}</span>
+            </div>
+            <div class="mandi-list" id="mandi-list">
+              <!-- Skeleton placeholder -->
+              <div class="mandi-item skeleton-loader">
+                <div class="skeleton skeleton-rect" style="height: 60px;"></div>
+              </div>
+              <div class="mandi-item skeleton-loader">
+                <div class="skeleton skeleton-rect" style="height: 60px;"></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="agro-card recommendations-card">
+            <div class="card-title-row">
+              <h2>AI Recommendations</h2>
+              <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+            </div>
+            <div class="recommendation-list">
+              {% for item in dashboard.recommendations %}
+                <div class="recommendation-item">
+                  <span class="check-badge">&#10003;</span>
+                  <div class="recommendation-content">
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.detail }}</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </article>
+
+          <article class="agro-card operations-card">
+            <div class="card-title-row">
+              <h2>Task Planner</h2>
+              <a class="dot-menu" href="/farms#task-planner">Open Planner</a>
+            </div>
+            <div class="operations-summary">
+              <div class="operation-stat">
+                <span>Open</span>
+                <strong>{{ dashboard.task_summary.open_count }}</strong>
+              </div>
+              <div class="operation-stat">
+                <span>Due Today</span>
+                <strong>{{ dashboard.task_summary.due_today_count }}</strong>
+              </div>
+              <div class="operation-stat">
+                <span>Overdue</span>
+                <strong>{{ dashboard.task_summary.overdue_count }}</strong>
+              </div>
+            </div>
+            <div class="operation-list">
+              {% if dashboard.task_summary.preview %}
+                {% for task in dashboard.task_summary.preview %}
+                  <div class="operation-item">
+                    <div class="operation-item-top">
+                      <strong>{{ task.title }}</strong>
+                      <span class="operation-chip{% if task.overdue %} overdue{% endif %}">{{ task.due_label }}</span>
+                    </div>
+                    <span>{{ task.farm_name }} • {{ task.category }} • {{ task.priority_label }}</span>
+                    <small>{{ task.details }}</small>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="operation-empty">No tasks yet. Add irrigation, spray, or harvest reminders from Farms.</div>
+              {% endif %}
+            </div>
+          </article>
+
+          <article class="agro-card satellite-card">
+            <div class="card-title-row">
+              <h2>Interactive Farm Map</h2>
+            </div>
+            <div id="dash-leaflet-map" class="satellite-frame" style="width:100%;min-height:220px;border-radius:10px;"></div>
+          </article>
+
+          <article class="agro-card yield-card">
+            <div class="card-title-row">
+              <h2>Yield Prediction</h2>
+              <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+            </div>
+            <div class="yield-image">
+              <div class="yield-overlay">
+                <span class="yield-kicker">{{ dashboard.crop_health.crop_name }}</span>
+                <strong>{{ dashboard.yield_prediction }}%</strong>
+                <p>Predicted readiness based on live profile.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="agro-card chart-card">
+            <div class="card-title-row chart-title">
+              <h2>Predictive Timeline</h2>
+              <span class="dot-menu">{{ dashboard.weather.updated_at }}</span>
+            </div>
+            <div class="timeline-container">
+               <!-- Placeholder for predictive timeline -->
+               <div class="timeline-day">
+                 <strong>Today</strong>
+                 <i class="fas fa-sun timeline-icon"></i>
+                 <span class="timeline-temp">32°C</span>
+               </div>
+               <div class="timeline-day">
+                 <strong>Tue</strong>
+                 <i class="fas fa-cloud-rain timeline-icon" style="color: #3b82f6;"></i>
+                 <span class="timeline-temp">28°C</span>
+               </div>
+               <div class="timeline-day">
+                 <strong>Wed</strong>
+                 <i class="fas fa-cloud timeline-icon"></i>
+                 <span class="timeline-temp">30°C</span>
+               </div>
+               <div class="timeline-day">
+                 <strong>Thu</strong>
+                 <i class="fas fa-sun timeline-icon"></i>
+                 <span class="timeline-temp">33°C</span>
+               </div>
+               <div class="timeline-day">
+                 <strong>Fri</strong>
+                 <i class="fas fa-sun timeline-icon"></i>
+                 <span class="timeline-temp">34°C</span>
+               </div>
+            </div>
+          </article>
+
+          <article class="agro-card carbon-card">
+            <div class="card-title-row">
+              <h2>Green Impact</h2>
+              <i class="fas fa-leaf" style="color: #a7ff83;"></i>
+            </div>
+            <div class="carbon-stats">
+              <div class="carbon-stat-box">
+                <span>CO2 Absorbed</span>
+                <strong>{{ carbon.co2_tonnes }}T</strong>
+              </div>
+              <div class="carbon-stat-box">
+                <span>Credits</span>
+                <strong>{{ carbon.credits }}</strong>
+              </div>
+            </div>
+            <div class="carbon-badge">
+              <i class="fas fa-award"></i>
+              <span>{{ carbon.impact_level }}</span>
+            </div>
+          </article>
+
+          <article class="agro-card alerts-card">
+            <div class="card-title-row alerts-title">
+              <h2>Live Notifications</h2>
+              <span class="dot-menu">&#8226;&#8226;&#8226;</span>
+            </div>
+            <div class="alert-list">
+              {% for item in dashboard.alerts %}
+                <div class="alert-item alert-item-{{ item.severity }}">
+                  <span class="alert-badge">!</span>
+                  <div class="alert-content">
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.detail }}</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </article>
+
+          <article class="agro-card iot-card">
+            <div class="card-title-row">
+              <h2>Field Controls (IoT)</h2>
+              <i class="fas fa-microchip" style="opacity: 0.5;"></i>
+            </div>
+            <div class="iot-controls">
+              <div class="iot-status-row">
+                <span>Smart Irrigation</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="irrigationToggle" {% if dashboard.soil.moisture < 45 %}checked{% endif %}>
+                  <span class="slider-toggle"></span>
+                </label>
+              </div>
+              <div class="iot-status-row">
+                <span>Moisture</span>
+                <strong>{{ dashboard.soil.moisture }}%</strong>
+              </div>
+              <div class="iot-status-row">
+                <span>Pump</span>
+                <span id="pumpStatus" class="status-indicator {% if dashboard.soil.moisture < 45 %}status-on{% else %}status-off{% endif %}" aria-live="polite">
+                  {% if dashboard.soil.moisture < 45 %}RUNNING{% else %}OFF{% endif %}
+                </span>
+              </div>
+            </div>
+            <p class="iot-helper" id="iotHelper">
+              Automation is monitoring the next irrigation cycle.
+            </p>
+          </article>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/intro.min.js"></script>
+  
+  <script>
+    // --- Skeleton Loading Logic ---
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.querySelectorAll('.skeleton-loader').forEach(el => {
+          el.style.display = 'none';
+        });
+      }, 1500);
+    });
+
+    // --- Onboarding Logic ---
+    function startOnboarding() {
+      if (localStorage.getItem('onboarding_complete')) return;
+
+      const intro = introJs();
+      intro.setOptions({
+        steps: [
+          {
+            title: 'Welcome to Smart Farming AI! 🚜',
+            intro: 'Let us show you how to get the most out of your digital farm.'
+          },
+          {
+            element: document.querySelector('#welcome-title'),
+            intro: 'This is your dashboard where you can see your farm status at a glance.'
+          },
+          {
+            element: document.querySelector('#step1-quick-actions'),
+            intro: 'Use these Quick Actions for fast access to core farming tools.'
+          },
+          {
+            element: document.querySelector('#step2-ai-tip'),
+            intro: 'Our AI analyzes conditions daily to give you optimization tips.'
+          },
+          {
+            element: document.querySelector('.weather-card'),
+            intro: 'Real-time weather and rain forecasts live here.'
+          }
+        ],
+        showBullets: true
+      });
+      
+      intro.oncomplete(() => {
+        localStorage.setItem('onboarding_complete', 'true');
+        showToast('Onboarding complete! Happy farming.', 'success');
+      });
+
+      intro.start();
+    }
+
+    // --- Toast Notification System ---
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      
+      let icon = 'info-circle';
+      if (type === 'success') icon = 'check-circle';
+      if (type === 'warning') icon = 'exclamation-triangle';
+      if (type === 'error') icon = 'times-circle';
+
+      toast.innerHTML = `
+        <i class="fas fa-${icon} toast-icon"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 100);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // --- Dynamic AI Tip Demo ---
+    function updateAITip() {
+      const tips = [
+        "Rain expected tomorrow. Delay fertilizer application.",
+        "Heat stress alert today! Increase irrigation.",
+        "Ideal time for soil testing detected.",
+        "Weather is perfect for spray application this morning."
+      ];
+      const tipEl = document.getElementById('dynamic-ai-tip');
+      if (tipEl) tipEl.textContent = tips[Math.floor(Math.random() * tips.length)];
+    }
+
+    // --- Theme Toggle ---
+    (function() {
+      const themeToggle = document.createElement('button');
+      themeToggle.id = 'themeToggle';
+      themeToggle.className = 'theme-toggle';
+      themeToggle.innerHTML = '<i class="fas fa-moon" id="themeIcon"></i>';
+      document.body.appendChild(themeToggle);
+
+      const themeIcon = document.getElementById('themeIcon');
+      if (localStorage.getItem('theme') === 'dark') {
+        themeIcon.className = 'fas fa-sun';
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.className = 'fas fa-moon';
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.className = 'fas fa-sun';
+        }
+      });
+    })();
+
+    // --- Other UI Initializers ---
+    document.addEventListener('DOMContentLoaded', () => {
+      startOnboarding();
+      updateAITip();
+      
+      // Map Restoration
+      var mapEl = document.getElementById('dash-leaflet-map');
+      if (mapEl) {
+        var lat = parseFloat("{{ dashboard.lat|default(20.3) }}");
+        var lng = parseFloat("{{ dashboard.lon|default(85.8) }}");
+        var map = L.map('dash-leaflet-map').setView([lat, lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Fetch real farm fields from our API
+        fetch('/api/farm-details')
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.fields && data.fields.length > 0) {
+              data.fields.forEach(field => {
+                const marker = L.marker(field.coords).addTo(map);
+                marker.bindPopup(`
+                  <div class="map-popup-content">
+                    <h4>${field.name}</h4>
+                    <p><strong>Health:</strong> <span class="health-val">${field.health}</span></p>
+                    <p><strong>Soil:</strong> ${field.soil}</p>
+                    <p class="popup-alert"><em>${field.alerts}</em></p>
+                  </div>
+                `);
+              });
+              // Center on first field
+              map.setView(data.fields[0].coords, 15);
+            } else {
+              L.marker([lat, lng]).addTo(map).bindPopup('Primary Farm Location');
+            }
+          })
+          .catch(err => {
+            console.error('Map Data Error:', err);
+            L.marker([lat, lng]).addTo(map).bindPopup('Primary Farm Location');
+          });
+
+        setTimeout(() => map.invalidateSize(), 400);
+      }
+
+      // Voice FAB & Bubble
+      const voiceBtn = document.getElementById('voiceBtn');
+      const voiceBubble = document.getElementById('voiceBubble');
+      if (voiceBtn && voiceBubble) {
+        voiceBtn.addEventListener('click', () => {
+          voiceBubble.style.display = (voiceBubble.style.display === 'flex') ? 'none' : 'flex';
+        });
+      }
+    });
+
+    // Mobile Sidebar
+    document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
+    });
+
+    // Mandi update (Mock for now)
+    async function updateMandiRates() {
+      const list = document.getElementById('mandi-list');
+      if (!list) return;
+      try {
+        const res = await fetch('/api/mandi-rates');
+        const data = await res.json();
+        if (data.success && data.rates.length) {
+          list.innerHTML = '';
+          data.rates.forEach(rate => {
+            const div = document.createElement('div');
+            div.className = 'mandi-item';
+            div.innerHTML = `
+              <div class="mandi-crop-info"><strong>${rate.crop}</strong><span>${rate.mandi}</span></div>
+              <div class="mandi-price-info"><span class="mandi-price">Rs. ${rate.price}</span></div>
+            `;
+            list.appendChild(div);
+          });
+        }
+      } catch(e) {}
+    }
+    setTimeout(updateMandiRates, 1000);
+
+    // Dynamic Style Parser
+    document.querySelectorAll('*').forEach(el => {
+      Array.from(el.attributes).forEach(attr => {
+        if (attr.name.startsWith('data-style-')) {
+          el.style[attr.name.slice(11)] = attr.value;
+        }
+      });
+    });
+  </script>
+  
+  <!-- Voice Assistant UI -->
+  <div class="voice-assistant-fab" id="voiceBtn" title="Ask Kisan Dost">
+    <i class="fas fa-microphone"></i>
+  </div>
+  <div class="voice-assistant-bubble" id="voiceBubble" style="display:none;">
+    <div class="bubble-header">
+      <span><i class="fas fa-robot"></i> Kisan Dost</span>
+      <i class="fas fa-times" onclick="document.getElementById('voiceBubble').style.display='none'" style="cursor:pointer;"></i>
+    </div>
+    <div class="bubble-content" id="voiceText">Namaste! Main aapka Kisan Dost hoon. Kaise madad kar sakta hoon?</div>
+    <div class="bubble-actions">
+      <input type="text" placeholder="Sawal yahan likhein..." style="flex:1; padding:8px; border-radius:8px; border:1px solid #ccc;">
+      <button class="bubble-send" style="padding: 8px 12px;"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+</body>
+</html>

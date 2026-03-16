@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farming Tools - Smart Farming AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.5);
+      --tool-accent: #2c7a7b; /* Teal-ish for tools */
+    }
+
+    [data-theme="dark"] {
+      --glass-bg: rgba(26, 32, 44, 0.7);
+      --glass-border: rgba(74, 85, 104, 0.5);
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .tool-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tool-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    }
+
+    .tool-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      background: rgba(44, 122, 123, 0.1);
+      color: var(--tool-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+    }
+
+    .tool-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+    }
+
+    .tool-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .input-group input, .input-group select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.5);
+      color: var(--text-dark);
+      font-family: inherit;
+      font-weight: 600;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--tool-accent);
+    }
+
+    .result-area {
+      margin-top: auto;
+      padding-top: 20px;
+      border-top: 1px dashed var(--glass-border);
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .result-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .result-value {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--tool-accent);
+    }
+
+    .ai-suggestion-box {
+      margin-top: 15px;
+      padding: 12px;
+      background: rgba(44, 122, 123, 0.05);
+      border-left: 4px solid var(--tool-accent);
+      border-radius: 0 10px 10px 0;
+      font-size: 0.85rem;
+      font-style: italic;
+      color: var(--text-dark);
+      display: none;
+    }
+
+    .ai-loading-dots {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--tool-accent);
+      margin-right: 4px;
+      animation: dots 1.4s infinite ease-in-out both;
+    }
+
+    .ai-loading-dots:nth-child(2) { animation-delay: 0.2s; }
+    .ai-loading-dots:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dots {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1.0); }
+    }
+
+    .tools-sidebar-item.is-active {
+      background: var(--tool-accent);
+      color: white;
+    }
+
+    /* History section */
+    .history-section {
+      margin-top: 40px;
+      padding: 0;
+    }
+
+    .history-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      border-bottom: 1px solid var(--glass-border);
+      font-size: 0.9rem;
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    /* Tool Selector Grid */
+    .tool-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .selector-card {
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+
+    .selector-card i {
+      font-size: 2.5rem;
+      color: var(--tool-accent);
+      margin-bottom: 15px;
+    }
+
+    .selector-card h3 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    /* Active Tool View */
+    .tool-active-view {
+      display: none;
+      max-width: 600px;
+      margin: 24px auto;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: rgba(44, 122, 123, 0.1);
+      color: var(--tool-accent);
+      border-radius: 99px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .back-btn:hover {
+      background: var(--tool-accent);
+      color: white;
+    }
+
+    .calculator-container {
+        display: none;
+    }
+
+    .calculator-container.is-visible {
+        display: block;
+        animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+
+  <button id="mobileMenuToggle" class="mobile-menu-toggle">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+          {% if user and user.profile_photo %}
+            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+          {% else %}
+            <i class="fas fa-user dashboard-avatar"></i>
+          {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>{{ user.email }}</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link is-active" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main tools-workspace">
+      <header class="dashboard-hero">
+        <div class="dashboard-hero-top">
+          <div style="display: flex; align-items: center;">
+            {% if user and user.profile_photo %}
+              <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+            {% else %}
+              <i class="fas fa-user-circle" style="font-size: 24px; color: var(--text-muted); margin-right: 8px;"></i>
+            {% endif %}
+            <span style="font-weight: 700; color: var(--text-dark);">{{ user.name }}</span>
+          </div>
+
+          <nav class="weather-top-nav" aria-label="Tools utility navigation">
+            <a href="/dashboard">Dashboard</a>
+            <span class="weather-divider"></span>
+            <a href="/tools">Tools</a>
+            <span class="weather-divider"></span>
+            <a href="/settings">Settings</a>
+          </nav>
+        </div>
+
+        <div class="dashboard-hero-copy">
+          <h1>Farming Tools & Calculators</h1>
+          <p>Plan your farming activities with AI-powered precision.</p>
+        </div>
+      </header>
+
+      <div id="tool-selector" class="tool-selector-grid">
+        <div class="agro-card selector-card" onclick="openTool('profit')">
+            <i class="fas fa-coins"></i>
+            <h3>Estimated Profit</h3>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Calculate net earnings</p>
+        </div>
+        <div class="agro-card selector-card" onclick="openTool('noloss')">
+            <i class="fas fa-shield-halved"></i>
+            <h3>No Loss Price</h3>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Minimum selling price</p>
+        </div>
+        <div class="agro-card selector-card" onclick="openTool('pest')">
+            <i class="fas fa-spray-can-sparkles"></i>
+            <h3>Pesticide (Field)</h3>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Dosage & refills</p>
+        </div>
+        <div class="agro-card selector-card" onclick="openTool('fert')">
+            <i class="fas fa-bottle-droplet"></i>
+            <h3>Fertilizer (NPK)</h3>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Urea, TSP, MOP needs</p>
+        </div>
+        <div class="agro-card selector-card" onclick="openTool('req')">
+            <i class="fas fa-seedling"></i>
+            <h3>Required Yield</h3>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Target harvest level</p>
+        </div>
+        <div class="agro-card selector-card" onclick="openTool('predictor')" style="border: 1px solid var(--tool-accent);">
+            <i class="fas fa-wand-magic-sparkles"></i>
+            <h3>AI Yield Predictor</h3>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Advanced AI estimations</p>
+        </div>
+      </div>
+
+      <div id="tool-view" class="tool-active-view">
+        <div class="back-btn" onclick="closeTool()">
+            <i class="fas fa-arrow-left"></i> Back to all tools
+        </div>
+
+        <!-- 1. Estimated Profit -->
+        <div id="calc-profit" class="agro-card calculator-container">
+          <div class="tool-icon"><i class="fas fa-coins"></i></div>
+          <h2 class="tool-title">Estimated Profit</h2>
+          <p class="tool-desc">Calculate your net earnings based on yield and expenses.</p>
+          
+          <div class="input-group">
+            <label>Yield (kg)</label>
+            <input type="number" id="profit-yield" placeholder="e.g. 2000" oninput="calcProfit()">
+          </div>
+          <div class="input-group">
+            <label>Price (₹/kg)</label>
+            <input type="number" id="profit-price" placeholder="e.g. 20" oninput="calcProfit()">
+          </div>
+          <div class="input-group">
+            <label>Expenses (₹)</label>
+            <input type="number" id="profit-expenses" placeholder="e.g. 15000" oninput="calcProfit()">
+          </div>
+
+          <div class="result-area">
+            <div class="result-row">
+              <span class="result-label">Revenue</span>
+              <span class="result-value" id="res-profit-revenue">₹0</span>
+            </div>
+            <div class="result-row" style="border-top: 1px solid var(--glass-border); padding-top: 10px;">
+              <span class="result-label">Net Profit</span>
+              <span class="result-value" id="res-profit-net" style="font-size: 1.5rem;">₹0</span>
+            </div>
+          </div>
+          <div class="ai-suggestion-box" id="ai-profit"></div>
+        </div>
+
+        <!-- 2. No Loss Price -->
+        <div id="calc-noloss" class="agro-card calculator-container">
+          <div class="tool-icon"><i class="fas fa-shield-halved"></i></div>
+          <h2 class="tool-title">No Loss Price</h2>
+          <p class="tool-desc">Find the minimum selling price to recover your expenses.</p>
+          
+          <div class="input-group">
+            <label>Total Expenses (₹)</label>
+            <input type="number" id="noloss-expenses" placeholder="e.g. 15000" oninput="calcNoLoss()">
+          </div>
+          <div class="input-group">
+            <label>Expected Yield (kg)</label>
+            <input type="number" id="noloss-yield" placeholder="e.g. 2000" oninput="calcNoLoss()">
+          </div>
+
+          <div class="result-area">
+            <div class="result-row">
+              <span class="result-label">Min. Price</span>
+              <span class="result-value" id="res-noloss-price" style="font-size: 1.5rem;">₹0/kg</span>
+            </div>
+          </div>
+          <div class="ai-suggestion-box" id="ai-noloss"></div>
+        </div>
+
+        <!-- 3. Pesticide Calculator (Field Crops) -->
+        <div id="calc-pest" class="agro-card calculator-container">
+          <div class="tool-icon"><i class="fas fa-spray-can-sparkles"></i></div>
+          <h2 class="tool-title">Pesticide (Field)</h2>
+          <p class="tool-desc">Calculate product needed for your crop area.</p>
+          
+          <div class="input-group">
+            <label>Area (Acres)</label>
+            <input type="number" id="pest-area" placeholder="e.g. 2" oninput="calcPest()">
+          </div>
+          <div class="input-group">
+            <label>Dosage (ml/Litre)</label>
+            <input type="number" step="0.1" id="pest-dosage" placeholder="e.g. 2.5" oninput="calcPest()">
+          </div>
+          <div class="input-group">
+            <label>Pump Capacity (Litres)</label>
+            <input type="number" id="pest-pump" placeholder="e.g. 15" oninput="calcPest()">
+          </div>
+
+          <div class="result-area">
+            <div class="result-row">
+              <span class="result-label">Total Product</span>
+              <span class="result-value" id="res-pest-total">0 ml</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Pump Refills</span>
+              <span class="result-value" id="res-pest-refills">0</span>
+            </div>
+          </div>
+          <div class="ai-suggestion-box" id="ai-pest"></div>
+        </div>
+
+        <!-- 4. Fertilizer Calculator -->
+        <div id="calc-fert" class="agro-card calculator-container">
+          <div class="tool-icon"><i class="fas fa-bottle-droplet"></i></div>
+          <h2 class="tool-title">Fertilizer (NPK)</h2>
+          <p class="tool-desc">Calculate Urea, TSP, and MOP required for your trees.</p>
+          
+          <div class="input-group">
+            <label>Number of Trees</label>
+            <input type="number" id="fert-trees" placeholder="e.g. 100" oninput="calcFert()">
+          </div>
+          <div class="input-group">
+            <label>Target N (g/tree)</label>
+            <input type="number" id="fert-n" placeholder="e.g. 400" oninput="calcFert()">
+          </div>
+          <div class="input-group">
+              <label>Target P (g/tree)</label>
+              <input type="number" id="fert-p" placeholder="e.g. 200" oninput="calcFert()">
+          </div>
+          <div class="input-group">
+              <label>Target K (g/tree)</label>
+              <input type="number" id="fert-k" placeholder="e.g. 400" oninput="calcFert()">
+          </div>
+
+          <div class="result-area">
+            <div class="result-row">
+              <span class="result-label">Urea Needed</span>
+              <span class="result-value" id="res-fert-urea">0 g</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">TSP Needed</span>
+              <span class="result-value" id="res-fert-tsp">0 g</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">MOP Needed</span>
+              <span class="result-value" id="res-fert-mop">0 g</span>
+            </div>
+          </div>
+          <div class="ai-suggestion-box" id="ai-fert"></div>
+        </div>
+
+        <!-- 5. Required Yield -->
+        <div id="calc-req" class="agro-card calculator-container">
+            <div class="tool-icon"><i class="fas fa-seedling"></i></div>
+            <h2 class="tool-title">Required Yield</h2>
+            <p class="tool-desc">How much crop do you need to sell to cover all expenses?</p>
+            
+            <div class="input-group">
+              <label>Total Expenses (₹)</label>
+              <input type="number" id="req-expenses" placeholder="e.g. 20000" oninput="calcReqYield()">
+            </div>
+            <div class="input-group">
+              <label>Selling Price (₹/kg)</label>
+              <input type="number" id="req-price" placeholder="e.g. 25" oninput="calcReqYield()">
+            </div>
+  
+            <div class="result-area">
+              <div class="result-row">
+                <span class="result-label">Needed Yield</span>
+                <span class="result-value" id="res-req-yield" style="font-size: 1.5rem;">0 kg</span>
+              </div>
+            </div>
+            <div class="ai-suggestion-box" id="ai-req"></div>
+          </div>
+
+        <!-- 6. AI Crop Yield Predictor -->
+        <div id="calc-predictor" class="agro-card calculator-container" style="border: 1px solid var(--tool-accent);">
+          <div class="tool-icon" style="background: rgba(44, 122, 123, 0.2);"><i class="fas fa-wand-magic-sparkles"></i></div>
+          <h2 class="tool-title">AI Crop Yield Predictor</h2>
+          <p class="tool-desc">Uses advanced AI to predict your harvest based on many factors.</p>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="input-group">
+                <label>Crop Type</label>
+                <select id="pred-crop">
+                    <option value="Rice">Rice</option>
+                    <option value="Wheat">Wheat</option>
+                    <option value="Maize">Maize</option>
+                    <option value="Cotton">Cotton</option>
+                    <option value="Potato">Potato</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Area (Acres)</label>
+                <input type="number" id="pred-area" value="1">
+            </div>
+            <div class="input-group">
+                <label>Rainfall (mm)</label>
+                <input type="number" id="pred-rain" value="150">
+            </div>
+            <div class="input-group">
+                <label>Soil Type</label>
+                <select id="pred-soil">
+                    <option value="Loamy">Loamy</option>
+                    <option value="Clayey">Clayey</option>
+                    <option value="Sandy">Sandy</option>
+                    <option value="Black">Black</option>
+                </select>
+            </div>
+          </div>
+
+          <button onclick="predictYield()" style="width: 100%; padding: 14px; background: var(--tool-accent); color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 10px;">
+            Predict Harvest with AI
+          </button>
+
+          <div id="pred-result" style="display: none; margin-top: 20px; padding: 20px; background: rgba(44, 122, 123, 0.1); border-radius: 15px;">
+            <div class="result-row">
+                <span class="result-label">Estimated Yield</span>
+                <span class="result-value" id="res-pred-yield">-- kg</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Estimated Profit</span>
+                <span class="result-value" id="res-pred-profit">-- ₹</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">AI Confidence</span>
+                <span class="result-value" id="res-pred-conf">--%</span>
+            </div>
+            <p id="res-pred-note" style="margin-top: 12px; font-size: 0.9rem; font-style: italic; color: var(--text-dark); border-top: 1px solid rgba(0,0,0,0.1); padding-top: 10px;"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Section -->
+      <section class="agro-card history-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 style="margin: 0; font-size: 1.2rem; font-weight: 800;">Recent Calculations</h2>
+            <button onclick="clearHistory()" style="background: none; border: none; color: var(--tool-accent); font-weight: 700; cursor: pointer;">Clear</button>
+        </div>
+        <ul class="history-list" id="history-list">
+            <!-- Items injected via JS -->
+        </ul>
+      </section>
+
+    </section>
+  </main>
+
+  <script>
+    // --- State & History ---
+    let history = JSON.parse(localStorage.getItem('tool_history')) || [];
+    let advisorTimeout = null;
+
+    function saveToHistory(type, summary) {
+        history.unshift({ type, summary, date: new Date().toLocaleTimeString() });
+        if (history.length > 10) history.pop();
+        localStorage.setItem('tool_history', JSON.stringify(history));
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('history-list');
+        list.innerHTML = history.length ? '' : '<p style="color: var(--text-muted);">No recent calculations.</p>';
+        history.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.innerHTML = `
+                <strong>${item.type}</strong>
+                <span>${item.summary} <span style="color: var(--text-muted); font-size: 0.8rem; margin-left: 10px;">${item.date}</span></span>
+            `;
+            list.appendChild(li);
+        });
+    }
+
+    // --- AI Advisor Logic ---
+    function triggerAI(type, inputs, results) {
+        const box = document.getElementById(`ai-${type}`);
+        if (!box) return;
+        
+        box.innerHTML = '<span class="ai-loading-dots"></span><span class="ai-loading-dots"></span><span class="ai-loading-dots"></span> AI is thinking...';
+        box.style.display = 'block';
+
+        clearTimeout(advisorTimeout);
+        advisorTimeout = setTimeout(async () => {
+            try {
+                const res = await fetch('/api/tool-advisor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, inputs, results })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    box.innerHTML = `<strong>AI Suggetion:</strong> ${data.suggestion}`;
+                }
+            } catch (err) {
+                box.style.display = 'none';
+            }
+        }, 1500);
+    }
+
+    // --- Calculators ---
+
+    function calcProfit() {
+        const y = parseFloat(document.getElementById('profit-yield').value) || 0;
+        const p = parseFloat(document.getElementById('profit-price').value) || 0;
+        const e = parseFloat(document.getElementById('profit-expenses').value) || 0;
+        
+        const rev = y * p;
+        const net = rev - e;
+
+        document.getElementById('res-profit-revenue').textContent = `₹${rev.toLocaleString()}`;
+        document.getElementById('res-profit-net').textContent = `₹${net.toLocaleString()}`;
+        
+        if (y > 0 && p > 0) {
+            triggerAI('profit', { yield_kg: y, price_per_kg: p, expenses: e }, { revenue: rev, profit: net });
+        }
+    }
+
+    function calcNoLoss() {
+        const e = parseFloat(document.getElementById('noloss-expenses').value) || 0;
+        const y = parseFloat(document.getElementById('noloss-yield').value) || 0;
+        const nl = y > 0 ? (e / y) : 0;
+        document.getElementById('res-noloss-price').textContent = `₹${nl.toFixed(2)}/kg`;
+        
+        if (e > 0 && y > 0) {
+            triggerAI('noloss', { expenses: e, yield_kg: y }, { no_loss_price: nl });
+        }
+    }
+
+    function calcPest() {
+        const a = parseFloat(document.getElementById('pest-area').value) || 0;
+        const d = parseFloat(document.getElementById('pest-dosage').value) || 0;
+        const p = parseFloat(document.getElementById('pest-pump').value) || 0;
+
+        const water = a * 200; // 200L per acre
+        const total = water * d;
+        const refills = p > 0 ? (water / p).toFixed(1) : 0;
+
+        document.getElementById('res-pest-total').textContent = `${total.toLocaleString()} ml`;
+        document.getElementById('res-pest-refills').textContent = refills;
+    }
+
+    function calcReqYield() {
+        const e = parseFloat(document.getElementById('req-expenses').value) || 0;
+        const p = parseFloat(document.getElementById('req-price').value) || 0;
+        const y = p > 0 ? (e / p) : 0;
+        document.getElementById('res-req-yield').textContent = `${Math.ceil(y)} kg`;
+    }
+
+    function calcFert() {
+        const t = parseInt(document.getElementById('fert-trees').value) || 0;
+        const nGoal = parseFloat(document.getElementById('fert-n').value) || 0;
+        const pGoal = parseFloat(document.getElementById('fert-p').value) || 0;
+        const kGoal = parseFloat(document.getElementById('fert-k').value) || 0;
+
+        // Urea is ~46% Nitrogen
+        // TSP is ~46% Phosphorus (P2O5)
+        // MOP is ~60% Potassium (K2O)
+        const urea = (nGoal * t) / 0.46;
+        const tsp = (pGoal * t) / 0.46;
+        const mop = (kGoal * t) / 0.60;
+
+        document.getElementById('res-fert-urea').textContent = `${Math.round(urea).toLocaleString()} g`;
+        document.getElementById('res-fert-tsp').textContent = `${Math.round(tsp).toLocaleString()} g`;
+        document.getElementById('res-fert-mop').textContent = `${Math.round(mop).toLocaleString()} g`;
+    }
+
+    async function predictYield() {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = 'Calculating...';
+        btn.disabled = true;
+
+        const inputs = {
+            crop: document.getElementById('pred-crop').value,
+            area: parseFloat(document.getElementById('pred-area').value) || 0,
+            rainfall: parseFloat(document.getElementById('pred-rain').value) || 0,
+            soil_type: document.getElementById('pred-soil').value
+        };
+
+        try {
+            const res = await fetch('/api/predict-yield', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(inputs)
+            });
+            const data = await res.json();
+            if (data.success) {
+                const p = data.prediction;
+                document.getElementById('res-pred-yield').textContent = `${p.estimated_yield_kg.toLocaleString()} kg`;
+                document.getElementById('res-pred-profit').textContent = `₹${p.estimated_profit_inr.toLocaleString()}`;
+                document.getElementById('res-pred-conf').textContent = `${p.ai_confidence}%`;
+                document.getElementById('res-pred-note').textContent = p.ai_note;
+                document.getElementById('pred-result').style.display = 'block';
+                
+                saveToHistory('AI Yield Prediction', `${p.estimated_yield_kg}kg predicted for ${inputs.crop}`);
+            }
+        } catch (err) {
+            alert('AI Prediction failed. Please try again later.');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function clearHistory() {
+        history = [];
+        localStorage.removeItem('tool_history');
+        renderHistory();
+    }
+
+    // --- Tool Switching Logic ---
+    function openTool(id) {
+        document.getElementById('tool-selector').style.display = 'none';
+        document.getElementById('tool-view').style.display = 'block';
+        
+        // Hide all calculators first
+        document.querySelectorAll('.calculator-container').forEach(c => {
+            c.classList.remove('is-visible');
+        });
+        
+        // Show selected
+        const target = document.getElementById(`calc-${id}`);
+        if (target) target.classList.add('is-visible');
+    }
+
+    function closeTool() {
+        document.getElementById('tool-selector').style.display = 'grid';
+        document.getElementById('tool-view').style.display = 'none';
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+        renderHistory();
+        
+        // Mobile Sidebar
+        document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
+            document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
+        });
+    });
+  </script>
+</body>
+</html>

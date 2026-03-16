@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Login to AgroVision AI to access crop monitoring, disease detection, climate alerts, and smart farm planning tools.">
+  <title>Login | AgroVision AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="page-login auth-page-shell">
+  <div class="auth-page-shell__glow auth-page-shell__glow--one" aria-hidden="true"></div>
+  <div class="auth-page-shell__glow auth-page-shell__glow--two" aria-hidden="true"></div>
+
+  <main class="auth-shell auth-shell--login">
+    <section class="auth-hero-card auth-hero-card--login">
+      <a class="brand-lockup brand-lockup--light" href="/" aria-label="Back to AgroVision AI home">
+        <img class="brand-lockup__mark" src="/static/brand/agrovision-mark.svg" alt="AgroVision AI mark">
+        <div class="brand-lockup__text">
+          <strong>AgroVision AI</strong>
+          <span>Smart Farming Solutions</span>
+        </div>
+      </a>
+
+      <img class="auth-hero-card__logo" src="/static/brand/agrovision-logo.svg" alt="AgroVision AI Smart Farming Solutions">
+
+      <div class="auth-hero-card__copy">
+        <span class="marketing-pill">Farmer access portal</span>
+        <h1>Welcome back to your AI farming workspace.</h1>
+        <p>
+          Sign in to monitor crop health, review disease scans, manage farm tasks, and stay ahead of weather-based risks.
+        </p>
+      </div>
+
+      <section class="auth-hero-card__status" aria-label="Workspace preview">
+        <div class="auth-hero-card__status-head">
+          <strong>What opens after login</strong>
+          <span>Your full smart farming workspace becomes available after one secure sign-in.</span>
+        </div>
+
+        <div class="auth-hero-card__status-grid">
+          <article>
+            <i class="fas fa-satellite-dish"></i>
+            <strong>Live crop view</strong>
+            <span>Review field condition and crop monitoring snapshots quickly.</span>
+          </article>
+          <article>
+            <i class="fas fa-bug"></i>
+            <strong>Disease history</strong>
+            <span>Open previous scans, symptoms, and treatment guidance in one place.</span>
+          </article>
+          <article>
+            <i class="fas fa-cloud-sun-rain"></i>
+            <strong>Weather alerts</strong>
+            <span>Check climate warnings before irrigation, spraying, or harvest planning.</span>
+          </article>
+          <article>
+            <i class="fas fa-tractor"></i>
+            <strong>Farm tasks</strong>
+            <span>Stay on top of reminders, operations, and day-to-day field work.</span>
+          </article>
+        </div>
+      </section>
+
+      <div class="auth-hero-card__grid auth-hero-card__grid--compact">
+        <article>
+          <i class="fas fa-seedling"></i>
+          <strong>Crop health visibility</strong>
+          <span>Get to field condition trends and monitoring summaries faster.</span>
+        </article>
+        <article>
+          <i class="fas fa-envelope-open-text"></i>
+          <strong>Email OTP security</strong>
+          <span>Password check is followed by OTP so account access stays protected.</span>
+        </article>
+        <article>
+          <i class="fas fa-chart-line"></i>
+          <strong>Fast access</strong>
+          <span>Jump back into alerts, planning tools, and AI insights without friction.</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="auth-form-panel auth-form-panel--modern auth-form-panel--login">
+      <div class="auth-form-panel__top">
+        <span class="section-kicker">Secure login</span>
+        <h2>Sign in to AgroVision AI</h2>
+        <p>Password verification is followed by OTP confirmation for extra account security.</p>
+      </div>
+
+      <div class="auth-panel-strip" aria-label="Login highlights">
+        <span><i class="fas fa-bolt"></i>Quick sign in</span>
+        <span><i class="fas fa-envelope-open-text"></i>Email OTP check</span>
+        <span><i class="fas fa-shield-halved"></i>Protected dashboard</span>
+      </div>
+
+      {% if error %}
+      <div class="auth-alert auth-alert--error">
+        <i class="fas fa-circle-exclamation"></i>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form class="auth-form-modern" method="POST">
+        <label class="auth-field-group" for="login-email">
+          <span>Email address</span>
+          <div class="auth-input">
+            <i class="fas fa-envelope"></i>
+            <input id="login-email" name="email" type="email" value="{{ request.form.get('email', '') }}" placeholder="you@example.com" autocomplete="email" required>
+          </div>
+        </label>
+
+        <label class="auth-field-group" for="login-password">
+          <span>Password</span>
+          <div class="auth-input">
+            <i class="fas fa-lock"></i>
+            <input id="login-password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+            <button class="auth-input__action" type="button" data-password-toggle aria-label="Show password">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </label>
+
+        <div class="auth-form-modern__support">
+          <div class="auth-helper-line">
+            <i class="fas fa-circle-check"></i>
+            <span>After password verification, we will send a one-time OTP to your registered email address.</span>
+          </div>
+          <div class="auth-helper-line auth-helper-line--subtle">
+            Use the same email address you used while creating your AgroVision AI account.
+          </div>
+        </div>
+
+        <button class="marketing-button marketing-button--solid marketing-button--full" type="submit">
+          <i class="fas fa-right-to-bracket"></i>
+          <span>Continue to OTP</span>
+        </button>
+      </form>
+
+      <div class="auth-note-row">
+        <div class="auth-note-chip">
+          <i class="fas fa-shield-halved"></i>
+          <span>Two-step login</span>
+        </div>
+        <div class="auth-note-chip">
+          <i class="fas fa-cloud-sun-rain"></i>
+          <span>Weather-ready dashboard</span>
+        </div>
+      </div>
+
+      <div class="auth-footer-links">
+        <a href="/">Back to home</a>
+        <a href="/register">Create a new account</a>
+      </div>
+    </section>
+  </main>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const isDark = localStorage.getItem('theme') === 'dark';
+
+      if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+
+      const passwordInput = document.getElementById('login-password');
+      const passwordToggle = document.querySelector('[data-password-toggle]');
+
+      if (passwordInput && passwordToggle) {
+        passwordToggle.addEventListener('click', () => {
+          const shouldShow = passwordInput.type === 'password';
+          passwordInput.type = shouldShow ? 'text' : 'password';
+          passwordToggle.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+
+          const icon = passwordToggle.querySelector('i');
+          if (icon) {
+            icon.classList.toggle('fa-eye', !shouldShow);
+            icon.classList.toggle('fa-eye-slash', shouldShow);
+          }
+        });
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
