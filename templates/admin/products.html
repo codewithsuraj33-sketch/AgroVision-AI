@@ -16,6 +16,7 @@
   <section class="admin-panel">
     <h2 class="admin-panel-title">Add Product</h2>
     <form method="post" enctype="multipart/form-data" class="admin-form admin-form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="admin-field">
         <span>Product Name</span>
         <input name="name" required>
@@ -80,12 +81,13 @@
               <td>#{{ p.id }}</td>
               <td class="admin-td-strong">{{ p.name }}</td>
               <td>{{ p.category }}</td>
-              <td>₹{{ p.price }}</td>
+              <td>&#8377;{{ p.price }}</td>
               <td>{{ p.stock or 0 }}</td>
               <td>{{ "Yes" if p.is_active else "No" }}</td>
               <td class="admin-td-actions">
                 <a class="admin-link" href="/admin/products/{{ p.id }}/edit">Edit</a>
                 <form method="post" action="/admin/products/{{ p.id }}/delete" onsubmit="return confirm('Delete this product?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="admin-btn admin-btn-danger" type="submit">Delete</button>
                 </form>
               </td>

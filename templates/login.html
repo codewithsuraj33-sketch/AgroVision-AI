@@ -110,6 +110,7 @@
       {% endif %}
 
       <form class="auth-form-modern" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label class="auth-field-group" for="login-email">
           <span>Email address</span>
           <div class="auth-input">

@@ -353,6 +353,10 @@
           <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
           <span>Crop Library</span>
         </a>
+        <a class="sidebar-link" href="/library">
+          <i class="fas fa-layer-group sidebar-icon"></i>
+          <span>Library</span>
+        </a>
         <a class="sidebar-link is-active farms-active" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
           <span>Farms</span>
@@ -561,10 +565,12 @@
                   <div class="farm-card-actions">
                     {% if not farm.is_primary %}
                       <form method="POST" action="/farms/set-primary/{{ farm.id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="farm-action-btn primary">Make Primary</button>
                       </form>
                     {% endif %}
                     <form method="POST" action="/farms/delete/{{ farm.id }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button type="submit" class="farm-action-btn ghost">Delete</button>
                     </form>
                     <span class="farm-note" style="align-self:center;">Saved {{ farm.created_label }}</span>
@@ -585,6 +591,7 @@
 
             <div class="task-layout">
               <form class="task-form" method="POST" action="/farms/tasks/add">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="task-form-grid">
                   <div class="full">
                     <label class="field-label" for="taskTitle">Task Title</label>
@@ -659,6 +666,7 @@
                     <div class="task-card-actions" style="margin-top:14px;">
                       {% if task.status != 'in_progress' and task.status != 'done' %}
                         <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="status" value="in_progress">
                           <button type="submit" class="task-action-btn secondary">Start</button>
                         </form>
@@ -666,17 +674,20 @@
 
                       {% if task.status != 'done' %}
                         <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="status" value="done">
                           <button type="submit" class="task-action-btn primary">Mark Done</button>
                         </form>
                       {% else %}
                         <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="status" value="todo">
                           <button type="submit" class="task-action-btn secondary">Reopen</button>
                         </form>
                       {% endif %}
 
                       <form method="POST" action="/tasks/{{ task.id }}/delete">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="task-action-btn ghost">Delete</button>
                       </form>
                     </div>
@@ -701,6 +712,7 @@
             </div>
 
             <form method="POST" action="/farms/add">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <div class="form-grid">
                 <div>
                   <label class="field-label" for="farmName">Farm Name</label>

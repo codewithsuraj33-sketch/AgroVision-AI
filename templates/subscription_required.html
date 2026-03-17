@@ -100,7 +100,9 @@
         document.getElementById('pay-btn').onclick = function(e){
             // Simulated payment for demo
             if(confirm("Ye ek demo payment hai. Kya aap Pro membership upgrade karna chahte hain?")) {
-                fetch('/upgrade-to-pro', {method: 'POST'})
+                const csrfMatch = document.cookie.match(/(?:^|;\\s*)csrf_token=([^;]+)/);
+                const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : "";
+                fetch('/upgrade-to-pro', {method: 'POST', headers: csrfToken ? {'X-CSRFToken': csrfToken} : {}})
                 .then(res => res.json())
                 .then(data => {
                     if(data.success) {

@@ -127,6 +127,10 @@
           <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
           <span>Crop Library</span>
         </a>
+        <a class="sidebar-link" href="/library">
+          <i class="fas fa-layer-group sidebar-icon"></i>
+          <span>Library</span>
+        </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
           <span>Farms</span>
@@ -205,6 +209,7 @@
         <div class="agro-card post-creator">
           <h3>Create a Post</h3>
           <form action="/community/post" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" name="title" placeholder="What's on your mind? (Title)" required>
             <textarea name="content" placeholder="Describe your topic in detail..." required></textarea>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
@@ -239,6 +244,7 @@
                 {% endfor %}
                 
                 <form class="comment-form" action="/community/comment/{{ post.id }}" method="POST">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="text" name="content" placeholder="Write a comment..." required>
                   <button type="submit" class="btn-submit"><i class="fas fa-paper-plane"></i></button>
                 </form>

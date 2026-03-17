@@ -1,15 +1,36 @@
 /* global Razorpay */
 
 (function () {
+  function getCookie(name) {
+    const needle = String(name || "") + "=";
+    const parts = String(document.cookie || "").split(";");
+    for (let i = 0; i < parts.length; i += 1) {
+      const part = parts[i].trim();
+      if (!part) continue;
+      if (part.indexOf(needle) === 0) {
+        return decodeURIComponent(part.slice(needle.length));
+      }
+    }
+    return "";
+  }
+
+  function getCsrfToken() {
+    return getCookie("csrf_token");
+  }
+
   function getInt(value, fallback) {
     const n = Number.parseInt(String(value || ""), 10);
     return Number.isFinite(n) ? n : fallback;
   }
 
   async function postJson(url, data) {
+    const csrfToken = getCsrfToken();
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: Object.assign(
+        { "Content-Type": "application/json" },
+        csrfToken ? { "X-CSRFToken": csrfToken } : {}
+      ),
       body: JSON.stringify(data || {}),
     });
     const payload = await res.json().catch(() => ({}));

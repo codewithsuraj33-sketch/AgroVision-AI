@@ -46,6 +46,10 @@
           <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
           <span>Crop Library</span>
         </a>
+        <a class="sidebar-link" href="/library">
+          <i class="fas fa-layer-group sidebar-icon"></i>
+          <span>Library</span>
+        </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
           <span>Farms</span>
@@ -139,6 +143,7 @@
           </div>
 
           <form class="disease-upload-form" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="disease-upload-dropzone{% if disease_page.has_upload %} is-filled{% endif %}">
               {% if disease_page.has_upload %}
                 <img class="disease-upload-preview" src="{{ disease_page.result.image_url }}" alt="Uploaded crop leaf preview">
@@ -387,14 +392,24 @@
         formData.append("crop_image", fileInput.files[0]);
 
         try {
-          var resp = await fetch("/predict-disease", { method: "POST", body: formData });
+          var csrfMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+          var csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : "";
+          var resp = await fetch("/predict-disease", {
+            method: "POST",
+            headers: csrfToken ? { "X-CSRFToken": csrfToken } : {},
+            body: formData
+          });
           var result = await resp.json();
 
-          if (result.success) {
-            document.getElementById("result-disease").textContent = result.disease || "Unknown";
-            document.getElementById("result-confidence").textContent = (result.confidence || 0) + "% confidence";
-            document.getElementById("result-risk").textContent = result.risk_level || "Medium";
-            document.getElementById("result-risk").className = "disease-risk-tag risk-" + (result.risk_level || "Medium").toLowerCase();
+           if (result.success) {
+             if (result.library_url) {
+               window.location.href = result.library_url;
+               return;
+             }
+             document.getElementById("result-disease").textContent = result.disease || "Unknown";
+             document.getElementById("result-confidence").textContent = (result.confidence || 0) + "% confidence";
+             document.getElementById("result-risk").textContent = result.risk_level || "Medium";
+             document.getElementById("result-risk").className = "disease-risk-tag risk-" + (result.risk_level || "Medium").toLowerCase();
             document.getElementById("result-symptoms").textContent = result.symptoms || "";
             document.getElementById("result-cause").textContent = result.cause || "";
             document.getElementById("result-organic").textContent = result.organic_solution || "";

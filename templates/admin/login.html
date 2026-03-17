@@ -23,6 +23,7 @@
       {% endif %}
 
       <form method="post" class="admin-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label class="admin-field">
           <span>Email</span>
           <input type="email" name="email" value="{{ admin_email or '' }}" required>

@@ -15,6 +15,7 @@
 
   <section class="admin-panel">
     <form method="post" enctype="multipart/form-data" class="admin-form admin-form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="admin-field">
         <span>Product Name</span>
         <input name="name" value="{{ product.name }}" required>

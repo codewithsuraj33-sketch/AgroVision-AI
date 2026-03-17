@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ disease.name }} - Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/library.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .lib-detail-hero{
+      border-radius: 26px;
+      border: 1px solid var(--lib-border);
+      background: var(--lib-card);
+      box-shadow: var(--lib-shadow);
+      overflow: hidden;
+    }
+    .lib-detail-media{
+      aspect-ratio: 16 / 10;
+      position: relative;
+      background: linear-gradient(180deg, rgba(31, 163, 109, 0.12), rgba(45, 216, 255, 0.08));
+    }
+    .lib-detail-media img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .lib-detail-badge{
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(180, 206, 232, 0.7);
+      font-weight: 900;
+      color: var(--lib-ink);
+    }
+    .lib-detail-body{
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+    .lib-detail-body h1{
+      margin: 0;
+      color: var(--lib-ink);
+      letter-spacing: -0.03em;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+    }
+    .lib-detail-meta{
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      color: var(--lib-muted);
+      font-weight: 800;
+    }
+    .lib-detail-meta span{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(180, 206, 232, 0.6);
+      background: rgba(255, 255, 255, 0.66);
+    }
+    .lib-section{
+      border-radius: 22px;
+      border: 1px solid var(--lib-border);
+      background: var(--lib-card);
+      box-shadow: var(--lib-shadow);
+      padding: 16px;
+      margin-top: 14px;
+    }
+    .lib-section h2{
+      margin: 0 0 10px;
+      color: var(--lib-ink);
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+    .lib-section p{
+      margin: 0;
+      color: var(--lib-muted);
+      line-height: 1.6;
+      font-weight: 650;
+    }
+    .lib-list{
+      margin: 0;
+      padding-left: 18px;
+      color: var(--lib-muted);
+      line-height: 1.7;
+      font-weight: 650;
+      display: grid;
+      gap: 6px;
+    }
+    .lib-reco{
+      display: grid;
+      gap: 12px;
+    }
+    .lib-reco-card{
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 12px;
+      align-items: center;
+      border-radius: 18px;
+      border: 1px solid rgba(180, 206, 232, 0.56);
+      background: rgba(255, 255, 255, 0.92);
+      overflow: hidden;
+      padding: 12px;
+    }
+    .lib-reco-card img{
+      width: 92px;
+      height: 92px;
+      border-radius: 16px;
+      object-fit: cover;
+      display: block;
+      border: 1px solid rgba(180, 206, 232, 0.58);
+    }
+    .lib-reco-actions{
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .lib-reco-actions button{
+      border: none;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 900;
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(31,163,109,0.9), rgba(45,216,255,0.7));
+      color: #04101e;
+    }
+    .lib-reco-actions a{
+      text-decoration: none;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 900;
+      border: 1px solid rgba(180, 206, 232, 0.66);
+      color: var(--lib-ink);
+      background: rgba(255,255,255,0.75);
+    }
+  </style>
+</head>
+<body class="dashboard-page library-page">
+  <main class="library-shell">
+    <div class="library-topbar">
+      <a href="/library/diseases"><i class="fas fa-arrow-left"></i> Back</a>
+      <span class="library-chip"><i class="fas fa-info-circle"></i> Guide</span>
+    </div>
+
+    <article class="lib-detail-hero">
+      <div class="lib-detail-media">
+        <span class="lib-detail-badge"><i class="fas fa-tag"></i> {{ disease.type }}</span>
+        <img src="{{ disease.image or fallback_image }}" data-fallback-src="{{ fallback_image }}" loading="lazy" decoding="async" alt="{{ disease.name }}">
+      </div>
+      <div class="lib-detail-body">
+        <div>
+          <h1>{{ disease.name }}</h1>
+          <div class="lib-detail-meta">
+            {% if disease.crops and disease.crops|length %}
+              <span><i class="fas fa-apple-whole"></i> {{ disease.crops[0] }}</span>
+            {% endif %}
+            {% if last_diagnosis and last_diagnosis.confidence %}
+              <span><i class="fas fa-wand-magic-sparkles"></i> Detected: {{ last_diagnosis.confidence }}%</span>
+            {% endif %}
+            {% if last_diagnosis and last_diagnosis.risk_level %}
+              <span><i class="fas fa-triangle-exclamation"></i> Risk: {{ last_diagnosis.risk_level }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if last_diagnosis and last_diagnosis.note %}
+          <div class="library-risk"><i class="fas fa-bell"></i> {{ last_diagnosis.note }}</div>
+        {% endif %}
+      </div>
+    </article>
+
+    {% if last_diagnosis and last_diagnosis.image_url %}
+      <section class="lib-section">
+        <h2>Your scan</h2>
+        <div style="display:grid; grid-template-columns: 104px 1fr; gap: 12px; align-items: center;">
+          <img
+            src="{{ last_diagnosis.image_url }}"
+            loading="lazy"
+            decoding="async"
+            alt="Uploaded leaf image"
+            style="width:104px; height:104px; border-radius: 18px; object-fit: cover; border: 1px solid rgba(180, 206, 232, 0.58);"
+          >
+          <p style="margin:0;">Saved from your latest detection. Compare the symptoms below with your leaf photo.</p>
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="lib-section">
+      <h2>Symptoms</h2>
+      {% if disease.symptoms and disease.symptoms|length %}
+        <ul class="lib-list">
+          {% for s in disease.symptoms %}
+            <li>{{ s }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No symptom data available yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="lib-section">
+      <h2>Cause</h2>
+      <p>{{ disease.cause or "Cause information will appear here once available." }}</p>
+    </section>
+
+    <section class="lib-section">
+      <h2>Solution</h2>
+      <p>{{ disease.solution or "Solution steps will appear here once available." }}</p>
+    </section>
+
+    <section class="lib-section">
+      <h2>Prevention</h2>
+      {% if disease.prevention and disease.prevention|length %}
+        <ul class="lib-list">
+          {% for p in disease.prevention %}
+            <li>{{ p }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No prevention tips available yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="lib-section lib-reco">
+      <h2>AI product recommendation</h2>
+      {% if recommended_product %}
+        <div class="lib-reco-card">
+          <img src="{{ recommended_product.image_url }}" data-fallback-src="{{ recommended_product.fallback_image }}" loading="lazy" decoding="async" alt="{{ recommended_product.name }}">
+          <div>
+            <div class="library-kicker">{{ recommended_product.category }}</div>
+            <h3 style="margin:4px 0 2px; color: var(--lib-ink); letter-spacing:-0.02em;">{{ recommended_product.name }}</h3>
+            <div style="color: var(--lib-muted); font-weight: 900;">Rs {{ recommended_product.price }} | {{ recommended_product.unit }}</div>
+            <div class="lib-reco-actions">
+              <button type="button" data-buy-product="{{ recommended_product.id }}" data-buy-source="library-disease-detail">Buy Now</button>
+              <a href="{{ recommended_product.detail_url }}">View product</a>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <p>Recommendation will appear when a matching product is available in the store.</p>
+      {% endif %}
+    </section>
+  </main>
+
+  <script src="/static/library.js"></script>
+  <script src="/static/store.js"></script>
+</body>
+</html>

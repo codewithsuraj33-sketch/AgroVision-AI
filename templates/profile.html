@@ -49,6 +49,10 @@
           <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
           <span>Crop Library</span>
         </a>
+        <a class="sidebar-link" href="/library">
+          <i class="fas fa-layer-group sidebar-icon"></i>
+          <span>Library</span>
+        </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
           <span>Farms</span>
@@ -193,6 +197,7 @@
 
           <!-- USER INFO FORM -->
           <form class="profile-card" method="POST" action="/profile" enctype="multipart/form-data" id="profileForm" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="form_type" value="user_info">
             <input type="file" id="photoInput" name="profile_photo" accept="image/*" style="display:none;" onchange="previewPhoto(this)">
 
@@ -278,6 +283,7 @@
 
           <!-- FARM INFO FORM -->
           <form class="profile-card" method="POST" action="/profile" id="farmForm" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="form_type" value="farm_info">
 
             <div class="profile-card-header">

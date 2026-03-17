@@ -88,6 +88,26 @@ def inject_shared_ui_assets(response):
     return response
 
 
+@app.after_request
+def set_csrf_cookie(response):
+    """Expose a CSRF token to JavaScript via cookie (double-submit pattern)."""
+    try:
+        token = get_csrf_token()
+    except Exception:
+        return response
+
+    # Not HttpOnly on purpose: JS fetch() reads it and sends back in X-CSRFToken.
+    response.set_cookie(
+        "csrf_token",
+        token,
+        samesite="Lax",
+        secure=bool(app.config.get("SESSION_COOKIE_SECURE")),
+        httponly=False,
+        max_age=60 * 60 * 24 * 30,
+    )
+    return response
+
+
 def load_local_env_file(env_path):
     if not env_path.exists():
         return
@@ -163,6 +183,8 @@ app.config["UPLOAD_FOLDER"] = str(UPLOADS_DIR)
 KISAN_DOST_KNOWLEDGE_PATH = Path(app.root_path) / "dataset" / "kisan_dost_faq.json"
 CROP_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "crop_library.json"
 STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "store_products.json"
+DISEASE_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "disease_data.json"
+CULTIVATION_TIPS_DATA_PATH = Path(app.root_path) / "dataset" / "cultivation_tips.json"
 EMAIL_LOGO_PATH = Path(app.root_path) / "static" / "brand" / "agrovision-email-logo.png"
 EMAIL_LOGO_FILENAME = EMAIL_LOGO_PATH.name
 EMAIL_LOGO_SUBTYPE = "png"
@@ -175,6 +197,8 @@ CROP_DISEASE_LABELS_PATH = Path(
 ALLOWED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 DISEASE_MODEL_CACHE = {"attempted": False, "model": None, "labels": None}
 CROP_LIBRARY_CACHE = None
+DISEASE_LIBRARY_CACHE = {"mtime": 0.0, "items": []}
+CULTIVATION_TIPS_CACHE = {"mtime": 0.0, "payload": {}}
 CROP_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "images" / "crops"
 CROP_LIBRARY_DEFAULT_IMAGE = "/static/images/default_crop.png"
 STORE_PRODUCT_FALLBACK_IMAGE = "/static/images/store-product-fallback.svg"
@@ -213,10 +237,14 @@ STORE_CATEGORY_META = {
     },
 }
 
+# Very small in-memory rate limiter (demo-friendly). Resets on server restart.
+RATE_LIMIT_BUCKET = {}
+
 # Admin Panel (defaults requested by user; override via environment for safety)
 ADMIN_EMAIL = (os.getenv("ADMIN_EMAIL") or "admin123@gmail.com").strip().lower()
 ADMIN_PASSWORD = (os.getenv("ADMIN_PASSWORD") or "123").strip()
 ADMIN_NOTIFY_EMAIL = (os.getenv("ADMIN_NOTIFY_EMAIL") or ADMIN_EMAIL).strip().lower()
+RAZORPAY_WEBHOOK_SECRET = (os.getenv("RAZORPAY_WEBHOOK_SECRET") or "").strip()
 STORE_CATEGORY_HIGHLIGHTS = {
     "Pesticides": [
         "Targets disease and pest hotspots quickly.",
@@ -244,10 +272,99 @@ STORE_CATEGORY_HIGHLIGHTS = {
         "Pair with mulch, compost, and scouting for best results.",
     ],
 }
+
+
+STATIC_PRODUCTS_DIR = Path(app.root_path) / "static" / "products"
+ALLOWED_LOCAL_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
+_STORE_PRODUCT_IMAGE_INDEX = None
+
+
+def _tokenize_filename(value):
+    return set(re.findall(r"[a-z0-9]+", str(value or "").lower()))
+
+
+def _build_store_product_image_index():
+    """Cache a lightweight index of local product images for fuzzy matching."""
+    global _STORE_PRODUCT_IMAGE_INDEX
+    if _STORE_PRODUCT_IMAGE_INDEX is not None:
+        return _STORE_PRODUCT_IMAGE_INDEX
+
+    index = []
+    try:
+        for path in STATIC_PRODUCTS_DIR.iterdir():
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in ALLOWED_LOCAL_IMAGE_SUFFIXES:
+                continue
+            tokens = _tokenize_filename(path.stem)
+            index.append(
+                {
+                    "name": path.name,
+                    "tokens": tokens,
+                    "url": f"/static/products/{path.name}",
+                }
+            )
+    except OSError:
+        index = []
+
+    _STORE_PRODUCT_IMAGE_INDEX = index
+    return _STORE_PRODUCT_IMAGE_INDEX
+
+
+def _local_static_path_from_url(static_url):
+    url = str(static_url or "").strip()
+    if not url.startswith("/static/products/"):
+        return None
+    filename = url.split("/static/products/", 1)[1]
+    if not filename or "/" in filename or "\\" in filename:
+        return None
+    return STATIC_PRODUCTS_DIR / filename
+
+
+def resolve_store_product_image_url(product):
+    """Prefer a stable local image URL when possible (avoids external Unsplash dependency)."""
+    raw = str(getattr(product, "image_url", "") or "").strip()
+
+    # If admin provided a remote URL, keep it.
+    if raw and (raw.startswith("http://") or raw.startswith("https://")):
+        return raw
+
+    # If it's a local static products URL and the file exists, use it.
+    local_path = _local_static_path_from_url(raw) if raw else None
+    if local_path is not None and local_path.exists():
+        return raw
+
+    # Try exact matches by slug / name.
+    slug = str(getattr(product, "slug", "") or "").strip().lower()
+    name_slug = slugify_crop_name(getattr(product, "name", "") or "")
+    for candidate_base in [slug, name_slug]:
+        if not candidate_base:
+            continue
+        for ext in [".jpg", ".jpeg", ".png", ".webp"]:
+            candidate = STATIC_PRODUCTS_DIR / f"{candidate_base}{ext}"
+            if candidate.exists():
+                return f"/static/products/{candidate.name}"
+
+    # Fuzzy match against local images by token overlap.
+    tokens = _tokenize_filename(slug) | _tokenize_filename(name_slug) | _tokenize_filename(getattr(product, "name", ""))
+    best = None
+    best_score = 0
+    for item in _build_store_product_image_index():
+        overlap = len(tokens & (item.get("tokens") or set()))
+        if overlap > best_score:
+            best_score = overlap
+            best = item
+
+    if best is not None and best_score >= 2:
+        return best.get("url") or STORE_PRODUCT_FALLBACK_IMAGE
+
+    return STORE_PRODUCT_FALLBACK_IMAGE
 STORE_DISEASE_PRODUCT_RULES = [
     (("healthy",), None),
-    (("blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "bacterial"), "Copper Fungicide Spray"),
-    (("pest", "insect", "mite", "aphid", "vector", "mosaic", "curl virus"), "Neem Oil Spray"),
+    # Keep mappings aligned with products that actually exist in dataset/store_products.json.
+    (("pest", "insect", "mite", "aphid", "vector", "whitefly", "thrips", "armyworm", "worm", "caterpillar", "mosaic", "curl virus"), "Neem Oil"),
+    (("blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "bacterial", "rot", "scab"), "Bio Pesticide"),
+    (("organic", "chemical-free", "bio"), "Organic Pest Spray"),
 ]
 RAZORPAY_KEY_ID = (os.getenv("RAZORPAY_KEY_ID") or "rzp_test_SRyeQDEMFrRHwD").strip()
 RAZORPAY_KEY_SECRET = (os.getenv("RAZORPAY_KEY_SECRET") or "b1mY7dNC8mDuxekLF2YmiV0I").strip()
@@ -859,6 +976,22 @@ class User(db.Model):
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
 
+
+class AdminUser(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, index=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), default="admin")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    def __init__(self, **kwargs):
+        super(AdminUser, self).__init__(**kwargs)
+
 class DiseaseHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -1196,12 +1329,12 @@ def require_plan(min_plan_name):
             ensure_user_subscription_state(user, commit=True)
             user_plan = normalize_plan_name(user.plan)
 
-            # Free plan always has access to non-premium routes.
-            if plan_rank(user_plan) >= plan_rank(min_plan) and is_paid_subscription_active(user):
+            # Trial is full-access for a limited window (all plans, including premium).
+            if is_trial_active(user):
                 return f(*args, **kwargs)
 
-            # Trial acts like Pro access for a limited window.
-            if min_plan == "pro" and is_trial_active(user):
+            # Paid access (after trial) requires an active subscription.
+            if plan_rank(user_plan) >= plan_rank(min_plan) and is_paid_subscription_active(user):
                 return f(*args, **kwargs)
 
             return redirect("/subscriptions?required=1")
@@ -1213,6 +1346,71 @@ def require_plan(min_plan_name):
 
 def check_subscription(f):
     return require_plan("pro")(f)
+
+
+def is_user_paywall_blocked(user):
+    """After the free trial ends, block access unless the user has an active paid plan."""
+    if user is None:
+        return False
+    ensure_user_subscription_state(user, commit=True)
+    if is_trial_active(user):
+        return False
+    return not (normalize_plan_name(user.plan) in {"pro", "premium"} and is_paid_subscription_active(user))
+
+
+def is_paywall_exempt_path(path_value):
+    path = str(path_value or "")
+    if not path or path == "/":
+        return True
+
+    exact_allow = {
+        "/login",
+        "/register",
+        "/verify-otp",
+        "/logout",
+        "/subscriptions",
+    }
+    if path in exact_allow:
+        return True
+
+    prefix_allow = (
+        "/static/",
+        "/admin",
+        "/webhooks/",
+        "/api/subscription/",
+        "/api/apply-wallet",
+    )
+    return any(path.startswith(prefix) for prefix in prefix_allow)
+
+
+@app.before_request
+def enforce_trial_paywall():
+    """Give 7-day full access; after that redirect to subscriptions until paid."""
+    # Skip preflight/health.
+    if request.method == "OPTIONS":
+        return None
+
+    if is_paywall_exempt_path(request.path):
+        return None
+
+    user = get_current_user()
+    if not user:
+        return None
+
+    if not is_user_paywall_blocked(user):
+        return None
+
+    # For API-like routes, return JSON so frontend can handle gracefully.
+    if request.path.startswith("/api/") or request.path == "/predict-disease":
+        return jsonify(
+            {
+                "success": False,
+                "error": "Trial ended. Please subscribe to continue using AgroVision AI.",
+                "redirect_url": "/subscriptions?expired=1",
+            }
+        ), 403
+
+    return redirect("/subscriptions?expired=1")
 
 
 def check_user_password(user, password_value, upgrade_legacy=True):
@@ -1237,19 +1435,45 @@ def check_user_password(user, password_value, upgrade_legacy=True):
 
 
 def check_admin_password(candidate_password):
-    stored = (ADMIN_PASSWORD or "").strip()
     candidate = (candidate_password or "").strip()
-    if not stored or not candidate:
+    if not candidate:
         return False
 
+    # Prefer DB-backed admin users when available.
+    try:
+        admin = AdminUser.query.filter_by(email=ADMIN_EMAIL).first()  # type: ignore
+    except Exception:
+        admin = None
+
+    if admin is not None:
+        return check_password_hash(admin.password_hash or "", candidate)
+
+    # Fallback to env-based credentials (backward compatible).
+    stored = (ADMIN_PASSWORD or "").strip()
+    if not stored:
+        return False
     if is_password_hash(stored):
         return check_password_hash(stored, candidate)
-
     return stored == candidate
 
 
 def is_admin_authenticated():
-    return bool(session.get("admin_authed") and session.get("admin_email") == ADMIN_EMAIL)
+    if not session.get("admin_authed"):
+        return False
+    email = (session.get("admin_email") or "").strip().lower()
+    if email and email == ADMIN_EMAIL:
+        return True
+    # If multiple admins are added, fall back to ID check.
+    try:
+        admin_id = int(session.get("admin_id") or 0)
+    except (TypeError, ValueError):
+        admin_id = 0
+    if not admin_id:
+        return False
+    try:
+        return db.session.get(AdminUser, admin_id) is not None
+    except Exception:
+        return False
 
 
 def admin_required(f):
@@ -1537,6 +1761,31 @@ def send_admin_order_email(order, user, product):
 def clamp(value, lower, upper):
     return max(lower, min(value, upper))
 
+
+def _client_ip():
+    # If behind a proxy, set proper proxy headers in production (not enabled by default).
+    return (request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown").split(",")[0].strip()
+
+
+def rate_limit_exceeded(bucket_key, max_hits, window_seconds):
+    """Return True if exceeded, else False."""
+    now = time.time()
+    window = float(window_seconds or 1)
+    limit = int(max_hits or 1)
+    key = str(bucket_key or "")
+    if not key:
+        return False
+
+    hits = RATE_LIMIT_BUCKET.get(key) or []
+    hits = [ts for ts in hits if now - float(ts) <= window]
+    if len(hits) >= limit:
+        RATE_LIMIT_BUCKET[key] = hits
+        return True
+
+    hits.append(now)
+    RATE_LIMIT_BUCKET[key] = hits
+    return False
+
 def calculate_carbon_credits(user):
     """
     Simulates carbon credit calculation based on farm size and crop type.
@@ -1802,6 +2051,102 @@ def safe_json_loads(raw_value, default):
         return default
 
 
+def _cache_file_mtime(path):
+    try:
+        return float(path.stat().st_mtime)
+    except OSError:
+        return 0.0
+
+
+def load_disease_library():
+    """Load pests & disease reference data from dataset/disease_data.json (cached)."""
+    global DISEASE_LIBRARY_CACHE
+
+    mtime = _cache_file_mtime(DISEASE_LIBRARY_DATA_PATH)
+    if DISEASE_LIBRARY_CACHE.get("items") and DISEASE_LIBRARY_CACHE.get("mtime") == mtime:
+        return DISEASE_LIBRARY_CACHE["items"]
+
+    if not DISEASE_LIBRARY_DATA_PATH.exists():
+        DISEASE_LIBRARY_CACHE = {"mtime": 0.0, "items": []}
+        return []
+
+    try:
+        raw = json.loads(DISEASE_LIBRARY_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        DISEASE_LIBRARY_CACHE = {"mtime": mtime, "items": []}
+        return []
+
+    items = raw if isinstance(raw, list) else []
+    normalized = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        slug = slugify_crop_name(item.get("slug") or name)
+        normalized.append(
+            {
+                "slug": slug,
+                "name": name,
+                "type": str(item.get("type") or "Disease").strip() or "Disease",
+                "crops": [str(c).strip() for c in (item.get("crops") or []) if str(c).strip()] if isinstance(item.get("crops"), list) else [],
+                "stages": [str(s).strip().lower() for s in (item.get("stages") or []) if str(s).strip()] if isinstance(item.get("stages"), list) else [],
+                "symptoms": [str(s).strip() for s in (item.get("symptoms") or []) if str(s).strip()] if isinstance(item.get("symptoms"), list) else [],
+                "cause": str(item.get("cause") or "").strip(),
+                "solution": str(item.get("solution") or "").strip(),
+                "prevention": [str(p).strip() for p in (item.get("prevention") or []) if str(p).strip()] if isinstance(item.get("prevention"), list) else [],
+                "image": str(item.get("image") or "").strip(),
+                "tags": [str(t).strip() for t in (item.get("tags") or []) if str(t).strip()] if isinstance(item.get("tags"), list) else [],
+            }
+        )
+
+    DISEASE_LIBRARY_CACHE = {"mtime": mtime, "items": normalized}
+    return normalized
+
+
+def get_disease_library_entry(slug_or_name):
+    key = slugify_crop_name(slug_or_name)
+    return next((entry for entry in load_disease_library() if entry["slug"] == key), None)
+
+
+def load_cultivation_tips():
+    """Load cultivation tips reference data from dataset/cultivation_tips.json (cached)."""
+    global CULTIVATION_TIPS_CACHE
+
+    mtime = _cache_file_mtime(CULTIVATION_TIPS_DATA_PATH)
+    if CULTIVATION_TIPS_CACHE.get("payload") and CULTIVATION_TIPS_CACHE.get("mtime") == mtime:
+        return CULTIVATION_TIPS_CACHE["payload"]
+
+    if not CULTIVATION_TIPS_DATA_PATH.exists():
+        CULTIVATION_TIPS_CACHE = {"mtime": 0.0, "payload": {}}
+        return {}
+
+    try:
+        raw = json.loads(CULTIVATION_TIPS_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        CULTIVATION_TIPS_CACHE = {"mtime": mtime, "payload": {}}
+        return {}
+
+    payload = raw if isinstance(raw, dict) else {}
+    CULTIVATION_TIPS_CACHE = {"mtime": mtime, "payload": payload}
+    return payload
+
+
+def build_library_crop_options(user=None):
+    crops = load_crop_library()
+    names = [crop["name"] for crop in crops]
+    # Prefer the user's crop first when possible.
+    preferred = str(getattr(user, "crop_type", "") or "").strip()
+    if preferred:
+        for item in list(names):
+            if item.lower() == preferred.lower():
+                names.remove(item)
+                names.insert(0, item)
+                break
+    return ["All"] + names[:40]
+
+
 def truncate_text(text, limit=120):
     value = str(text or "").strip()
     if len(value) <= limit:
@@ -1976,6 +2321,8 @@ def serialize_store_product(product):
         ]
     ).lower()
 
+    image_url = resolve_store_product_image_url(product)
+
     return {
         "id": product.id,
         "slug": product.slug,
@@ -1991,20 +2338,7 @@ def serialize_store_product(product):
         "rating": rating_value,
         "rating_label": f"{rating_value:.1f}",
         "rating_count": 48 + (product.id * 13),
-        "image_url": (
-            str(product.image_url or "").strip() 
-            if str(product.image_url or "").strip()
-            and str(product.image_url or "").strip() != STORE_PRODUCT_FALLBACK_IMAGE
-            and not str(product.image_url or "").strip().lower().startswith("/static/images/store/")
-            and not str(product.image_url or "").strip().lower().endswith(".svg")
-            else f"https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&q=80&w=600&sig={product.id}"
-            if "seed" not in product.name.lower() and "fertilizer" not in product.name.lower() and "tool" not in product.name.lower() and "sprayer" not in product.name.lower()
-            else f"https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&q=80&w=600&sig={product.id}"
-            if "seed" in product.name.lower()
-            else f"https://images.unsplash.com/photo-1628352081506-83c43123ed6d?auto=format&fit=crop&q=80&w=600&sig={product.id}"
-            if "fertilizer" in product.name.lower()
-            else f"https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&q=80&w=600&sig={product.id}"
-        ),
+        "image_url": image_url,
         "fallback_image": STORE_PRODUCT_FALLBACK_IMAGE,
         "description": description,
         "short_description": truncate_text(description, 96),
@@ -2241,9 +2575,9 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
                 return mapped_product
 
     if "fungicide" in diagnostic_text or "copper" in diagnostic_text:
-        return find_store_product_by_name("Copper Fungicide Spray")
+        return find_store_product_by_name("Bio Pesticide")
     if "pest" in diagnostic_text or "neem" in diagnostic_text or "vector" in diagnostic_text:
-        return find_store_product_by_name("Neem Oil Spray")
+        return find_store_product_by_name("Neem Oil")
     return None
 
 
@@ -2318,6 +2652,114 @@ def verify_razorpay_signature(order_id, payment_id, signature):
         sha256,
     ).hexdigest()
     return hmac.compare_digest(generated_signature, signature)
+
+
+def verify_razorpay_webhook_signature(raw_body, signature):
+    """Verify Razorpay webhook signature (X-Razorpay-Signature) using webhook secret."""
+    if not (raw_body and signature and RAZORPAY_WEBHOOK_SECRET):
+        return False
+
+    generated = hmac.new(
+        RAZORPAY_WEBHOOK_SECRET.encode("utf-8"),
+        raw_body,
+        sha256,
+    ).hexdigest()
+
+    try:
+        return hmac.compare_digest(generated, str(signature))
+    except Exception:
+        return False
+
+
+def _wallet_debit_exists_for_subscription_payment(user_id, payment_id):
+    """Best-effort idempotency: check if a wallet debit was already applied for a subscription payment."""
+    if not (user_id and payment_id):
+        return False
+    try:
+        recent = (
+            WalletTransaction.query.filter_by(user_id=int(user_id), direction="debit", reason="subscription_wallet_applied")
+            .order_by(WalletTransaction.created_at.desc())
+            .limit(50)
+            .all()
+        )
+    except Exception:
+        return False
+
+    for tx in recent:
+        meta = safe_json_loads(getattr(tx, "meta_json", None), {}) if tx is not None else {}
+        if str(meta.get("payment_id") or "") == str(payment_id):
+            return True
+    return False
+
+
+@app.route("/webhooks/razorpay", methods=["POST"])
+def razorpay_webhook():
+    """Razorpay webhook receiver (best-effort). Keeps orders/subscriptions in sync even if client verify fails."""
+    signature = request.headers.get("X-Razorpay-Signature") or ""
+    raw_body = request.get_data(cache=False) or b""
+
+    # If webhook secret isn't configured, do not accept webhooks silently.
+    if not RAZORPAY_WEBHOOK_SECRET:
+        return jsonify({"success": False, "error": "Webhook secret not configured."}), 400
+
+    if not verify_razorpay_webhook_signature(raw_body, signature):
+        return jsonify({"success": False, "error": "Invalid webhook signature."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    event_type = str(payload.get("event") or "").strip().lower()
+
+    payment_entity = (
+        (((payload.get("payload") or {}).get("payment") or {}).get("entity") or {})
+        if isinstance(payload, dict)
+        else {}
+    )
+    order_id = str(payment_entity.get("order_id") or "").strip()
+    payment_id = str(payment_entity.get("id") or "").strip()
+
+    if not order_id:
+        # Signature is valid but payload isn't useful. Ack to avoid retries.
+        return jsonify({"success": True, "message": "No order_id in webhook."}), 200
+
+    # Subscription payments
+    sub_payment = SubscriptionPayment.query.filter_by(razorpay_order_id=order_id).first()
+    if sub_payment is not None:
+        if sub_payment.status == "paid":
+            return jsonify({"success": True, "message": "Subscription already paid."}), 200
+
+        user = db.session.get(User, sub_payment.user_id) if sub_payment.user_id else None
+        sub_payment.razorpay_payment_id = payment_id or sub_payment.razorpay_payment_id
+
+        wallet_use = int(sub_payment.wallet_used_inr or 0)
+        if user is not None and wallet_use and not _wallet_debit_exists_for_subscription_payment(user.id, sub_payment.id):
+            # If wallet debit fails (balance changed), proceed without wallet discount to avoid blocking paid access.
+            if not wallet_debit(user, wallet_use, "subscription_wallet_applied", {"payment_id": sub_payment.id, "plan": sub_payment.plan}):
+                sub_payment.wallet_used_inr = 0
+
+        if user is not None:
+            apply_user_subscription(user, sub_payment.plan)
+
+        sub_payment.status = "paid" if event_type in {"payment.captured", "payment.authorized"} or payment_id else "paid"
+        db.session.commit()
+        return jsonify({"success": True, "message": "Subscription updated via webhook."}), 200
+
+    # Store orders
+    order_record = StoreOrder.query.filter_by(razorpay_order_id=order_id).first()
+    if order_record is not None:
+        if str(order_record.status or "").strip().lower() == "paid":
+            return jsonify({"success": True, "message": "Store order already paid."}), 200
+
+        order_record.razorpay_payment_id = payment_id or order_record.razorpay_payment_id
+        order_record.status = "paid"
+        notes = get_order_notes(order_record)
+        notes["verified_by_webhook"] = True
+        notes["webhook_event"] = event_type or "unknown"
+        notes["webhook_seen_at"] = datetime.now(timezone.utc).isoformat()
+        set_order_notes(order_record, notes)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Store order updated via webhook."}), 200
+
+    # Unknown order id: acknowledge to avoid retries.
+    return jsonify({"success": True, "message": "No matching order found."}), 200
 
 
 def lookup_kisan_dost_knowledge(query_text, crop_name):
@@ -2849,6 +3291,45 @@ def remember_notice(session_key, text, tone="success"):
     session[session_key] = {"text": text, "tone": tone}
 
 
+def get_csrf_token():
+    token = session.get("csrf_token")
+    if token and isinstance(token, str):
+        return token
+    token = uuid.uuid4().hex
+    session["csrf_token"] = token
+    return token
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": get_csrf_token}
+
+
+def csrf_matches(candidate):
+    expected = session.get("csrf_token") or ""
+    cand = str(candidate or "")
+    if not expected or not cand:
+        return False
+    try:
+        return hmac.compare_digest(str(expected), cand)
+    except Exception:
+        return False
+
+
+def require_csrf():
+    """Validate CSRF for form posts / JSON posts. Returns a response on failure, else None."""
+    token = request.form.get("csrf_token") if request.form else None
+    if not token:
+        token = request.headers.get("X-CSRFToken") or request.headers.get("X-CSRF-Token")
+
+    if csrf_matches(token):
+        return None
+
+    # JSON-friendly response for API callers.
+    if request.path.startswith("/api/") or request.is_json:
+        return jsonify({"success": False, "error": "CSRF validation failed. Please refresh and try again."}), 400
+    return render_template("login.html", error="Security check failed. Please refresh the page and try again."), 400
+
 def get_current_user():
     user = None
     if "user_id" in session:
@@ -2858,6 +3339,13 @@ def get_current_user():
         user = User.query.filter_by(name=session["user"]).first()
 
     if user is not None:
+        # Backward compatible: if older users don't have a trial start date, start it now.
+        if getattr(user, "trial_start_date", None) is None:
+            try:
+                user.trial_start_date = datetime.now(timezone.utc)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         ensure_user_farm_setup(user)
         get_or_create_user_preferences(user)
 
@@ -4755,6 +5243,13 @@ def signup_alias_page():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return csrf_resp
+
+        if rate_limit_exceeded(f"login:{_client_ip()}", max_hits=10, window_seconds=5 * 60):
+            return render_template("login.html", error="Too many login attempts. Please wait a few minutes and try again.")
+
         email = (request.form.get("email") or "").strip()
         password = request.form.get("password") or ""
 
@@ -4762,6 +5257,12 @@ def login():
         if email.strip().lower() == ADMIN_EMAIL and check_admin_password(password):
             session["admin_authed"] = True
             session["admin_email"] = ADMIN_EMAIL
+            try:
+                admin_row = AdminUser.query.filter_by(email=ADMIN_EMAIL).first()  # type: ignore
+                if admin_row is not None:
+                    session["admin_id"] = int(admin_row.id)
+            except Exception:
+                pass
             return redirect("/admin")
 
         user = User.query.filter_by(email=email).first()
@@ -4792,6 +5293,13 @@ def login():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return csrf_resp
+
+        if rate_limit_exceeded(f"register:{_client_ip()}", max_hits=8, window_seconds=10 * 60):
+            return render_template("register.html", error="Too many attempts. Please wait and try again.")
+
         name = (request.form.get("name") or "").strip()
         email = (request.form.get("email") or "").strip()
         password = request.form.get("password") or ""
@@ -4857,6 +5365,14 @@ def verify_otp():
         
     error = None
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            # verify_otp has its own UI; show toast-like error.
+            return render_template("verify_otp.html", error="Security check failed. Please refresh and try again.")
+
+        if rate_limit_exceeded(f"otp:{_client_ip()}:{session.get('otp_target')}", max_hits=10, window_seconds=5 * 60):
+            return render_template("verify_otp.html", error="Too many OTP attempts. Please request a new OTP and try again.")
+
         user_otp = request.form.get("otp", "")
         
         # Check expiry
@@ -4969,6 +5485,10 @@ def add_farm():
     if not user:
         return redirect("/login")
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     _, farms = ensure_user_farm_setup(user)
     name = (request.form.get("name") or "").strip() or build_default_farm_name(user, len(farms) + 1)
     location = (request.form.get("location") or "").strip() or user.location or ""
@@ -5008,6 +5528,10 @@ def set_primary_farm(farm_id):
     if not user:
         return redirect("/login")
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     farm = Farm.query.filter_by(id=farm_id, user_id=user.id).first()
     if farm is None:
         remember_notice("farms_notice", "Farm not found.", tone="warning")
@@ -5030,6 +5554,10 @@ def delete_farm(farm_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
 
     farms = Farm.query.filter_by(user_id=user.id).order_by(Farm.created_at.asc()).all()
     farm = next((item for item in farms if item.id == farm_id), None)
@@ -5062,6 +5590,10 @@ def add_farm_task():
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
 
     title = (request.form.get("title") or "").strip()
     if not title:
@@ -5096,6 +5628,10 @@ def update_task_status(task_id):
     if not user:
         return redirect("/login")
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     task = FarmTask.query.filter_by(id=task_id, user_id=user.id).first()
     if task is None:
         remember_notice("farms_notice", "Task not found.", tone="warning")
@@ -5118,6 +5654,10 @@ def delete_task(task_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
 
     task = FarmTask.query.filter_by(id=task_id, user_id=user.id).first()
     if task is None:
@@ -5183,6 +5723,180 @@ def crop_detail(crop_slug):
 
     related_crops = pick_related_crops(crop["slug"], crop["category"], crop["life_cycle"], crop["soil_type"])
     return render_template("crop_detail.html", user=user, crop=crop, related_crops=related_crops)
+
+
+@app.route("/library")
+def library_home():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crops = load_crop_library()
+    diseases = load_disease_library()
+    tips_payload = load_cultivation_tips()
+    return render_template(
+        "library_home.html",
+        user=user,
+        crop_count=len(crops),
+        disease_count=len(diseases),
+        tip_task_count=len((tips_payload or {}).get("tasks") or []),
+        tip_stage_count=len((tips_payload or {}).get("stages") or []),
+    )
+
+
+@app.route("/library/crops")
+def library_crops():
+    return redirect("/crop-library")
+
+
+@app.route("/library/diseases")
+def library_diseases():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crop_filter = (request.args.get("crop") or "All").strip()
+    query = (request.args.get("q") or "").strip().lower()
+    kind = (request.args.get("type") or "all").strip().lower()
+
+    all_items = load_disease_library()
+    items = list(all_items)
+    if crop_filter and crop_filter != "All":
+        items = [item for item in items if crop_filter in (item.get("crops") or [])]
+    if kind in {"insect", "virus", "fungus", "bacteria", "disease", "pest"}:
+        items = [item for item in items if str(item.get("type") or "").strip().lower() == kind]
+    if query:
+        def _matches(item):
+            hay = " ".join(
+                [
+                    str(item.get("name") or ""),
+                    str(item.get("type") or ""),
+                    " ".join(item.get("crops") or []),
+                    " ".join(item.get("tags") or []),
+                ]
+            ).lower()
+            return query in hay
+        items = [item for item in items if _matches(item)]
+
+    no_results = False
+    suggested_items = []
+    if not items and (query or kind != "all" or (crop_filter and crop_filter != "All")):
+        no_results = True
+        # Provide a helpful fallback so the page never looks empty.
+        suggested_items = all_items[:12]
+
+    # Group by stage for the Plantix-like sections.
+    stage_order = ["seedling", "vegetative", "flowering", "harvesting", "post_harvest"]
+    stage_labels = {
+        "seedling": "Seedling Stage",
+        "vegetative": "Vegetative Stage",
+        "flowering": "Flowering Stage",
+        "harvesting": "Harvesting Stage",
+        "post_harvest": "Post Harvest",
+    }
+    stage_sections = []
+    for stage_key in stage_order:
+        stage_items = [item for item in items if stage_key in (item.get("stages") or [])]
+        if stage_items:
+            stage_sections.append({"key": stage_key, "label": stage_labels.get(stage_key, stage_key.title()), "items": stage_items[:10]})
+
+    return render_template(
+        "library_diseases.html",
+        user=user,
+        crops=build_library_crop_options(user),
+        active_crop=crop_filter if crop_filter else "All",
+        query=query,
+        active_type=kind,
+        stage_sections=stage_sections,
+        items=items,
+        no_results=no_results,
+        suggested_items=suggested_items,
+        fallback_image=STORE_PRODUCT_FALLBACK_IMAGE,
+    )
+
+
+@app.route("/library/disease/<disease_slug>")
+def library_disease_detail(disease_slug):
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    entry = get_disease_library_entry(disease_slug)
+    if entry is None:
+        abort(404)
+
+    recommended = resolve_store_recommendation(disease_name=entry["name"])
+    recommended_payload = serialize_store_product(recommended) if recommended is not None else None
+
+    last_diag = session.get("last_library_diagnosis") if isinstance(session.get("last_library_diagnosis"), dict) else {}
+    if last_diag.get("slug") != entry["slug"]:
+        last_diag = {}
+
+    return render_template(
+        "library_disease_detail.html",
+        user=user,
+        disease=entry,
+        recommended_product=recommended_payload,
+        fallback_image=STORE_PRODUCT_FALLBACK_IMAGE,
+        last_diagnosis=last_diag,
+    )
+
+
+@app.route("/library/tips")
+def library_tips():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crop_filter = (request.args.get("crop") or "All").strip()
+    payload = load_cultivation_tips()
+    return render_template(
+        "library_tips.html",
+        user=user,
+        crops=build_library_crop_options(user),
+        active_crop=crop_filter if crop_filter else "All",
+        tips=payload,
+    )
+
+
+@app.route("/library/alerts")
+def library_alerts():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crop_filter = (request.args.get("crop") or "All").strip()
+    items = load_disease_library()
+    if crop_filter and crop_filter != "All":
+        items = [item for item in items if crop_filter in (item.get("crops") or [])]
+
+    # Mock risk: stable by user id + crop to keep it consistent per user.
+    rng = random.Random(str(user.id) + "|" + crop_filter)
+    picks = items[:]
+    rng.shuffle(picks)
+    picks = picks[:6]
+
+    alerts = []
+    for idx, item in enumerate(picks):
+        alerts.append(
+            {
+                "severity": "high" if idx < 2 else "medium" if idx < 4 else "low",
+                "crop": (item.get("crops") or ["Crop"])[0] if item.get("crops") else "Crop",
+                "name": item.get("name") or "",
+                "type": item.get("type") or "",
+                "slug": item.get("slug") or "",
+                "image": item.get("image") or "",
+            }
+        )
+
+    return render_template(
+        "library_alerts.html",
+        user=user,
+        crops=build_library_crop_options(user),
+        active_crop=crop_filter if crop_filter else "All",
+        alerts=alerts,
+        fallback_image=STORE_PRODUCT_FALLBACK_IMAGE,
+    )
 
 
 @app.route("/farm-twin")
@@ -5264,6 +5978,10 @@ def store_checkout():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     payload = request.get_json(silent=True) or {}
     product = get_store_product_by_id(payload.get("product_id"))
     if product is None:
@@ -5340,6 +6058,10 @@ def store_payment_success():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     payload = request.get_json(silent=True) or {}
     product = get_store_product_by_id(payload.get("product_id"))
     if product is None:
@@ -5373,6 +6095,14 @@ def store_payment_success():
     razorpay_payment_id = str(payload.get("razorpay_payment_id") or f"demo_pay_{uuid.uuid4().hex[:10]}")
     razorpay_signature = str(payload.get("razorpay_signature") or "")
     signature_verified = verify_razorpay_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+
+    is_demo = str(payload.get("checkout_mode") or order_record.checkout_mode or "demo").strip().lower() == "demo"
+    if not is_demo and not signature_verified:
+        order_record.status = "failed"
+        notes.update({"verified": False, "failure": "signature_failed"})
+        set_order_notes(order_record, notes)
+        db.session.commit()
+        return jsonify({"success": False, "error": "Payment verification failed."}), 400
 
     order_record.status = "paid"
     order_record.checkout_mode = str(payload.get("checkout_mode") or order_record.checkout_mode or "demo")
@@ -5413,11 +6143,24 @@ def admin_login():
         return redirect("/admin")
 
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return render_template("admin/login.html", error="Security check failed. Please refresh and try again.", admin_email=ADMIN_EMAIL)
+
+        if rate_limit_exceeded(f"admin_login:{_client_ip()}", max_hits=10, window_seconds=10 * 60):
+            return render_template("admin/login.html", error="Too many attempts. Please wait and try again.", admin_email=ADMIN_EMAIL)
+
         email = (request.form.get("email") or "").strip().lower()
         password = (request.form.get("password") or "").strip()
         if email == ADMIN_EMAIL and check_admin_password(password):
             session["admin_authed"] = True
             session["admin_email"] = ADMIN_EMAIL
+            try:
+                admin_row = AdminUser.query.filter_by(email=ADMIN_EMAIL).first()  # type: ignore
+                if admin_row is not None:
+                    session["admin_id"] = int(admin_row.id)
+            except Exception:
+                pass
             return redirect("/admin")
 
         return render_template("admin/login.html", error="Invalid admin credentials.", admin_email=ADMIN_EMAIL)
@@ -5429,6 +6172,7 @@ def admin_login():
 def admin_logout():
     session.pop("admin_authed", None)
     session.pop("admin_email", None)
+    session.pop("admin_id", None)
     return redirect("/admin/login")
 
 
@@ -5459,56 +6203,60 @@ def admin_products():
     success = None
 
     if request.method == "POST":
-        name = (request.form.get("name") or "").strip()
-        category = (request.form.get("category") or "Organic").strip() or "Organic"
-        image_url = (request.form.get("image_url") or "").strip()
-        description = (request.form.get("description") or "").strip()
-        is_active = request.form.get("is_active") == "on"
-        image_file = request.files.get("image_file")
-
-        try:
-            price = int(request.form.get("price") or 0)
-        except (TypeError, ValueError):
-            price = 0
-
-        try:
-            stock = int(request.form.get("stock") or 0)
-        except (TypeError, ValueError):
-            stock = 0
-
-        if not name or price <= 0:
-            error = "Product name and price are required."
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            error = "Security check failed. Please refresh and try again."
         else:
-            slug_base = slugify_crop_name(name)
-            slug = slug_base
-            if StoreProduct.query.filter_by(slug=slug).first() is not None:
-                slug = f"{slug_base}-{uuid.uuid4().hex[:6]}"
+            name = (request.form.get("name") or "").strip()
+            category = (request.form.get("category") or "Organic").strip() or "Organic"
+            image_url = (request.form.get("image_url") or "").strip()
+            description = (request.form.get("description") or "").strip()
+            is_active = request.form.get("is_active") == "on"
+            image_file = request.files.get("image_file")
 
-            if image_file and getattr(image_file, "filename", ""):
-                try:
-                    image_url = save_product_image_upload(image_file, slug_hint=slug_base)
-                except ValueError as exc:
-                    error = str(exc)
+            try:
+                price = int(request.form.get("price") or 0)
+            except (TypeError, ValueError):
+                price = 0
 
-        if not error:
-            product = StoreProduct(
-                slug=slug,
-                name=name,
-                category=category if category in STORE_CATEGORY_ORDER else "Organic",
-                price=price,
-                mrp=max(int(estimate_store_mrp(price, category)), price),
-                discount_pct=compute_store_discount(price, max(int(estimate_store_mrp(price, category)), price)),
-                rating=4.2,
-                image_url=image_url,
-                description=description,
-                seller=default_store_seller(category),
-                unit="Pack",
-                stock=max(0, stock),
-                is_active=bool(is_active),
-            )
-            db.session.add(product)
-            db.session.commit()
-            success = "Product added."
+            try:
+                stock = int(request.form.get("stock") or 0)
+            except (TypeError, ValueError):
+                stock = 0
+
+            if not name or price <= 0:
+                error = "Product name and price are required."
+            else:
+                slug_base = slugify_crop_name(name)
+                slug = slug_base
+                if StoreProduct.query.filter_by(slug=slug).first() is not None:
+                    slug = f"{slug_base}-{uuid.uuid4().hex[:6]}"
+
+                if image_file and getattr(image_file, "filename", ""):
+                    try:
+                        image_url = save_product_image_upload(image_file, slug_hint=slug_base)
+                    except ValueError as exc:
+                        error = str(exc)
+
+            if not error:
+                product = StoreProduct(
+                    slug=slug,
+                    name=name,
+                    category=category if category in STORE_CATEGORY_ORDER else "Organic",
+                    price=price,
+                    mrp=max(int(estimate_store_mrp(price, category)), price),
+                    discount_pct=compute_store_discount(price, max(int(estimate_store_mrp(price, category)), price)),
+                    rating=4.2,
+                    image_url=image_url,
+                    description=description,
+                    seller=default_store_seller(category),
+                    unit="Pack",
+                    stock=max(0, stock),
+                    is_active=bool(is_active),
+                )
+                db.session.add(product)
+                db.session.commit()
+                success = "Product added."
 
     products = StoreProduct.query.order_by(StoreProduct.updated_at.desc(), StoreProduct.created_at.desc()).all()
     return render_template(
@@ -5531,6 +6279,11 @@ def admin_edit_product(product_id):
     success = None
 
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            error = "Security check failed. Please refresh and try again."
+            return render_template("admin/product_edit.html", product=product, categories=[c for c in STORE_CATEGORY_ORDER if c != "All"], error=error, success=None)
+
         name = (request.form.get("name") or "").strip()
         category = (request.form.get("category") or product.category or "Organic").strip() or "Organic"
         image_url = (request.form.get("image_url") or "").strip()
@@ -5586,6 +6339,10 @@ def admin_edit_product(product_id):
 @app.route("/admin/products/<int:product_id>/delete", methods=["POST"])
 @admin_required
 def admin_delete_product(product_id):
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return redirect("/admin/products")
+
     product = db.session.get(StoreProduct, product_id)
     if product is None:
         abort(404)
@@ -5631,6 +6388,10 @@ def admin_orders():
 @app.route("/admin/orders/<int:order_id>/fulfillment", methods=["POST"])
 @admin_required
 def admin_update_order_fulfillment(order_id):
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return redirect("/admin/orders")
+
     order = db.session.get(StoreOrder, order_id)
     if order is None:
         abort(404)
@@ -5652,26 +6413,30 @@ def admin_mappings():
     success = None
 
     if request.method == "POST":
-        disease_label = (request.form.get("disease") or "").strip()
-        disease_key = normalize_disease_key(disease_label)
-        try:
-            product_id = int(request.form.get("product_id") or 0)
-        except (TypeError, ValueError):
-            product_id = 0
-
-        product = db.session.get(StoreProduct, product_id) if product_id else None
-        if not disease_key or product is None:
-            error = "Disease name and a valid product are required."
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            error = "Security check failed. Please refresh and try again."
         else:
-            existing = DiseaseProductMapping.query.filter_by(disease_key=disease_key).first()
-            if existing is None:
-                existing = DiseaseProductMapping(disease_key=disease_key, disease_label=disease_label, product_id=product.id)
-                db.session.add(existing)
+            disease_label = (request.form.get("disease") or "").strip()
+            disease_key = normalize_disease_key(disease_label)
+            try:
+                product_id = int(request.form.get("product_id") or 0)
+            except (TypeError, ValueError):
+                product_id = 0
+
+            product = db.session.get(StoreProduct, product_id) if product_id else None
+            if not disease_key or product is None:
+                error = "Disease name and a valid product are required."
             else:
-                existing.disease_label = disease_label
-                existing.product_id = product.id
-            db.session.commit()
-            success = "Mapping saved."
+                existing = DiseaseProductMapping.query.filter_by(disease_key=disease_key).first()
+                if existing is None:
+                    existing = DiseaseProductMapping(disease_key=disease_key, disease_label=disease_label, product_id=product.id)
+                    db.session.add(existing)
+                else:
+                    existing.disease_label = disease_label
+                    existing.product_id = product.id
+                db.session.commit()
+                success = "Mapping saved."
 
     mappings = DiseaseProductMapping.query.order_by(DiseaseProductMapping.updated_at.desc()).all()
     products = StoreProduct.query.filter_by(is_active=True).order_by(StoreProduct.name.asc()).all()
@@ -5701,6 +6466,10 @@ def admin_mappings():
 @app.route("/admin/mappings/<int:mapping_id>/delete", methods=["POST"])
 @admin_required
 def admin_delete_mapping(mapping_id):
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return redirect("/admin/mappings")
+
     mapping = db.session.get(DiseaseProductMapping, mapping_id)
     if mapping is None:
         abort(404)
@@ -5719,6 +6488,11 @@ def predict_disease():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        # Return JSON because this endpoint is always called via fetch().
+        return jsonify({"success": False, "error": "Security check failed. Please refresh and try again."}), 400
 
     uploaded_file = request.files.get("crop_image")
     if not uploaded_file or not uploaded_file.filename:
@@ -5773,6 +6547,36 @@ def predict_disease():
             "image_url": preview_url,
             "crop": crop_display
         }
+        disease_name = str(response_payload.get("disease") or "").strip()
+        if disease_name:
+            # "Healthy" is not a pest/disease guide; route users to tips instead.
+            if normalize_disease_key(disease_name) in {"healthy", "no disease", "no-disease"}:
+                response_payload["library_url"] = "/library/tips"
+                session["last_library_diagnosis"] = {
+                    "slug": "healthy",
+                    "confidence": int(response_payload.get("confidence") or 0),
+                    "risk_level": str(response_payload.get("risk_level") or ""),
+                    "note": "No major pest or disease detected. Keep monitoring regularly.",
+                    "image_url": preview_url,
+                }
+                return jsonify(attach_store_recommendation(response_payload, disease_info.get("best_product", "")))
+
+            slug = slugify_crop_name(disease_name)
+            entry = get_disease_library_entry(slug) or next(
+                (item for item in load_disease_library() if str(item.get("name") or "").strip().lower() == disease_name.lower()),
+                None,
+            )
+            response_payload["library_url"] = (
+                f"/library/disease/{entry['slug']}" if entry is not None else f"/library/diseases?q={quote(disease_name)}"
+            )
+            session["last_library_diagnosis"] = {
+                "slug": entry["slug"] if entry is not None else slug,
+                "confidence": int(response_payload.get("confidence") or 0),
+                "risk_level": str(response_payload.get("risk_level") or ""),
+                "note": "We have a high amount of farmers reporting this issue in crops near you.",
+                "image_url": preview_url,
+            }
+
         return jsonify(attach_store_recommendation(response_payload, disease_info.get("best_product", "")))
     
     crop_input = (user.crop_type or "generic").lower().strip()
@@ -5879,6 +6683,35 @@ def predict_disease():
         "image_url": preview_url,
         "crop": diagnosis.get("crop", user.crop_type or "Crop")
     }
+    disease_name = str(response_payload.get("disease") or "").strip()
+    if disease_name:
+        if normalize_disease_key(disease_name) in {"healthy", "no disease", "no-disease"}:
+            response_payload["library_url"] = "/library/tips"
+            session["last_library_diagnosis"] = {
+                "slug": "healthy",
+                "confidence": int(response_payload.get("confidence") or 0),
+                "risk_level": str(response_payload.get("risk_level") or ""),
+                "note": "No major pest or disease detected. Keep monitoring regularly.",
+                "image_url": preview_url,
+            }
+            return jsonify(attach_store_recommendation(response_payload))
+
+        slug = slugify_crop_name(disease_name)
+        entry = get_disease_library_entry(slug) or next(
+            (item for item in load_disease_library() if str(item.get("name") or "").strip().lower() == disease_name.lower()),
+            None,
+        )
+        response_payload["library_url"] = (
+            f"/library/disease/{entry['slug']}" if entry is not None else f"/library/diseases?q={quote(disease_name)}"
+        )
+        session["last_library_diagnosis"] = {
+            "slug": entry["slug"] if entry is not None else slug,
+            "confidence": int(response_payload.get("confidence") or 0),
+            "risk_level": str(response_payload.get("risk_level") or ""),
+            "note": "We have a high amount of farmers reporting this issue in crops near you.",
+            "image_url": preview_url,
+        }
+
     return jsonify(attach_store_recommendation(response_payload))
 
 
@@ -5892,6 +6725,10 @@ def profile():
     success = None
 
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return csrf_resp
+
         form_type = request.form.get("form_type", "")
 
         if form_type == "user_info":
@@ -6049,6 +6886,10 @@ def settings_page():
     success = None
 
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return csrf_resp
+
         preferences.crop_alerts = request.form.get("crop_alerts") == "on"
         preferences.disease_alerts = request.form.get("disease_alerts") == "on"
         preferences.weather_alerts = request.form.get("weather_alerts") == "on"
@@ -6249,6 +7090,10 @@ def community_post():
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     title = request.form.get("title")
     content = request.form.get("content")
@@ -6267,6 +7112,10 @@ def community_comment(post_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     content = request.form.get("content")
     if content:
@@ -6293,6 +7142,10 @@ def tool_advisor():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     data = request.json
     if not data:
@@ -6329,6 +7182,10 @@ def predict_yield():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     data = request.json
     if not data:
@@ -6406,11 +7263,14 @@ def subscription_plans():
     if not user:
         return redirect("/login")
     ensure_user_subscription_state(user, commit=True)
+    expired = bool(request.args.get("expired")) or bool(request.args.get("required"))
     return render_template(
         "subscriptions.html",
         user=user,
         plans=SUBSCRIPTION_PLANS,
         trial_active=is_trial_active(user),
+        expired=expired,
+        trial_days=SUBSCRIPTION_TRIAL_DAYS,
     )
 
 
@@ -6469,6 +7329,10 @@ def api_subscription_create_order():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
 
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan"))
@@ -6550,6 +7414,10 @@ def api_subscription_verify_payment():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     payload = request.get_json(silent=True) or {}
     try:
         payment_id = int(payload.get("payment_id") or 0)
@@ -6626,6 +7494,10 @@ def api_apply_wallet():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan"))
     if plan == "free":
@@ -6700,6 +7572,10 @@ def upgrade_to_pro():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan") or "pro")
@@ -6714,6 +7590,31 @@ def upgrade_to_pro():
 
 with app.app_context():
     db.create_all()
+
+    # Seed a DB-backed admin user (keeps env defaults working too).
+    # Requested default: admin123@gmail.com / 123 (override via ADMIN_EMAIL/ADMIN_PASSWORD env vars).
+    try:
+        _admin_email = (ADMIN_EMAIL or "").strip().lower()
+        _admin_pw = (ADMIN_PASSWORD or "").strip()
+        if _admin_email and _admin_pw:
+            _existing_admin = AdminUser.query.filter_by(email=_admin_email).first()  # type: ignore
+            if _existing_admin is None:
+                db.session.add(
+                    AdminUser(  # type: ignore
+                        email=_admin_email,
+                        password_hash=hash_password(_admin_pw),
+                        role="admin",
+                    )
+                )
+                db.session.commit()
+            else:
+                # Upgrade legacy/plain stored password to hash if needed.
+                if not is_password_hash(_existing_admin.password_hash or ""):
+                    _existing_admin.password_hash = hash_password(_admin_pw)
+                    db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     # --- Auto-migrate: add missing columns to existing SQLite tables ---
     import sqlite3 as _sqlite3
     _db_path = os.path.join(app.instance_path, "database.db")

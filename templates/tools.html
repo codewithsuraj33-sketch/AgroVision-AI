@@ -294,6 +294,10 @@
           <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
           <span>Crop Library</span>
         </a>
+        <a class="sidebar-link" href="/library">
+          <i class="fas fa-layer-group sidebar-icon"></i>
+          <span>Library</span>
+        </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
           <span>Farms</span>
@@ -648,6 +652,23 @@
     let history = JSON.parse(localStorage.getItem('tool_history')) || [];
     let advisorTimeout = null;
 
+    function getCookie(name) {
+        const needle = String(name || '') + '=';
+        const parts = String(document.cookie || '').split(';');
+        for (let i = 0; i < parts.length; i += 1) {
+            const part = parts[i].trim();
+            if (!part) continue;
+            if (part.indexOf(needle) === 0) {
+                return decodeURIComponent(part.slice(needle.length));
+            }
+        }
+        return '';
+    }
+
+    function getCsrfToken() {
+        return getCookie('csrf_token');
+    }
+
     function saveToHistory(type, summary) {
         history.unshift({ type, summary, date: new Date().toLocaleTimeString() });
         if (history.length > 10) history.pop();
@@ -682,7 +703,10 @@
             try {
                 const res = await fetch('/api/tool-advisor', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: Object.assign(
+                        { 'Content-Type': 'application/json' },
+                        getCsrfToken() ? { 'X-CSRFToken': getCsrfToken() } : {}
+                    ),
                     body: JSON.stringify({ type, inputs, results })
                 });
                 const data = await res.json();
@@ -705,8 +729,8 @@
         const rev = y * p;
         const net = rev - e;
 
-        document.getElementById('res-profit-revenue').textContent = `₹${rev.toLocaleString()}`;
-        document.getElementById('res-profit-net').textContent = `₹${net.toLocaleString()}`;
+        document.getElementById('res-profit-revenue').textContent = `\u20B9${rev.toLocaleString()}`;
+        document.getElementById('res-profit-net').textContent = `\u20B9${net.toLocaleString()}`;
         
         if (y > 0 && p > 0) {
             triggerAI('profit', { yield_kg: y, price_per_kg: p, expenses: e }, { revenue: rev, profit: net });
@@ -717,7 +741,7 @@
         const e = parseFloat(document.getElementById('noloss-expenses').value) || 0;
         const y = parseFloat(document.getElementById('noloss-yield').value) || 0;
         const nl = y > 0 ? (e / y) : 0;
-        document.getElementById('res-noloss-price').textContent = `₹${nl.toFixed(2)}/kg`;
+        document.getElementById('res-noloss-price').textContent = `\u20B9${nl.toFixed(2)}/kg`;
         
         if (e > 0 && y > 0) {
             triggerAI('noloss', { expenses: e, yield_kg: y }, { no_loss_price: nl });
@@ -778,14 +802,17 @@
         try {
             const res = await fetch('/api/predict-yield', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: Object.assign(
+                    { 'Content-Type': 'application/json' },
+                    getCsrfToken() ? { 'X-CSRFToken': getCsrfToken() } : {}
+                ),
                 body: JSON.stringify(inputs)
             });
             const data = await res.json();
             if (data.success) {
                 const p = data.prediction;
                 document.getElementById('res-pred-yield').textContent = `${p.estimated_yield_kg.toLocaleString()} kg`;
-                document.getElementById('res-pred-profit').textContent = `₹${p.estimated_profit_inr.toLocaleString()}`;
+                document.getElementById('res-pred-profit').textContent = `\u20B9${p.estimated_profit_inr.toLocaleString()}`;
                 document.getElementById('res-pred-conf').textContent = `${p.ai_confidence}%`;
                 document.getElementById('res-pred-note').textContent = p.ai_note;
                 document.getElementById('pred-result').style.display = 'block';

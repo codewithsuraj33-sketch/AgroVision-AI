@@ -241,6 +241,7 @@
         {% endif %}
 
         <form action="/verify-otp" method="POST" id="otp-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="otp" id="final-otp">
             <div class="otp-inputs">
                 <input type="text" maxlength="1" class="otp-input" required>

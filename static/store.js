@@ -3,6 +3,23 @@
   let razorpayScriptPromise = null;
   let recommendationFocused = false;
 
+  function getCookie(name) {
+    const needle = String(name || "") + "=";
+    const parts = String(document.cookie || "").split(";");
+    for (let i = 0; i < parts.length; i += 1) {
+      const part = parts[i].trim();
+      if (!part) continue;
+      if (part.indexOf(needle) === 0) {
+        return decodeURIComponent(part.slice(needle.length));
+      }
+    }
+    return "";
+  }
+
+  function getCsrfToken() {
+    return getCookie("csrf_token");
+  }
+
   function createToastRoot() {
     let toastRoot = document.getElementById("storeToast");
     if (toastRoot) {
@@ -138,9 +155,13 @@
   }
 
   async function finalizePayment(payload, button) {
+    const csrfToken = getCsrfToken();
     const response = await fetch("/api/store/payment-success", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: Object.assign(
+        { "Content-Type": "application/json" },
+        csrfToken ? { "X-CSRFToken": csrfToken } : {}
+      ),
       body: JSON.stringify(payload),
     });
     const data = await response.json();
@@ -186,9 +207,13 @@
     setBuyButtonLoading(button, true);
 
     try {
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/store/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: Object.assign(
+          { "Content-Type": "application/json" },
+          csrfToken ? { "X-CSRFToken": csrfToken } : {}
+        ),
         body: JSON.stringify({
           product_id: Number(productId),
           source: button.dataset.buySource || "store",
