@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+  <section class="admin-page-head">
+    <h1>Products</h1>
+    <p>Add, edit, or delete store products.</p>
+  </section>
+
+  {% if error %}
+    <div class="admin-alert admin-alert-error">{{ error }}</div>
+  {% endif %}
+  {% if success %}
+    <div class="admin-alert admin-alert-success">{{ success }}</div>
+  {% endif %}
+
+  <section class="admin-panel">
+    <h2 class="admin-panel-title">Add Product</h2>
+    <form method="post" enctype="multipart/form-data" class="admin-form admin-form-grid">
+      <label class="admin-field">
+        <span>Product Name</span>
+        <input name="name" required>
+      </label>
+      <label class="admin-field">
+        <span>Price (INR)</span>
+        <input name="price" type="number" min="1" required>
+      </label>
+      <label class="admin-field">
+        <span>Category</span>
+        <select name="category">
+          {% for c in categories %}
+            <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="admin-field">
+        <span>Stock</span>
+        <input name="stock" type="number" min="0" value="0">
+      </label>
+      <label class="admin-field admin-field-wide">
+        <span>Image URL</span>
+        <input name="image_url" placeholder="https://...">
+      </label>
+      <label class="admin-field admin-field-wide">
+        <span>Or Upload Image</span>
+        <input name="image_file" type="file" accept="image/*">
+        <small class="admin-hint">If you upload a file, it will be saved to <code>/static/products</code> and used automatically.</small>
+      </label>
+      <label class="admin-field admin-field-wide">
+        <span>Description</span>
+        <textarea name="description" rows="3"></textarea>
+      </label>
+      <label class="admin-check">
+        <input type="checkbox" name="is_active" checked>
+        <span>Active</span>
+      </label>
+      <div class="admin-actions">
+        <button class="admin-btn admin-btn-primary" type="submit">Add Product</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="admin-panel-title">All Products</h2>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Active</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in products %}
+            <tr>
+              <td>#{{ p.id }}</td>
+              <td class="admin-td-strong">{{ p.name }}</td>
+              <td>{{ p.category }}</td>
+              <td>₹{{ p.price }}</td>
+              <td>{{ p.stock or 0 }}</td>
+              <td>{{ "Yes" if p.is_active else "No" }}</td>
+              <td class="admin-td-actions">
+                <a class="admin-link" href="/admin/products/{{ p.id }}/edit">Edit</a>
+                <form method="post" action="/admin/products/{{ p.id }}/delete" onsubmit="return confirm('Delete this product?');">
+                  <button class="admin-btn admin-btn-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

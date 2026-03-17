@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subscriptions - AgroVision AI</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      .sub-page {
+        min-height: 100vh;
+        padding: 40px 18px;
+        background: radial-gradient(circle at top right, #0a2472, #00072d);
+        color: #fff;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+      }
+
+      .sub-shell {
+        max-width: 1060px;
+        margin: 0 auto;
+      }
+
+      .sub-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 22px;
+      }
+
+      .sub-header a {
+        color: #a5b4fc;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .sub-header h1 {
+        margin: 8px 0 6px;
+        font-size: clamp(1.9rem, 3vw, 2.6rem);
+        letter-spacing: -0.03em;
+      }
+
+      .sub-header p {
+        margin: 0;
+        color: #a5b4fc;
+        line-height: 1.55;
+        max-width: 62ch;
+      }
+
+      .sub-meta {
+        display: grid;
+        gap: 10px;
+        justify-items: end;
+        text-align: right;
+      }
+
+      .sub-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: #e0e7ff;
+        font-weight: 800;
+      }
+
+      .sub-cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .sub-card {
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: 0 28px 56px rgba(0, 0, 0, 0.35);
+        padding: 22px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .sub-card.is-highlight {
+        border-color: rgba(125, 255, 46, 0.38);
+        background: linear-gradient(180deg, rgba(125, 255, 46, 0.08), rgba(255, 255, 255, 0.06));
+      }
+
+      .sub-card h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        letter-spacing: -0.02em;
+      }
+
+      .sub-price {
+        font-size: 2.2rem;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+      }
+
+      .sub-price small {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #a5b4fc;
+      }
+
+      .sub-features {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+        color: #dbeafe;
+        font-weight: 650;
+      }
+
+      .sub-features li {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+
+      .sub-features i {
+        color: #7dff2e;
+        margin-top: 3px;
+      }
+
+      .sub-actions {
+        display: grid;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      .sub-btn {
+        width: 100%;
+        border: none;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font-size: 1rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      }
+
+      .sub-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .sub-btn-primary {
+        background: linear-gradient(135deg, #7dff2e, #30e6bf);
+        color: #00072d;
+        box-shadow: 0 12px 24px rgba(125, 255, 46, 0.22);
+      }
+
+      .sub-btn-ghost {
+        background: rgba(255, 255, 255, 0.08);
+        color: #e0e7ff;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      .sub-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 30px rgba(0, 0, 0, 0.28);
+      }
+
+      .sub-wallet {
+        margin-top: 18px;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .sub-wallet strong {
+        font-size: 1.05rem;
+      }
+
+      .sub-wallet .wallet-balance {
+        color: #7dff2e;
+        font-weight: 900;
+      }
+
+      .sub-wallet .sub-wallet-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .sub-wallet input {
+        width: 160px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(0, 0, 0, 0.28);
+        color: #fff;
+        font-weight: 800;
+        outline: none;
+      }
+
+      .sub-note {
+        margin-top: 12px;
+        color: rgba(229, 231, 235, 0.8);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 960px) {
+        .sub-cards {
+          grid-template-columns: 1fr;
+        }
+        .sub-meta {
+          justify-items: start;
+          text-align: left;
+        }
+        .sub-header {
+          flex-direction: column;
+        }
+        .sub-wallet input {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="sub-page"
+    data-user-name="{{ user.name or '' }}"
+    data-user-email="{{ user.email or '' }}"
+    data-user-phone="{{ user.phone or '' }}"
+    data-user-plan="{{ user.plan or 'free' }}"
+    data-wallet-balance="{{ user.wallet_balance or 0 }}"
+  >
+    <div class="sub-shell">
+      <header class="sub-header">
+        <div>
+          <a href="/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+          <h1>Choose Your Plan</h1>
+          <p>
+            Free plan ke saath basic modules available hain. Pro / Premium ke saath AI features unlock hote hain.
+          </p>
+          {% if trial_active %}
+            <p class="sub-note"><strong>Trial:</strong> Aapka Pro trial active hai. Trial khatam hone ke baad Pro/Premium lena padega (premium features ke liye).</p>
+          {% endif %}
+        </div>
+        <div class="sub-meta">
+          <span class="sub-pill"><i class="fas fa-shield"></i> Secure Razorpay Checkout</span>
+          <span class="sub-pill"><i class="fas fa-wallet"></i> Wallet: <span class="wallet-balance">Rs {{ user.wallet_balance or 0 }}</span></span>
+          <span class="sub-pill"><i class="fas fa-gift"></i> Referral: <span style="letter-spacing:0.08em">{{ user.referral_code }}</span></span>
+        </div>
+      </header>
+
+      <section class="sub-cards">
+        <article class="sub-card">
+          <h2>Free</h2>
+          <div class="sub-price">Rs 0 <small>/ month</small></div>
+          <div style="color:#a5b4fc; font-weight:700;">{{ plans["free"]["description"] }}</div>
+          <ul class="sub-features">
+            <li><i class="fas fa-check-circle"></i> Dashboard, farms, weather, soil tools</li>
+            <li><i class="fas fa-check-circle"></i> Store browsing</li>
+            <li><i class="fas fa-check-circle"></i> Referral link + wallet rewards</li>
+          </ul>
+          <div class="sub-actions">
+            <button class="sub-btn sub-btn-ghost" type="button" disabled>
+              {% if (user.plan or "free")|lower == "free" %}Current Plan{% else %}Available{% endif %}
+            </button>
+          </div>
+        </article>
+
+        <article class="sub-card is-highlight">
+          <h2>Pro</h2>
+          <div class="sub-price">Rs {{ plans["pro"]["price_inr"] }} <small>/ month</small></div>
+          <div style="color:#a5b4fc; font-weight:700;">{{ plans["pro"]["description"] }}</div>
+          <ul class="sub-features">
+            <li><i class="fas fa-check-circle"></i> AI disease detection access</li>
+            <li><i class="fas fa-check-circle"></i> Priority insights</li>
+            <li><i class="fas fa-check-circle"></i> Wallet discount supported</li>
+          </ul>
+          <div class="sub-actions">
+            <button class="sub-btn sub-btn-primary" type="button" data-buy-plan="pro">Buy Pro</button>
+            <button class="sub-btn sub-btn-ghost" type="button" data-buy-plan="pro" data-use-wallet="1">Buy Pro (Use Wallet)</button>
+          </div>
+        </article>
+
+        <article class="sub-card">
+          <h2>Premium</h2>
+          <div class="sub-price">Rs {{ plans["premium"]["price_inr"] }} <small>/ month</small></div>
+          <div style="color:#a5b4fc; font-weight:700;">{{ plans["premium"]["description"] }}</div>
+          <ul class="sub-features">
+            <li><i class="fas fa-check-circle"></i> All Pro features</li>
+            <li><i class="fas fa-check-circle"></i> Satellite Farm Twin monitoring</li>
+            <li><i class="fas fa-check-circle"></i> Best suited for advanced farms</li>
+          </ul>
+          <div class="sub-actions">
+            <button class="sub-btn sub-btn-primary" type="button" data-buy-plan="premium">Buy Premium</button>
+            <button class="sub-btn sub-btn-ghost" type="button" data-buy-plan="premium" data-use-wallet="1">Buy Premium (Use Wallet)</button>
+          </div>
+        </article>
+      </section>
+
+      <section class="sub-wallet" aria-label="Wallet apply">
+        <div>
+          <strong>Wallet apply (optional)</strong>
+          <div class="sub-note">Referral se wallet me Rs 20/10 aata hai. Subscription me directly use kar sakte ho.</div>
+        </div>
+        <div class="sub-wallet-actions">
+          <input id="walletUseInput" type="number" min="0" step="1" placeholder="Wallet use (Rs)" />
+          <button class="sub-btn sub-btn-ghost" type="button" id="walletCheckBtn">Check Wallet</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="/static/subscriptions.js"></script>
+  </body>
+</html>
+

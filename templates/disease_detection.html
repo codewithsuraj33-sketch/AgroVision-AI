@@ -42,6 +42,10 @@
           <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
           <span>Dashboard</span>
         </a>
+        <a class="sidebar-link" href="/crop-library">
+          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+          <span>Crop Library</span>
+        </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
           <span>Farms</span>
@@ -85,6 +89,14 @@
         <a class="sidebar-link" href="/community">
           <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
           <span>Community Hub</span>
+        </a>
+        <a class="sidebar-link" href="/market">
+          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
+          <span>Market</span>
+        </a>
+        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
         </a>
       </nav>
 
@@ -168,6 +180,20 @@
               <span class="disease-confidence-chip" id="result-confidence"></span>
             </div>
 
+            <!-- New Stats Row for Premium Feel -->
+            <div class="disease-result-stats" style="display: flex; gap: 12px; margin-bottom: 20px;">
+              <div class="result-stat-item" style="flex: 1; padding: 12px; background: rgba(125, 255, 46, 0.1); border-radius: 12px; text-align: center;">
+                <i class="fas fa-check-circle" style="color: #7dff2e; margin-bottom: 4px; display: block;"></i>
+                <small style="display: block; opacity: 0.7; font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Accuracy</small>
+                <strong id="stat-accuracy" style="font-size: 1.1rem; color: #173154;">--</strong>
+              </div>
+              <div class="result-stat-item" style="flex: 1; padding: 12px; background: rgba(51, 157, 219, 0.1); border-radius: 12px; text-align: center;">
+                <i class="fas fa-microscope" style="color: #339ddb; margin-bottom: 4px; display: block;"></i>
+                <small style="display: block; opacity: 0.7; font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Analysis</small>
+                <strong id="stat-type" style="font-size: 1.1rem; color: #173154;">AI</strong>
+              </div>
+            </div>
+
           <div class="disease-result-body">
             <div class="disease-result-layout">
               <div class="disease-result-copy">
@@ -200,42 +226,233 @@
                   <ul class="disease-tips-list" id="result-tips">
                   </ul>
                 </div>
+
+                <div class="disease-result-section disease-store-recommendation" id="resultProductSection" hidden>
+                  <div class="disease-store-head">
+                    <div>
+                      <h3>Recommended Product</h3>
+                      <p id="resultProductReason">AI-linked product suggestion based on the detected crop issue.</p>
+                    </div>
+                    <a class="disease-store-link" id="resultProductLinkInline" href="/market">Open store</a>
+                  </div>
+
+                  <article class="disease-store-card">
+                    <a class="disease-store-media" id="resultProductLink" href="/market">
+                      <img
+                        class="disease-store-image"
+                        id="resultProductImage"
+                        src="/static/images/store-product-fallback.svg"
+                        alt="Recommended product"
+                        loading="lazy"
+                        decoding="async"
+                        data-fallback-src="/static/images/store-product-fallback.svg"
+                      >
+                    </a>
+
+                    <div class="disease-store-copy">
+                      <span class="disease-store-category" id="resultProductCategory">Store recommendation</span>
+                      <strong id="resultProductName">Recommended product will appear here</strong>
+                      <p id="resultProductDescription">Upload and analyze a crop image to see a linked store suggestion.</p>
+
+                      <div class="disease-store-meta">
+                        <span id="resultProductRating">Rating will appear here</span>
+                        <span id="resultProductPrice">Price will appear here</span>
+                      </div>
+
+                      <div class="disease-store-actions">
+                        <a class="store-secondary-button disease-store-details" id="resultProductDetailButton" href="/market">View Details</a>
+                        <button class="store-primary-button disease-store-buy" id="resultProductBuyButton" type="button" hidden>
+                          Buy Now
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                </div>
               </div>
 
               <div class="disease-result-visual">
-               tipsList.appendChild(li);
+                {% if disease_page.has_upload %}
+                  <img class="disease-result-image" src="{{ disease_page.result.image_url }}" alt="Uploaded leaf">
+                {% else %}
+                  <div class="disease-result-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px 20px;opacity:0.5;">
+                    <i class="fas fa-microscope" style="font-size:3rem;"></i>
+                    <span>Upload an image to see results</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var body = document.body;
+      var form = document.querySelector(".disease-upload-form");
+      var dropzone = document.querySelector(".disease-upload-dropzone");
+      var resultCard = document.getElementById("disease-result-card");
+      var analyzeButton = document.querySelector(".disease-analyze-button");
+      var fileInput = document.getElementById("crop-image");
+      var resultProductSection = document.getElementById("resultProductSection");
+      var resultProductImage = document.getElementById("resultProductImage");
+      var resultProductLink = document.getElementById("resultProductLink");
+      var resultProductLinkInline = document.getElementById("resultProductLinkInline");
+      var resultProductDetailButton = document.getElementById("resultProductDetailButton");
+      var resultProductBuyButton = document.getElementById("resultProductBuyButton");
+
+      function hideRecommendation() {
+        if (resultProductSection) {
+          resultProductSection.hidden = true;
+        }
+        if (resultProductBuyButton) {
+          resultProductBuyButton.hidden = true;
+          resultProductBuyButton.removeAttribute("data-buy-product");
+        }
+      }
+
+      function showRecommendation(product) {
+        if (!product || !resultProductSection) {
+          hideRecommendation();
+          return;
+        }
+
+        document.getElementById("resultProductReason").textContent = product.reason || "Recommended from the AgroVision AI store.";
+        document.getElementById("resultProductCategory").textContent = product.category || "Store recommendation";
+        document.getElementById("resultProductName").textContent = product.name || "Recommended product";
+        document.getElementById("resultProductDescription").textContent = product.short_description || product.description || "";
+        document.getElementById("resultProductRating").textContent = `Rating ${product.rating_label || product.rating || "0.0"}`;
+        document.getElementById("resultProductPrice").textContent = `Rs ${product.price || 0}`;
+
+        if (resultProductImage) {
+          resultProductImage.src = product.image_url || "/static/images/store-product-fallback.svg";
+        }
+
+        [resultProductLink, resultProductLinkInline, resultProductDetailButton].forEach(function (linkElement) {
+          if (linkElement) {
+            linkElement.href = product.detail_url || "/market";
+          }
+        });
+
+        if (resultProductBuyButton && product.id) {
+          resultProductBuyButton.hidden = false;
+          resultProductBuyButton.dataset.buyProduct = product.id;
+          resultProductBuyButton.dataset.buySource = "disease-recommendation";
+        }
+
+        resultProductSection.hidden = false;
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener("change", function () {
+          if (this.files && this.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              var existingPreview = dropzone.querySelector(".disease-upload-preview");
+              if (!existingPreview) {
+                existingPreview = document.createElement("img");
+                existingPreview.className = "disease-upload-preview";
+                dropzone.insertBefore(existingPreview, dropzone.firstChild);
+              }
+              existingPreview.src = e.target.result;
+              dropzone.classList.add("is-filled");
+            };
+            reader.readAsDataURL(this.files[0]);
+          }
+        });
+      }
+
+      if (!form) return;
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        if (!fileInput || !fileInput.files.length) {
+          alert("Please upload a crop image first.");
+          return;
+        }
+
+        form.classList.add("is-submitting");
+        if (dropzone) dropzone.classList.add("is-scanning");
+        if (resultCard) {
+          resultCard.style.display = "block";
+          resultCard.classList.add("is-scanning");
+        }
+        if (analyzeButton) {
+          analyzeButton.textContent = "Analyzing...";
+          analyzeButton.disabled = true;
+        }
+
+        var formData = new FormData();
+        formData.append("crop_image", fileInput.files[0]);
+
+        try {
+          var resp = await fetch("/predict-disease", { method: "POST", body: formData });
+          var result = await resp.json();
+
+          if (result.success) {
+            document.getElementById("result-disease").textContent = result.disease || "Unknown";
+            document.getElementById("result-confidence").textContent = (result.confidence || 0) + "% confidence";
+            document.getElementById("result-risk").textContent = result.risk_level || "Medium";
+            document.getElementById("result-risk").className = "disease-risk-tag risk-" + (result.risk_level || "Medium").toLowerCase();
+            document.getElementById("result-symptoms").textContent = result.symptoms || "";
+            document.getElementById("result-cause").textContent = result.cause || "";
+            document.getElementById("result-organic").textContent = result.organic_solution || "";
+            document.getElementById("result-chemical").textContent = result.chemical_solution || "";
+
+            // Populate new stats
+            const statAccuracy = document.getElementById("stat-accuracy");
+            const statType = document.getElementById("stat-type");
+            if (statAccuracy) statAccuracy.textContent = (result.confidence || 0) + "%";
+            if (statType) statType.textContent = result.diagnostic_reason && result.diagnostic_reason.includes("PyTorch") ? "AI Model" : "Expert AI";
+
+            var tipsList = document.getElementById("result-tips");
+            tipsList.innerHTML = "";
+            (result.prevention || []).forEach(function(tip) {
+              var li = document.createElement("li");
+              li.textContent = tip;
+              tipsList.appendChild(li);
             });
-            
-            // Clean up UI state
+
+            var resultImg = resultCard.querySelector(".disease-result-image");
+            if (resultImg && result.image_url) {
+              resultImg.src = result.image_url;
+            } else if (result.image_url) {
+              var placeholder = resultCard.querySelector(".disease-result-placeholder");
+              if (placeholder) {
+                var newImg = document.createElement("img");
+                newImg.className = "disease-result-image";
+                newImg.src = result.image_url;
+                newImg.alt = "Uploaded leaf";
+                placeholder.replaceWith(newImg);
+              }
+            }
+
+            showRecommendation(result.recommended_product);
+
             form.classList.remove("is-submitting");
-            dropzone?.classList.remove("is-scanning");
+            if (dropzone) dropzone.classList.remove("is-scanning");
             resultCard.classList.remove("is-scanning");
             if (analyzeButton) {
               analyzeButton.textContent = "Analyze Crop";
               analyzeButton.disabled = false;
             }
           } else {
+            hideRecommendation();
             alert(result.error || "An error occurred during analysis.");
             form.classList.remove("is-submitting");
-            dropzone?.classList.remove("is-scanning");
-            resultCard.classList.remove("is-scanning");
-            resultCard.style.display = "none";
-            if (analyzeButton) {
-              analyzeButton.textContent = "Analyze Crop";
-              analyzeButton.disabled = false;
-            }
+            if (dropzone) dropzone.classList.remove("is-scanning");
+            if (resultCard) { resultCard.classList.remove("is-scanning"); resultCard.style.display = "none"; }
+            if (analyzeButton) { analyzeButton.textContent = "Analyze Crop"; analyzeButton.disabled = false; }
           }
         } catch (err) {
-            console.error(err);
-            alert("Network error occurred during analysis.");
-            form.classList.remove("is-submitting");
-            dropzone?.classList.remove("is-scanning");
-            resultCard.classList.remove("is-scanning");
-            resultCard.style.display = "none";
-            if (analyzeButton) {
-              analyzeButton.textContent = "Analyze Crop";
-              analyzeButton.disabled = false;
-            }
+          console.error(err);
+          hideRecommendation();
+          alert("Network error occurred during analysis.");
+          form.classList.remove("is-submitting");
+          if (dropzone) dropzone.classList.remove("is-scanning");
+          if (resultCard) { resultCard.classList.remove("is-scanning"); resultCard.style.display = "none"; }
+          if (analyzeButton) { analyzeButton.textContent = "Analyze Crop"; analyzeButton.disabled = false; }
         }
       });
 
@@ -257,7 +474,6 @@
       const themeToggle = document.getElementById('themeToggle');
       const themeIcon = document.getElementById('themeIcon');
       
-      // Check saved theme
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
@@ -282,7 +498,6 @@
     })();
   </script>
 
-
   <!-- Mobile Sidebar JS -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -291,11 +506,10 @@
       
       if (mobileToggle && sidebar) {
         mobileToggle.addEventListener('click', (e) => {
-          e.stopPropagation(); // prevent immediate close on document click
+          e.stopPropagation();
           sidebar.classList.toggle('sidebar-open');
         });
 
-        // Close sidebar if clicking outside of it on mobile
         document.addEventListener('click', (e) => {
           if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
             if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
@@ -306,6 +520,11 @@
       }
     });
   </script>
-</body>
+  <script src="/static/store.js"></script>
 
+</body>
 </html>
+
+
+
+

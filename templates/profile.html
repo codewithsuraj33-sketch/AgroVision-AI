@@ -9,41 +9,7 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profile – SmartFarm AI</title>
-  <meta name="description" content="Manage your SmartFarm AI account information and farm details.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-</head>
-<body class="dashboard-page">
-  <main class="dashboard-shell">
-
-  <!-- Mobile Menu Toggle Button -->
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
-  </button>
-
-
-    <!-- ── Sidebar ── -->
-    <aside class="dashboard-sidebar">
-      <div class="sidebar-brand">
-        {% if user and user.profile_photo %}
-          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-        {% else %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <script>
-    if (localStorage.getItem('theme') === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }
-  </script>
-
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profile – AgroVisionAI</title>
+  <title>Profile - AgroVisionAI</title>
   <meta name="description" content="Manage your AgroVisionAI account information and farm details.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,7 +26,7 @@
   </button>
 
 
-    <!-- ── Sidebar ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar Ã¢â€â‚¬Ã¢â€â‚¬ -->
     <aside class="dashboard-sidebar">
       <div class="sidebar-brand">
         {% if user and user.profile_photo %}
@@ -78,6 +44,10 @@
         <a class="sidebar-link" href="/dashboard">
           <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
           <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/crop-library">
+          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+          <span>Crop Library</span>
         </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
@@ -115,7 +85,7 @@
           <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
           <span>Alerts</span>
         </a>
-        <a class="sidebar-link is-active" href="/settings">
+        <a class="sidebar-link is-active settings-active" href="/settings">
           <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
           <span>Settings</span>
         </a>
@@ -123,10 +93,23 @@
           <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
           <span>Community Hub</span>
         </a>
+        <a class="sidebar-link" href="/market">
+          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
+          <span>Market</span>
+        </a>
+        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
+        </a>
       </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
     </aside>
 
-    <!-- ── Main Content ── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Main Content Ã¢â€â‚¬Ã¢â€â‚¬ -->
     <section class="dashboard-main">
 
       <!-- Hero Banner -->
@@ -248,7 +231,7 @@
               </div>
               <div class="profile-field-wrap profile-field-wrap-password" id="pwDisplayWrap">
                 <i class="fas fa-lock profile-field-icon"></i>
-                <input type="password" value="••••••••••" disabled>
+                <input type="password" value="**********" disabled>
               </div>
 
               <div class="profile-pw-fields" id="pwFields" style="display:none;">
@@ -380,7 +363,7 @@
   </main>
 
   <script>
-    /* ── Photo preview ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Photo preview Ã¢â€â‚¬Ã¢â€â‚¬ */
     function previewPhoto(input) {
       const file = input.files[0];
       if (!file) return;
@@ -395,7 +378,7 @@
       reader.readAsDataURL(file);
     }
 
-    /* ── Password toggle ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Password toggle Ã¢â€â‚¬Ã¢â€â‚¬ */
     function togglePasswordFields() {
       const pwFields = document.getElementById('pwFields');
       const displayWrap = document.getElementById('pwDisplayWrap');
@@ -420,7 +403,7 @@
       }
     }
 
-    /* ── Eye toggle ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Eye toggle Ã¢â€â‚¬Ã¢â€â‚¬ */
     function toggleEye(fieldId, btn) {
       const field = document.getElementById(fieldId);
       const icon = btn.querySelector('i');
@@ -434,16 +417,16 @@
       }
     }
 
-    /* ── Form submit animation ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Form submit animation Ã¢â€â‚¬Ã¢â€â‚¬ */
     document.querySelectorAll('.profile-save-btn').forEach(btn => {
       btn.closest('form').addEventListener('submit', function() {
         btn.disabled = true;
-        btn.querySelector('span').textContent = 'Saving…';
+        btn.querySelector('span').textContent = 'Saving...';
         btn.querySelector('i').className = 'fas fa-spinner fa-spin';
       });
     });
 
-    /* ── Auto-dismiss flash after 5s ── */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Auto-dismiss flash after 5s Ã¢â€â‚¬Ã¢â€â‚¬ */
     ['profileFlash', 'profileFlashErr'].forEach(id => {
       const el = document.getElementById(id);
       if (el) setTimeout(() => el.remove(), 5000);
@@ -526,3 +509,7 @@
 </body>
 
 </html>
+
+
+
+

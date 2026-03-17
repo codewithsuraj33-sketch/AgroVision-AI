@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login | AgroVisionAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body class="admin-page">
+  <main class="admin-auth">
+    <section class="admin-auth-card">
+      <div class="admin-auth-header">
+        <h1>Admin Login</h1>
+        <p>Sign in to manage products, orders, and AI mappings.</p>
+      </div>
+
+      {% if error %}
+        <div class="admin-alert admin-alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" class="admin-form">
+        <label class="admin-field">
+          <span>Email</span>
+          <input type="email" name="email" value="{{ admin_email or '' }}" required>
+        </label>
+
+        <label class="admin-field">
+          <span>Password</span>
+          <input type="password" name="password" required>
+        </label>
+
+        <button class="admin-btn admin-btn-primary" type="submit">Login</button>
+      </form>
+
+      <div class="admin-auth-footer">
+        <small>Tip: You can change admin credentials using `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`.</small>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+

@@ -125,6 +125,14 @@
           </label>
         </div>
 
+        <label class="auth-field-group" for="reg-referral">
+          <span>Referral Code (Optional)</span>
+          <div class="auth-input">
+            <i class="fas fa-gift"></i>
+            <input id="reg-referral" name="referral_code" value="{{ request.form.get('referral_code') or request.args.get('ref', '') }}" placeholder="Enter code if you have one">
+          </div>
+        </label>
+
         <label class="auth-field-group" for="reg-photo">
           <span>Profile photo (optional)</span>
           <div class="auth-input auth-input--file">

@@ -1,0 +1,34 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+  <section class="admin-page-head">
+    <h1>Dashboard</h1>
+    <p>Overview of store activity.</p>
+  </section>
+
+  <section class="admin-cards">
+    <article class="admin-card">
+      <div class="admin-card-label">Total Products</div>
+      <div class="admin-card-value">{{ total_products }}</div>
+    </article>
+    <article class="admin-card">
+      <div class="admin-card-label">Total Orders</div>
+      <div class="admin-card-value">{{ total_orders }}</div>
+    </article>
+    <article class="admin-card">
+      <div class="admin-card-label">Pending Orders</div>
+      <div class="admin-card-value">{{ pending_orders }}</div>
+    </article>
+    <article class="admin-card admin-card-accent">
+      <div class="admin-card-label">Revenue</div>
+      <div class="admin-card-value">₹{{ "%.2f"|format(revenue or 0) }}</div>
+    </article>
+  </section>
+
+  <section class="admin-quick">
+    <a class="admin-quick-link" href="/admin/products">Manage Products</a>
+    <a class="admin-quick-link" href="/admin/orders">View Orders</a>
+    <a class="admin-quick-link" href="/admin/mappings">AI Disease Mapping</a>
+  </section>
+{% endblock %}
+

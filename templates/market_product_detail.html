@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ product.name }} - AgroVision Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page store-detail-page">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell store-shell">
+    <aside class="dashboard-sidebar store-sidebar">
+      <div class="sidebar-brand">
+        {% if user and user.profile_photo %}
+          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+        {% else %}
+          <i class="fas fa-user dashboard-avatar"></i>
+        {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>Smart Farm AI</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Store detail navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/crop-library">
+          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+          <span>Crop Library</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+        <a class="sidebar-link is-active store-active" href="/market">
+          <i class="fas fa-store sidebar-icon"></i>
+          <span>Market</span>
+        </a>
+        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main store-detail-main" data-store-detail-page data-product-id="{{ product.id }}">
+      <nav class="store-detail-breadcrumb" aria-label="Breadcrumb">
+        <a href="/dashboard">Dashboard</a>
+        <span>/</span>
+        <a href="/market">Store</a>
+        <span>/</span>
+        <strong>{{ product.name }}</strong>
+      </nav>
+
+      <section class="agro-card store-detail-hero">
+        <div class="store-detail-media is-loading">
+          <span class="store-card-category store-card-category-{{ product.category_accent }}">
+            <i class="fas {{ product.category_icon }}" aria-hidden="true"></i>
+            {{ product.category }}
+          </span>
+          <img
+            class="store-detail-image"
+            src="{{ product.image_url | static_version }}"
+            alt="{{ product.name }}"
+            loading="lazy"
+            decoding="async"
+            data-fallback-src="{{ product.fallback_image | static_version }}"
+          >
+        </div>
+
+        <div class="store-detail-copy">
+          <div class="store-detail-rating">
+            <i class="fas fa-star" aria-hidden="true"></i>
+            <strong>{{ product.rating_label }}</strong>
+            <span>{{ product.rating_count }} verified reviews</span>
+          </div>
+
+          <h1>{{ product.name }}</h1>
+          <p class="store-detail-description">{{ product.description }}</p>
+
+          <div class="store-detail-price-row">
+            <div class="store-detail-price">
+              <strong>Rs {{ product.price }}</strong>
+              <span>Rs {{ product.mrp }}</span>
+              <small>{{ product.discount_pct }}% off</small>
+            </div>
+            <span class="store-detail-unit">{{ product.unit }}</span>
+          </div>
+
+          <div class="store-detail-actions">
+            <button class="store-primary-button" type="button" data-buy-product="{{ product.id }}" data-buy-source="store-detail">
+              Buy Now
+            </button>
+            <a class="store-secondary-button" href="/market">Back to store</a>
+          </div>
+
+          <div class="store-detail-meta-grid">
+            <article class="store-detail-meta-card">
+              <span>Seller</span>
+              <strong>{{ product.seller }}</strong>
+            </article>
+            <article class="store-detail-meta-card">
+              <span>Category</span>
+              <strong>{{ product.category }}</strong>
+            </article>
+            <article class="store-detail-meta-card">
+              <span>Suitable for</span>
+              <strong>Smart crop protection and field use</strong>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="store-detail-grid">
+        <article class="agro-card store-detail-panel">
+          <div class="store-detail-panel-head">
+            <span>Product overview</span>
+            <h2>Why farmers choose this product</h2>
+          </div>
+          <ul class="store-detail-highlight-list">
+            {% for highlight in product.highlights %}
+              <li>{{ highlight }}</li>
+            {% endfor %}
+          </ul>
+        </article>
+
+        <article class="agro-card store-detail-panel">
+          <div class="store-detail-panel-head">
+            <span>Usage snapshot</span>
+            <h2>Field-ready details</h2>
+          </div>
+          <div class="store-detail-info-list">
+            <div>
+              <strong>Pack size</strong>
+              <span>{{ product.unit }}</span>
+            </div>
+            <div>
+              <strong>Category</strong>
+              <span>{{ product.category }}</span>
+            </div>
+            <div>
+              <strong>Store support</strong>
+              <span>Razorpay test checkout enabled for demo purchases.</span>
+            </div>
+            <div>
+              <strong>Image handling</strong>
+              <span>Lazy-loaded remote image with local fallback support.</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="store-related-section">
+        <div class="store-section-head">
+          <div>
+            <span>Explore more</span>
+            <h2>Related products</h2>
+          </div>
+          <a href="/market" class="store-section-link">Open catalog</a>
+        </div>
+
+        <div class="store-related-grid">
+          {% for item in related_products %}
+            <article class="store-card is-loading" data-product-id="{{ item.id }}" data-product-category="{{ item.category }}" data-product-price="{{ item.price }}" data-product-rating="{{ item.rating }}">
+              <a class="store-card-media" href="{{ item.detail_url }}">
+                <span class="store-card-category store-card-category-{{ item.category_accent }}">
+                  <i class="fas {{ item.category_icon }}" aria-hidden="true"></i>
+                  {{ item.category }}
+                </span>
+                <img
+                  class="store-card-image"
+                  src="{{ item.image_url | static_version }}"
+                  alt="{{ item.name }}"
+                  loading="lazy"
+                  decoding="async"
+                  data-fallback-src="{{ item.fallback_image | static_version }}"
+                >
+              </a>
+              <div class="store-card-body">
+                <div class="store-card-rating">
+                  <i class="fas fa-star" aria-hidden="true"></i>
+                  <strong>{{ item.rating_label }}</strong>
+                  <span>{{ item.rating_count }} reviews</span>
+                </div>
+                <a class="store-card-title" href="{{ item.detail_url }}">{{ item.name }}</a>
+                <p class="store-card-description">{{ item.short_description }}</p>
+                <div class="store-card-footer">
+                  <div class="store-card-price">
+                    <strong>Rs {{ item.price }}</strong>
+                    <span>Rs {{ item.mrp }}</span>
+                    <small>{{ item.discount_pct }}% off</small>
+                  </div>
+                  <div class="store-card-actions">
+                    <a class="store-detail-link" href="{{ item.detail_url }}">Details</a>
+                    <button class="store-buy-button" type="button" data-buy-product="{{ item.id }}" data-buy-source="store-related">
+                      Buy Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+
+  <script>
+    document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
+    });
+
+    (function () {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const savedTheme = localStorage.getItem('theme');
+
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+
+      themeToggle?.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+  <script src="/static/store.js"></script>
+</body>
+</html>

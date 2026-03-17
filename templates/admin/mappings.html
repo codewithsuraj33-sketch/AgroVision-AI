@@ -1,0 +1,72 @@
+{% extends "admin/base.html" %}
+{% block title %}AI Mapping{% endblock %}
+{% block content %}
+  <section class="admin-page-head">
+    <h1>AI Disease to Product Mapping</h1>
+    <p>Admin-controlled mapping used for store recommendations after disease detection.</p>
+  </section>
+
+  {% if error %}
+    <div class="admin-alert admin-alert-error">{{ error }}</div>
+  {% endif %}
+  {% if success %}
+    <div class="admin-alert admin-alert-success">{{ success }}</div>
+  {% endif %}
+
+  <section class="admin-panel">
+    <h2 class="admin-panel-title">Add / Update Mapping</h2>
+    <form method="post" class="admin-form admin-form-grid">
+      <label class="admin-field admin-field-wide">
+        <span>Disease Name</span>
+        <input name="disease" placeholder="Leaf Blight" required>
+      </label>
+      <label class="admin-field admin-field-wide">
+        <span>Recommended Product</span>
+        <select name="product_id" required>
+          <option value="" disabled selected>Select a product</option>
+          {% for p in products %}
+            <option value="{{ p.id }}">{{ p.name }} (₹{{ p.price }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="admin-actions">
+        <button class="admin-btn admin-btn-primary" type="submit">Save Mapping</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="admin-panel-title">Current Mappings</h2>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Disease</th>
+            <th>Key</th>
+            <th>Product</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in mappings %}
+            <tr>
+              <td>#{{ m.id }}</td>
+              <td class="admin-td-strong">{{ m.disease }}</td>
+              <td class="admin-muted">{{ m.disease_key }}</td>
+              <td>{{ m.product_name }}</td>
+              <td class="admin-muted">{% if m.updated_at %}{{ m.updated_at.strftime("%Y-%m-%d %H:%M") }}{% endif %}</td>
+              <td class="admin-td-actions">
+                <form method="post" action="/admin/mappings/{{ m.id }}/delete" onsubmit="return confirm('Delete this mapping?');">
+                  <button class="admin-btn admin-btn-danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}
+

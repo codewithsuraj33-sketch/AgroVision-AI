@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ crop.name }} - Crop Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page crop-detail-page">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell crop-detail-shell">
+    <aside class="dashboard-sidebar crop-library-sidebar">
+      <div class="sidebar-brand">
+        {% if user and user.profile_photo %}
+          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+        {% else %}
+          <i class="fas fa-user dashboard-avatar"></i>
+        {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>Smart Farm AI</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Crop detail navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link is-active library-active" href="/crop-library">
+          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+          <span>Crop Library</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+        <a class="sidebar-link" href="/market">
+          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
+          <span>Market</span>
+        </a>
+        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main crop-detail-main">
+      <nav class="crop-detail-breadcrumb" aria-label="Breadcrumb">
+        <a href="/dashboard">Dashboard</a>
+        <span>/</span>
+        <a href="/crop-library">Crop Library</a>
+        <span>/</span>
+        <strong>{{ crop.name }}</strong>
+      </nav>
+
+      <header class="agro-card crop-detail-hero">
+        <div class="crop-detail-title-row">
+          <span class="crop-detail-tag">{{ crop.category_label }}</span>
+          <h1>{{ crop.name }}</h1>
+        </div>
+
+        <div class="crop-detail-image-frame">
+          <img
+            class="crop-detail-hero-image{% if crop.image_url.endswith('default_crop.png') %} is-fallback{% endif %}"
+            src="{{ crop.image_url }}"
+            alt="{{ crop.name }} crop image"
+            data-fallback-src="/static/images/default_crop.png"
+          >
+        </div>
+
+        <button class="crop-share-button" id="cropShareButton" type="button">
+          <i class="fas fa-share-nodes" aria-hidden="true"></i>
+          <span>Share</span>
+        </button>
+      </header>
+
+      <section class="crop-detail-section">
+        <div class="crop-detail-section-head">
+          <span>Section 1</span>
+          <h2>Growing Conditions</h2>
+        </div>
+        <div class="crop-detail-metric-grid crop-detail-metric-grid-4">
+          <article class="crop-detail-metric-card">
+            <span>Temperature</span>
+            <strong>{{ crop.temperature }}</strong>
+          </article>
+          <article class="crop-detail-metric-card">
+            <span>Rainfall</span>
+            <strong>{{ crop.rainfall }}</strong>
+          </article>
+          <article class="crop-detail-metric-card">
+            <span>Sunlight</span>
+            <strong>{{ crop.sunlight }}</strong>
+          </article>
+          <article class="crop-detail-metric-card">
+            <span>Humidity</span>
+            <strong>{{ crop.humidity }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="crop-detail-section">
+        <div class="crop-detail-section-head">
+          <span>Section 2</span>
+          <h2>Cultivation</h2>
+        </div>
+        <div class="crop-detail-metric-grid crop-detail-metric-grid-3">
+          <article class="crop-detail-metric-card">
+            <span>Life cycle</span>
+            <strong>{{ crop.life_cycle }}</strong>
+          </article>
+          <article class="crop-detail-metric-card">
+            <span>Planting method</span>
+            <strong>{{ crop.planting_method }}</strong>
+          </article>
+          <article class="crop-detail-metric-card">
+            <span>Labour requirement</span>
+            <strong>{{ crop.labour_requirement }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="crop-detail-section">
+        <div class="crop-detail-section-head">
+          <span>Section 3</span>
+          <h2>Soil Parameters</h2>
+        </div>
+        <div class="crop-detail-metric-grid crop-detail-metric-grid-2">
+          <article class="crop-detail-metric-card">
+            <span>Soil type</span>
+            <strong>{{ crop.soil_type }}</strong>
+          </article>
+          <article class="crop-detail-metric-card">
+            <span>pH range</span>
+            <strong>{{ crop.ph_range }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="crop-detail-section">
+        <div class="crop-detail-section-head">
+          <span>Section 4</span>
+          <h2>Plant Spacing</h2>
+        </div>
+        <div class="crop-detail-metric-grid crop-detail-metric-grid-2">
+          <article class="crop-detail-metric-card">
+            <span>Row to row spacing</span>
+            <strong>{{ crop.row_spacing }}</strong>
+          </article>
+          <article class="crop-detail-metric-card">
+            <span>Plant to plant spacing</span>
+            <strong>{{ crop.plant_spacing }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="crop-detail-section">
+        <div class="crop-detail-section-head">
+          <span>Section 5</span>
+          <h2>Nutrient Requirements</h2>
+        </div>
+        <div class="crop-detail-metric-grid crop-detail-metric-grid-3">
+          <article class="crop-detail-metric-card crop-detail-nutrient-card">
+            <span>Nitrogen (N)</span>
+            <strong>{{ crop.nitrogen }}</strong>
+          </article>
+          <article class="crop-detail-metric-card crop-detail-nutrient-card">
+            <span>Phosphorus (P)</span>
+            <strong>{{ crop.phosphorus }}</strong>
+          </article>
+          <article class="crop-detail-metric-card crop-detail-nutrient-card">
+            <span>Potassium (K)</span>
+            <strong>{{ crop.potassium }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="crop-detail-section">
+        <div class="crop-detail-section-head">
+          <span>Section 6</span>
+          <h2>Crop Companions</h2>
+        </div>
+        <div class="crop-detail-companion-grid">
+          <article class="crop-detail-list-card">
+            <h3>Good companion crops</h3>
+            <ul>
+              {% for item in crop.good_companions %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </article>
+          <article class="crop-detail-list-card crop-detail-list-card-warn">
+            <h3>Bad companion crops</h3>
+            <ul>
+              {% for item in crop.bad_companions %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="crop-detail-section">
+        <div class="crop-detail-section-head">
+          <span>Section 7</span>
+          <h2>Farming Tips</h2>
+        </div>
+        <article class="crop-detail-list-card crop-detail-tips-card">
+          <ul>
+            {% for tip in crop.farming_tips %}
+              <li>{{ tip }}</li>
+            {% endfor %}
+          </ul>
+        </article>
+      </section>
+
+      <section class="crop-detail-section">
+        <div class="crop-detail-section-head">
+          <span>More to explore</span>
+          <h2>Related Crops</h2>
+        </div>
+        <div class="crop-detail-related-grid">
+          {% for item in related_crops %}
+            <a class="crop-detail-related-card{% if item.image_url.endswith('default_crop.png') %} has-fallback-image{% endif %}" href="/crop/{{ item.slug }}">
+              <div class="crop-detail-related-media">
+                <img
+                  class="crop-detail-related-image{% if item.image_url.endswith('default_crop.png') %} is-fallback{% endif %}"
+                  src="{{ item.image_url }}"
+                  alt="{{ item.name }} crop"
+                  loading="lazy"
+                  decoding="async"
+                  data-fallback-src="/static/images/default_crop.png"
+                >
+              </div>
+              <div class="crop-detail-related-copy">
+                <strong>{{ item.name }}</strong>
+                <span>{{ item.category_label }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
+    });
+
+    function bindCropImageFallbacks() {
+      document.querySelectorAll('img[data-fallback-src]').forEach((image) => {
+        const fallback = image.dataset.fallbackSrc;
+
+        function applyFallback() {
+          if (!fallback || image.dataset.fallbackApplied === '1') {
+            return;
+          }
+          image.dataset.fallbackApplied = '1';
+          image.src = fallback;
+          image.classList.add('is-fallback');
+          image.closest('.crop-library-card, .crop-detail-related-card')?.classList.add('has-fallback-image');
+        }
+
+        if (image.currentSrc.includes('default_crop.png') || image.src.includes('default_crop.png')) {
+          image.classList.add('is-fallback');
+          image.closest('.crop-library-card, .crop-detail-related-card')?.classList.add('has-fallback-image');
+        }
+
+        image.addEventListener('error', applyFallback);
+      });
+    }
+
+    document.getElementById('cropShareButton')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      const shareUrl = window.location.href;
+      const shareData = {
+        title: `${document.title}`,
+        text: `Explore the ${button.closest('.crop-detail-hero')?.querySelector('h1')?.textContent || 'crop'} profile on AgroVision AI.`,
+        url: shareUrl
+      };
+
+      try {
+        if (navigator.share) {
+          await navigator.share(shareData);
+        } else if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(shareUrl);
+          button.querySelector('span').textContent = 'Link copied';
+          window.setTimeout(() => {
+            button.querySelector('span').textContent = 'Share';
+          }, 1800);
+        }
+      } catch (error) {
+        // Intentionally silent for cancelled share dialogs.
+      }
+    });
+
+    bindCropImageFallbacks();
+  </script>
+</body>
+</html>
+
