@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Admin{% endblock %} | AgroVisionAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="admin-page">
+  <header class="admin-topbar">
+    <div class="admin-topbar-inner">
+      <a class="admin-brand" href="/admin">
+        <span class="admin-brand-mark">AgroVisionAI</span>
+        <span class="admin-brand-sub">Admin Panel</span>
+      </a>
+
+      <nav class="admin-nav">
+        <a href="/admin" class="{% if request.path == '/admin' %}is-active{% endif %}">Dashboard</a>
+        <a href="/admin/products" class="{% if request.path.startswith('/admin/products') %}is-active{% endif %}">Products</a>
+        <a href="/admin/orders" class="{% if request.path.startswith('/admin/orders') %}is-active{% endif %}">Orders</a>
+        <a href="/admin/mappings" class="{% if request.path.startswith('/admin/mappings') %}is-active{% endif %}">AI Mapping</a>
+        <a class="admin-logout" href="/admin/logout">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="admin-shell">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
+

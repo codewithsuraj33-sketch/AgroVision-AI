@@ -267,6 +267,11 @@
   </button>
 
   <main class="dashboard-shell">
+      <!-- Language Switcher -->
+      <div class="language-switcher">
+        <div id="google_translate_element"></div>
+      </div>
+
     <aside class="dashboard-sidebar">
       <div class="sidebar-brand">
           {% if user and user.profile_photo %}
@@ -280,10 +285,14 @@
         </div>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" aria-label="Tools navigation">
         <a class="sidebar-link" href="/dashboard">
           <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
           <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/crop-library">
+          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+          <span>Crop Library</span>
         </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
@@ -297,10 +306,6 @@
           <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
           <span>Soil Health</span>
         </a>
-        <a class="sidebar-link is-active" href="/tools">
-          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
-          <span>Tools</span>
-        </a>
         <a class="sidebar-link" href="/crop-monitoring">
           <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
           <span>Crop Monitoring</span>
@@ -312,6 +317,10 @@
         <a class="sidebar-link" href="/ai-insights">
           <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
           <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link is-active tools-active" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
         </a>
         <a class="sidebar-link" href="/disease-detection">
           <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
@@ -329,10 +338,18 @@
           <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
           <span>Community Hub</span>
         </a>
+        <a class="sidebar-link" href="/market">
+          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
+          <span>Market</span>
+        </a>
+        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
+        </a>
       </nav>
 
       <a class="sidebar-logout" href="/logout">
-        <i class="fas fa-right-from-bracket"></i>
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
         <span>Logout</span>
       </a>
     </aside>
@@ -819,5 +836,25 @@
         });
     });
   </script>
+
+  <!-- Google Translate -->
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement(
+        {
+          pageLanguage: 'en',
+          includedLanguages: 'en,hi,or',
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+        },
+        'google_translate_element'
+      );
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 </body>
 </html>
+
+
+
+

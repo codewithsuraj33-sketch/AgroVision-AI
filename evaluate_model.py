@@ -10,7 +10,13 @@ import matplotlib.pyplot as plt
 
 MODEL_PATH = "models/agrovision_disease_model.pth"
 LABELS_PATH = "models/agrovision_disease_labels.json"
-DATASET_DIR = "dataset/PlantVillage"
+DATASET_DIR = Path("dataset") / "PlantVillage"
+
+def resolve_imagefolder_root(path: Path) -> Path:
+    nested = path / path.name
+    if nested.is_dir():
+        return nested
+    return path
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 transform = transforms.Compose([
@@ -20,17 +26,26 @@ transform = transforms.Compose([
 ])
 
 # Load model & labels
+if not Path(MODEL_PATH).exists():
+    raise FileNotFoundError(f"Missing model file: {MODEL_PATH}. Train it first with train_mobilenetv2_pro.py")
+if not Path(LABELS_PATH).exists():
+    raise FileNotFoundError(f"Missing labels file: {LABELS_PATH}. Train it first with train_mobilenetv2_pro.py")
+
 model = torch.load(MODEL_PATH, map_location=device)
 model.eval()
 with open(LABELS_PATH, 'r') as f:
     labels = json.load(f)
 class_names = list(labels.values())
+num_classes = len(class_names)
 
 print("Model loaded. Testing predictions...")
 print("Classes:", class_names)
 
 # Test on few val images
-dataset = datasets.ImageFolder(DATASET_DIR, transform=transform)
+dataset_dir = resolve_imagefolder_root(Path(DATASET_DIR))
+if not dataset_dir.exists():
+    raise FileNotFoundError(f"Missing dataset directory: {dataset_dir}")
+dataset = datasets.ImageFolder(str(dataset_dir), transform=transform)
 val_loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
 all_preds, all_labels = [], []
@@ -46,6 +61,7 @@ with torch.no_grad():
 
 print("\nVal Accuracy:", np.mean(np.array(all_preds) == np.array(all_labels)))
 print("\nClassification Report:")
-print(classification_report(all_labels, all_preds, target_names=class_names[:len(set(all_labels))]))
+label_ids = list(range(num_classes))
+print(classification_report(all_labels, all_preds, labels=label_ids, target_names=class_names, zero_division=0))
 
 print("\n✅ Model evaluation complete. Ready for app.py integration!")

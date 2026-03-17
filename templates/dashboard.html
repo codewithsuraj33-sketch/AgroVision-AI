@@ -17,71 +17,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/introjs.min.css">
-  <style>
-    .operations-summary {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .operation-stat {
-      background: rgba(10, 92, 58, 0.08);
-      border-radius: 14px;
-      padding: 12px;
-    }
-    .operation-stat strong {
-      display: block;
-      font-size: 1.1rem;
-      color: #0f5132;
-      margin-top: 4px;
-    }
-    .operation-list {
-      display: grid;
-      gap: 10px;
-    }
-    .operation-item {
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(16, 24, 40, 0.06);
-    }
-    .operation-item-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 6px;
-      align-items: center;
-    }
-    .operation-item small {
-      display: block;
-      color: #607087;
-      margin-top: 4px;
-    }
-    .operation-chip {
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      background: rgba(34, 185, 120, 0.15);
-      color: #157347;
-    }
-    .operation-chip.overdue {
-      background: rgba(220, 53, 69, 0.14);
-      color: #b02a37;
-    }
-    .operation-empty {
-      padding: 20px 14px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.72);
-      color: #607087;
-      text-align: center;
-    }
-    @media (max-width: 640px) {
-      .operations-summary {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
 </head>
 <body class="dashboard-page">
   <main class="dashboard-shell">
@@ -105,9 +40,13 @@
       </div>
 
       <nav class="sidebar-nav" aria-label="Dashboard navigation">
-        <a class="sidebar-link is-active" href="/dashboard">
+        <a class="sidebar-link is-active dashboard-active" href="/dashboard">
           <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
           <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/crop-library">
+          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+          <span>Crop Library</span>
         </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
@@ -153,15 +92,32 @@
           <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
           <span>Community Hub</span>
         </a>
+        <a class="sidebar-link" href="/market">
+          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
+          <span>Market</span>
+        </a>
+        <a class="sidebar-link" href="/subscriptions" style="border: 1px dashed rgba(45, 216, 255, 0.3); margin-top: 5px; background: rgba(45, 216, 255, 0.06);">
+          <i class="fas fa-crown sidebar-icon" style="color: #2dd8ff;"></i>
+          <span style="color: #e0e7ff; font-weight: 700;">Subscriptions</span>
+        </a>
+        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
+        </a>
       </nav>
 
-        <a class="sidebar-logout" href="/logout">
-          <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
-          <span>Logout</span>
-        </a>
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
     </aside>
 
     <section class="dashboard-main">
+      <!-- Language Switcher -->
+      <div class="language-switcher">
+        <div id="google_translate_element"></div>
+      </div>
+
       <header class="dashboard-hero">
         <div class="dashboard-hero-copy">
           <h1 id="welcome-title">Welcome, {{ user.name }}</h1>
@@ -175,7 +131,7 @@
         </div>
       </header>
 
-      <section class="dashboard-content-area" style="padding: 14px 24px;">
+      <section class="dashboard-content-area">
         <!-- Toast Container -->
         <div id="toast-container"></div>
 
@@ -682,5 +638,25 @@
       <button class="bubble-send" style="padding: 8px 12px;"><i class="fas fa-paper-plane"></i></button>
     </div>
   </div>
+
+  <!-- Google Translate -->
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement(
+        {
+          pageLanguage: 'en',
+          includedLanguages: 'en,hi,or',
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+        },
+        'google_translate_element'
+      );
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 </body>
 </html>
+
+
+
+

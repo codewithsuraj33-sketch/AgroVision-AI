@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crop Library - AgroVision AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page crop-library-page">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell crop-library-shell">
+    <aside class="dashboard-sidebar crop-library-sidebar">
+      <div class="sidebar-brand">
+        {% if user and user.profile_photo %}
+          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+        {% else %}
+          <i class="fas fa-user dashboard-avatar"></i>
+        {% endif %}
+        <div class="sidebar-brand-copy">
+          <strong>{{ user.name }}</strong>
+          <span>Smart Farm AI</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Crop library navigation">
+        <a class="sidebar-link" href="/dashboard">
+          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link is-active library-active" href="/crop-library">
+          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+          <span>Crop Library</span>
+        </a>
+        <a class="sidebar-link" href="/farms">
+          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+          <span>Farms</span>
+        </a>
+        <a class="sidebar-link" href="/weather">
+          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+          <span>Weather</span>
+        </a>
+        <a class="sidebar-link" href="/soil-health">
+          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+          <span>Soil Health</span>
+        </a>
+        <a class="sidebar-link" href="/crop-monitoring">
+          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+          <span>Crop Monitoring</span>
+        </a>
+        <a class="sidebar-link" href="/farm-twin">
+          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+          <span>Farm Twin</span>
+        </a>
+        <a class="sidebar-link" href="/ai-insights">
+          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+          <span>AI Insights</span>
+        </a>
+        <a class="sidebar-link" href="/tools">
+          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+          <span>Tools</span>
+        </a>
+        <a class="sidebar-link" href="/disease-detection">
+          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+          <span>Disease Detection</span>
+        </a>
+        <a class="sidebar-link" href="/alerts">
+          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+          <span>Alerts</span>
+        </a>
+        <a class="sidebar-link" href="/settings">
+          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+          <span>Settings</span>
+        </a>
+        <a class="sidebar-link" href="/community">
+          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+          <span>Community Hub</span>
+        </a>
+        <a class="sidebar-link" href="/market">
+          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
+          <span>Market</span>
+        </a>
+        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
+        </a>
+      </nav>
+
+      <a class="sidebar-logout" href="/logout">
+        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+        <span>Logout</span>
+      </a>
+    </aside>
+
+    <section class="dashboard-main crop-library-main">
+      <header class="crop-library-hero">
+        <div class="crop-library-hero-copy">
+          <span class="crop-library-kicker">AgroVision AI Knowledge Hub</span>
+          <h1>Crop Library</h1>
+          <p>Explore crop profiles, growing conditions, soil needs, spacing, and practical field guidance across the farm knowledge base.</p>
+        </div>
+
+        <div class="crop-library-stat-grid">
+          <article class="crop-library-stat-card">
+            <span>Total crops</span>
+            <strong>{{ crop_library.count }}</strong>
+          </article>
+          <article class="crop-library-stat-card">
+            <span>Annual crops</span>
+            <strong>{{ crop_library.annual_count }}</strong>
+          </article>
+          <article class="crop-library-stat-card">
+            <span>Perennial crops</span>
+            <strong>{{ crop_library.perennial_count }}</strong>
+          </article>
+          <article class="crop-library-stat-card">
+            <span>Crop groups</span>
+            <strong>{{ crop_library.category_count }}</strong>
+          </article>
+        </div>
+      </header>
+
+      <section class="agro-card crop-library-toolbar">
+        <label class="crop-library-search" for="cropLibrarySearch">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <input id="cropLibrarySearch" type="search" placeholder="Search crops like tomato, rice, papaya, cotton..." autocomplete="off">
+        </label>
+
+        <div class="crop-library-toolbar-meta">
+          <strong id="cropLibraryCount">{{ crop_library.count }} crops</strong>
+          <span>Tap a crop card to open its detailed cultivation profile.</span>
+        </div>
+      </section>
+
+      <section class="crop-library-grid" id="cropLibraryGrid" aria-live="polite">
+        {% for crop in crop_library.crops %}
+          <a class="crop-library-card{% if crop.image_url.endswith('default_crop.png') %} has-fallback-image{% endif %}" href="/crop/{{ crop.slug }}" data-search="{{ crop.search_text }}">
+            <div class="crop-library-card-media">
+              <img
+                class="crop-library-card-image{% if crop.image_url.endswith('default_crop.png') %} is-fallback{% endif %}"
+                src="{{ crop.image_url }}"
+                alt="{{ crop.name }} crop"
+                loading="lazy"
+                decoding="async"
+                data-fallback-src="/static/images/default_crop.png"
+              >
+            </div>
+            <div class="crop-library-card-body">
+              <span class="crop-library-card-tag">{{ crop.category_label }}</span>
+              <strong>{{ crop.name }}</strong>
+            </div>
+          </a>
+        {% endfor %}
+      </section>
+
+      <section class="agro-card crop-library-empty" id="cropLibraryEmpty" hidden>
+        <i class="fas fa-seedling" aria-hidden="true"></i>
+        <h2>No crops match your search</h2>
+        <p>Try another crop name or clear the search to browse the full library.</p>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
+    });
+
+    const searchInput = document.getElementById('cropLibrarySearch');
+    const grid = document.getElementById('cropLibraryGrid');
+    const cards = Array.from(grid?.querySelectorAll('.crop-library-card') || []);
+    const emptyState = document.getElementById('cropLibraryEmpty');
+    const countLabel = document.getElementById('cropLibraryCount');
+
+    function bindCropImageFallbacks() {
+      document.querySelectorAll('img[data-fallback-src]').forEach((image) => {
+        const fallback = image.dataset.fallbackSrc;
+
+        function applyFallback() {
+          if (!fallback || image.dataset.fallbackApplied === '1') {
+            return;
+          }
+          image.dataset.fallbackApplied = '1';
+          image.src = fallback;
+          image.classList.add('is-fallback');
+          image.closest('.crop-library-card, .crop-detail-related-card')?.classList.add('has-fallback-image');
+        }
+
+        if (image.currentSrc.includes('default_crop.png') || image.src.includes('default_crop.png')) {
+          image.classList.add('is-fallback');
+          image.closest('.crop-library-card, .crop-detail-related-card')?.classList.add('has-fallback-image');
+        }
+
+        image.addEventListener('error', applyFallback);
+      });
+    }
+
+    function updateCropLibrary() {
+      const query = (searchInput?.value || '').trim().toLowerCase();
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const text = (card.dataset.search || '').toLowerCase();
+        const isVisible = !query || text.includes(query);
+        card.hidden = !isVisible;
+        if (isVisible) {
+          visibleCount += 1;
+        }
+      });
+
+      if (countLabel) {
+        countLabel.textContent = `${visibleCount} crop${visibleCount === 1 ? '' : 's'}`;
+      }
+
+      if (emptyState) {
+        emptyState.hidden = visibleCount > 0;
+      }
+    }
+
+    searchInput?.addEventListener('input', updateCropLibrary);
+    bindCropImageFallbacks();
+  </script>
+</body>
+</html>
+

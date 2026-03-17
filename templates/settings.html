@@ -273,6 +273,11 @@
 </head>
 <body class="dashboard-page">
   <main class="dashboard-shell">
+      <!-- Language Switcher -->
+      <div class="language-switcher">
+        <div id="google_translate_element"></div>
+      </div>
+
     <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
       <i class="fas fa-bars"></i>
     </button>
@@ -294,6 +299,10 @@
         <a class="sidebar-link" href="/dashboard">
           <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
           <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link" href="/crop-library">
+          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+          <span>Crop Library</span>
         </a>
         <a class="sidebar-link" href="/farms">
           <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
@@ -331,13 +340,21 @@
           <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
           <span>Alerts</span>
         </a>
-        <a class="sidebar-link is-active" href="/settings">
+        <a class="sidebar-link is-active settings-active" href="/settings">
           <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
           <span>Settings</span>
         </a>
         <a class="sidebar-link" href="/community">
           <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
           <span>Community Hub</span>
+        </a>
+        <a class="sidebar-link" href="/market">
+          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
+          <span>Market</span>
+        </a>
+        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
         </a>
       </nav>
 
@@ -687,5 +704,25 @@
       }
     });
   </script>
+
+  <!-- Google Translate -->
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement(
+        {
+          pageLanguage: 'en',
+          includedLanguages: 'en,hi,or',
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+        },
+        'google_translate_element'
+      );
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 </body>
 </html>
+
+
+
+

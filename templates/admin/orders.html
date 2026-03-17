@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+{% block title %}Orders{% endblock %}
+{% block content %}
+  <section class="admin-page-head">
+    <h1>Orders</h1>
+    <p>Track purchases and update delivery status.</p>
+  </section>
+
+  <section class="admin-filters">
+    <a class="admin-chip {% if not status_filter %}is-active{% endif %}" href="/admin/orders">All</a>
+    {% for s in statuses %}
+      <a class="admin-chip {% if status_filter == s %}is-active{% endif %}" href="/admin/orders?status={{ s }}">{{ s.title() }}</a>
+    {% endfor %}
+  </section>
+
+  <section class="admin-panel">
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Product</th>
+            <th>User</th>
+            <th>Price</th>
+            <th>Payment</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+            <tr>
+              <td>#{{ o.id }}</td>
+              <td class="admin-td-strong">{{ o.product_name }}</td>
+              <td>
+                {{ o.user_name or "User" }}
+                {% if o.user_email %}<div class="admin-muted">{{ o.user_email }}</div>{% endif %}
+              </td>
+              <td>₹{{ "%.2f"|format(o.amount_inr or 0) }}</td>
+              <td>{{ (o.payment_status or "").title() }}</td>
+              <td>
+                <span class="admin-badge admin-badge-{{ o.fulfillment_status }}">{{ o.fulfillment_status.title() }}</span>
+              </td>
+              <td class="admin-muted">
+                {% if o.created_at %}{{ o.created_at.strftime("%Y-%m-%d %H:%M") }}{% endif %}
+              </td>
+              <td class="admin-td-actions">
+                <form method="post" action="/admin/orders/{{ o.id }}/fulfillment">
+                  <select name="fulfillment_status">
+                    {% for s in statuses %}
+                      <option value="{{ s }}" {% if s == o.fulfillment_status %}selected{% endif %}>{{ s.title() }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="admin-btn admin-btn-primary" type="submit">Update</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}
+
