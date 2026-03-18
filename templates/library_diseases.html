@@ -17,11 +17,22 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body class="dashboard-page library-page">
-  <main class="library-shell">
-    <div class="library-topbar">
-      <a href="/library"><i class="fas fa-arrow-left"></i> Library</a>
-      <span class="library-chip"><i class="fas fa-bug"></i> Pests &amp; Diseases</span>
-    </div>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      {% set active_page = 'library' %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main">
+      <section class="library-shell">
+        <div class="library-topbar">
+          <a href="/library"><i class="fas fa-arrow-left"></i> Library</a>
+          <span class="library-chip"><i class="fas fa-bug"></i> Pests &amp; Diseases</span>
+        </div>
 
     <h1 class="library-title">Pests &amp; diseases</h1>
     <p class="library-subtitle">Filter by crop, search by name, and explore stage-wise cards like Plantix.</p>
@@ -124,9 +135,13 @@
           {% endfor %}
         {% endif %}
       </div>
+        </section>
+      </section>
     </section>
   </main>
 
   <script src="/static/library.js"></script>
+  {% include "_mobile_sidebar_script.html" %}
 </body>
 </html>
+

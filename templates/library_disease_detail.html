@@ -155,8 +155,19 @@
   </style>
 </head>
 <body class="dashboard-page library-page">
-  <main class="library-shell">
-    <div class="library-topbar">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      {% set active_page = 'library' %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main">
+      <section class="library-shell">
+        <div class="library-topbar">
       <a href="/library/diseases"><i class="fas fa-arrow-left"></i> Back</a>
       <span class="library-chip"><i class="fas fa-info-circle"></i> Guide</span>
     </div>
@@ -258,10 +269,14 @@
       {% else %}
         <p>Recommendation will appear when a matching product is available in the store.</p>
       {% endif %}
+        </section>
+      </section>
     </section>
   </main>
 
   <script src="/static/library.js"></script>
   <script src="/static/store.js"></script>
+  {% include "_mobile_sidebar_script.html" %}
 </body>
 </html>
+

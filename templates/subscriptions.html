@@ -236,14 +236,26 @@
     </style>
   </head>
   <body
-    class="sub-page"
+    class="dashboard-page"
     data-user-name="{{ user.name or '' }}"
     data-user-email="{{ user.email or '' }}"
     data-user-phone="{{ user.phone or '' }}"
     data-user-plan="{{ user.plan or 'free' }}"
     data-wallet-balance="{{ user.wallet_balance or 0 }}"
   >
-    <div class="sub-shell">
+    <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <main class="dashboard-shell">
+      <aside class="dashboard-sidebar">
+        {% set active_page = 'subscriptions' %}
+        {% include "_user_sidebar.html" %}
+      </aside>
+
+      <section class="dashboard-main">
+        <div class="sub-page">
+          <div class="sub-shell">
       <header class="sub-header">
         <div>
           <a href="/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
@@ -325,10 +337,14 @@
           <button class="sub-btn sub-btn-ghost" type="button" id="walletCheckBtn">Check Wallet</button>
         </div>
       </section>
-    </div>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="/static/subscriptions.js"></script>
+    {% include "_mobile_sidebar_script.html" %}
   </body>
 </html>
 

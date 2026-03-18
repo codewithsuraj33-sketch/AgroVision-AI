@@ -1,0 +1,92 @@
+<div class="sidebar-brand">
+  {% if user and user.profile_photo %}
+    <img
+      class="dashboard-avatar-img dashboard-avatar"
+      style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;"
+      src="/static/uploads/{{ user.profile_photo }}"
+      alt="Avatar"
+    >
+  {% else %}
+    <i class="fas fa-user dashboard-avatar"></i>
+  {% endif %}
+  <div class="sidebar-brand-copy">
+    <strong>{{ user.name }}</strong>
+    <span>Smart Farm AI</span>
+  </div>
+</div>
+
+<nav class="sidebar-nav" aria-label="Dashboard navigation">
+  <a class="sidebar-link{% if active_page == 'dashboard' %} is-active dashboard-active{% endif %}" href="/dashboard">
+    <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
+    <span>Dashboard</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'crop_library' %} is-active library-active{% endif %}" href="/crop-library">
+    <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
+    <span>Crop Library</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'library' %} is-active library-active{% endif %}" href="/library">
+    <i class="fas fa-layer-group sidebar-icon"></i>
+    <span>Library</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'farms' %} is-active farms-active{% endif %}" href="/farms">
+    <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
+    <span>Farms</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'weather' %} is-active weather-active{% endif %}" href="/weather">
+    <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
+    <span>Weather</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'soil' %} is-active soil-active{% endif %}" href="/soil-health">
+    <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
+    <span>Soil Health</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'crop_monitoring' %} is-active crop-active{% endif %}" href="/crop-monitoring">
+    <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
+    <span>Crop Monitoring</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'farm_twin' %} is-active farm-twin-active{% endif %}" href="/farm-twin">
+    <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
+    <span>Farm Twin</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'ai_insights' %} is-active ai-active{% endif %}" href="/ai-insights">
+    <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
+    <span>AI Insights</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'tools' %} is-active tools-active{% endif %}" href="/tools">
+    <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
+    <span>Tools</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'disease_detection' %} is-active disease-active{% endif %}" href="/disease-detection">
+    <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
+    <span>Disease Detection</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'alerts' %} is-active alerts-active{% endif %}" href="/alerts">
+    <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
+    <span>Alerts</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'settings' %} is-active settings-active{% endif %}" href="/settings">
+    <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
+    <span>Settings</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'community' %} is-active community-active{% endif %}" href="/community">
+    <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
+    <span>Community</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'market' %} is-active store-active{% endif %}" href="/market">
+    <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
+    <span>Market</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'subscriptions' %} is-active{% endif %}" href="/subscriptions" style="border: 1px dashed rgba(45, 216, 255, 0.3); margin-top: 5px; background: rgba(45, 216, 255, 0.06);">
+    <i class="fas fa-crown sidebar-icon" style="color: #2dd8ff;"></i>
+    <span style="color: #2dd8ff; font-weight: 800;">Subscriptions</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'refer' %} is-active{% endif %}" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+    <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
+    <span style="color: #7dff2e; font-weight: 700;">Refer &amp; Earn</span>
+  </a>
+</nav>
+
+<a class="sidebar-logout" href="/logout">
+  <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
+  <span>Logout</span>
+</a>

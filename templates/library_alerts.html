@@ -74,11 +74,22 @@
   </style>
 </head>
 <body class="dashboard-page library-page">
-  <main class="library-shell">
-    <div class="library-topbar">
-      <a href="/library"><i class="fas fa-arrow-left"></i> Library</a>
-      <span class="library-chip"><i class="fas fa-triangle-exclamation"></i> Alerts</span>
-    </div>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <main class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      {% set active_page = 'library' %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main">
+      <section class="library-shell">
+        <div class="library-topbar">
+          <a href="/library"><i class="fas fa-arrow-left"></i> Library</a>
+          <span class="library-chip"><i class="fas fa-triangle-exclamation"></i> Alerts</span>
+        </div>
 
     <h1 class="library-title">Pests &amp; Disease Alert</h1>
     <p class="library-subtitle">High risk pests and diseases that might appear in your field (mock daily updates).</p>
@@ -111,9 +122,13 @@
           </a>
         {% endfor %}
       </div>
+        </section>
+      </section>
     </section>
   </main>
 
   <script src="/static/library.js"></script>
+  {% include "_mobile_sidebar_script.html" %}
 </body>
 </html>
+

@@ -79,8 +79,19 @@
         }
     </style>
 </head>
-<body>
-    <div class="page-container">
+<body class="dashboard-page">
+    <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <main class="dashboard-shell">
+      <aside class="dashboard-sidebar">
+        {% set active_page = 'refer' %}
+        {% include "_user_sidebar.html" %}
+      </aside>
+
+      <section class="dashboard-main">
+        <div class="page-container">
       <!-- Language Switcher -->
       <div class="language-switcher">
         <div id="google_translate_element"></div>
@@ -131,7 +142,9 @@
                 </div>
             </div>
         </div>
-    </div>
+        </div>
+      </section>
+    </main>
 
     <script>
         function copyCode() {
@@ -160,6 +173,8 @@
     }
   </script>
   <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  {% include "_mobile_sidebar_script.html" %}
 
 </body>
 </html>
+

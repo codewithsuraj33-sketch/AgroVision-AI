@@ -5271,19 +5271,10 @@ def login():
         if user and password_ok:
             if upgraded:
                 db.session.commit()
-            otp = generate_otp()
-            session["otp"] = otp
-            session["otp_target"] = email
-            session["otp_type"] = "login"
-            session["otp_user_id"] = user.id
-            session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
-            
-            # Send Real Email
-            email_sent = send_otp_email(email, otp)
-            if not email_sent:
-                print(f"DEBUG: Email delivery failed. Login OTP for {email} is {otp} (Simulation)")
-            
-            return redirect("/verify-otp")
+            clear_otp_session_state()
+            session["user_id"] = user.id
+            session["user"] = user.name
+            return redirect("/dashboard")
         else:
             return render_template("login.html", error="Invalid email or password.")
 
