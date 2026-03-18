@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <script>
@@ -21,18 +21,18 @@
   <main class="dashboard-shell">
 
   <!-- Mobile Menu Toggle Button -->
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
 
 
-    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar Ã¢â€â‚¬Ã¢â€â‚¬ -->
+    <!-- Sidebar -->
     <aside class="dashboard-sidebar">
       {% set active_page = 'settings' %}
       {% include "_user_sidebar.html" %}
     </aside>
 
-    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Main Content Ã¢â€â‚¬Ã¢â€â‚¬ -->
+    <!-- Main Content -->
     <section class="dashboard-main">
 
       <!-- Hero Banner -->
@@ -288,7 +288,7 @@
   </main>
 
   <script>
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Photo preview Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Photo preview */
     function previewPhoto(input) {
       const file = input.files[0];
       if (!file) return;
@@ -303,7 +303,7 @@
       reader.readAsDataURL(file);
     }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Password toggle Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Password toggle */
     function togglePasswordFields() {
       const pwFields = document.getElementById('pwFields');
       const displayWrap = document.getElementById('pwDisplayWrap');
@@ -328,7 +328,7 @@
       }
     }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Eye toggle Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Eye toggle */
     function toggleEye(fieldId, btn) {
       const field = document.getElementById(fieldId);
       const icon = btn.querySelector('i');
@@ -342,7 +342,7 @@
       }
     }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Form submit animation Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Form submit animation */
     document.querySelectorAll('.profile-save-btn').forEach(btn => {
       btn.closest('form').addEventListener('submit', function() {
         btn.disabled = true;
@@ -351,7 +351,7 @@
       });
     });
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Auto-dismiss flash after 5s Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Auto-dismiss flash after 5s */
     ['profileFlash', 'profileFlashErr'].forEach(id => {
       const el = document.getElementById(id);
       if (el) setTimeout(() => el.remove(), 5000);
@@ -393,7 +393,7 @@
   </script>
 
 
-  <!-- Mobile Sidebar JS -->
+  <!-- Sidebar -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const mobileToggle = document.getElementById('mobileMenuToggle');
@@ -434,5 +434,7 @@
 </body>
 
 </html>
+
+
 
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <script>
@@ -22,8 +22,8 @@
   <main class="dashboard-shell">
 
   <!-- Mobile Menu Toggle Button -->
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
     <aside class="dashboard-sidebar">
       {% set active_page = 'dashboard' %}
@@ -86,6 +86,7 @@
             <p id="dynamic-ai-tip">Checking field conditions... Optimization suggestion loading.</p>
           </div>
         </div>
+        <script id="dashboardRecommendationData" type="application/json">[{% for item in dashboard.recommendations or [] %}{{ {'title': item.title, 'detail': item.detail}|tojson }}{% if not loop.last %},{% endif %}{% endfor %}]</script>
 
         <section class="dashboard-grid">
           <a href="/weather" class="dash-card-link">
@@ -250,27 +251,27 @@
                <div class="timeline-day">
                  <strong>Today</strong>
                  <i class="fas fa-sun timeline-icon"></i>
-                 <span class="timeline-temp">32°C</span>
+                 <span class="timeline-temp">32Â°C</span>
                </div>
                <div class="timeline-day">
                  <strong>Tue</strong>
                  <i class="fas fa-cloud-rain timeline-icon" style="color: #3b82f6;"></i>
-                 <span class="timeline-temp">28°C</span>
+                 <span class="timeline-temp">28Â°C</span>
                </div>
                <div class="timeline-day">
                  <strong>Wed</strong>
                  <i class="fas fa-cloud timeline-icon"></i>
-                 <span class="timeline-temp">30°C</span>
+                 <span class="timeline-temp">30Â°C</span>
                </div>
                <div class="timeline-day">
                  <strong>Thu</strong>
                  <i class="fas fa-sun timeline-icon"></i>
-                 <span class="timeline-temp">33°C</span>
+                 <span class="timeline-temp">33Â°C</span>
                </div>
                <div class="timeline-day">
                  <strong>Fri</strong>
                  <i class="fas fa-sun timeline-icon"></i>
-                 <span class="timeline-temp">34°C</span>
+                 <span class="timeline-temp">34Â°C</span>
                </div>
             </div>
           </article>
@@ -368,7 +369,7 @@
       intro.setOptions({
         steps: [
           {
-            title: 'Welcome to Smart Farming AI! 🚜',
+            title: 'Welcome to Smart Farming AI! ðŸšœ',
             intro: 'Let us show you how to get the most out of your digital farm.'
           },
           {
@@ -427,12 +428,27 @@
 
     // --- Dynamic AI Tip Demo ---
     function updateAITip() {
-      const tips = [
-        "Rain expected tomorrow. Delay fertilizer application.",
-        "Heat stress alert today! Increase irrigation.",
-        "Ideal time for soil testing detected.",
-        "Weather is perfect for spray application this morning."
-      ];
+      const recommendationNode = document.getElementById('dashboardRecommendationData');
+      let tips = [];
+      if (recommendationNode) {
+        try {
+          const recommendationData = JSON.parse(recommendationNode.textContent || "[]");
+          tips = recommendationData.map(item => {
+            if (item && item.title && item.detail) return `${item.title}: ${item.detail}`;
+            return item && (item.detail || item.title) ? (item.detail || item.title) : "";
+          }).filter(Boolean);
+        } catch (error) {
+          tips = [];
+        }
+      }
+      if (!tips.length) {
+        tips = [
+          "Rain expected tomorrow. Delay fertilizer application.",
+          "Heat stress alert today! Increase irrigation.",
+          "Ideal time for soil testing detected.",
+          "Weather is perfect for spray application this morning."
+        ];
+      }
       const tipEl = document.getElementById('dynamic-ai-tip');
       if (tipEl) tipEl.textContent = tips[Math.floor(Math.random() * tips.length)];
     }
@@ -477,7 +493,7 @@
         var map = L.map('dash-leaflet-map').setView([lat, lng], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
             maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
+            attribution: 'Â© OpenStreetMap contributors'
         }).addTo(map);
         
         // Fetch real farm fields from our API
@@ -518,11 +534,6 @@
           voiceBubble.style.display = (voiceBubble.style.display === 'flex') ? 'none' : 'flex';
         });
       }
-    });
-
-    // Mobile Sidebar
-    document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
-      document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
     });
 
     // Mandi update (Mock for now)
@@ -591,6 +602,7 @@
 
 </body>
 </html>
+
 
 
 

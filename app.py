@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 import random
 import re
@@ -38,6 +38,7 @@ app = Flask(__name__)
 
 SHARED_UI_CSS_TAG = '<link rel="stylesheet" href="/static/shared-ui.css">'
 SHARED_UI_JS_TAG = '<script src="/static/shared-ui.js"></script>'
+MOBILE_SIDEBAR_JS_TAG = '<script src="/static/mobile-sidebar.js"></script>'
 
 
 @app.template_filter("static_version")
@@ -71,20 +72,33 @@ def inject_shared_ui_assets(response):
     except (RuntimeError, UnicodeDecodeError):
         return response
 
-    if not html or "/static/shared-ui.js" in html:
+    if not html:
         return response
 
-    if "</head>" in html:
-        html = html.replace("</head>", f"  {SHARED_UI_CSS_TAG}\n</head>", 1)
-    else:
-        html = f"{SHARED_UI_CSS_TAG}\n{html}"
+    changed = False
 
-    if "</body>" in html:
-        html = html.replace("</body>", f"  {SHARED_UI_JS_TAG}\n</body>", 1)
-    else:
-        html = f"{html}\n{SHARED_UI_JS_TAG}"
+    if "/static/shared-ui.js" not in html:
+        if "</head>" in html:
+            html = html.replace("</head>", f"  {SHARED_UI_CSS_TAG}\n</head>", 1)
+        else:
+            html = f"{SHARED_UI_CSS_TAG}\n{html}"
 
-    response.set_data(html)
+        if "</body>" in html:
+            html = html.replace("</body>", f"  {SHARED_UI_JS_TAG}\n</body>", 1)
+        else:
+            html = f"{html}\n{SHARED_UI_JS_TAG}"
+        changed = True
+
+    # Inject mobile sidebar behavior on pages that include the hamburger button.
+    if 'id="mobileMenuToggle"' in html and "/static/mobile-sidebar.js" not in html:
+        if "</body>" in html:
+            html = html.replace("</body>", f"  {MOBILE_SIDEBAR_JS_TAG}\n</body>", 1)
+        else:
+            html = f"{html}\n{MOBILE_SIDEBAR_JS_TAG}"
+        changed = True
+
+    if changed:
+        response.set_data(html)
     return response
 
 
@@ -201,6 +215,15 @@ DISEASE_LIBRARY_CACHE = {"mtime": 0.0, "items": []}
 CULTIVATION_TIPS_CACHE = {"mtime": 0.0, "payload": {}}
 CROP_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "images" / "crops"
 CROP_LIBRARY_DEFAULT_IMAGE = "/static/images/default_crop.png"
+DISEASE_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "library" / "diseases"
+DISEASE_LIBRARY_DEFAULT_IMAGES = {
+    "insect": "/static/library/diseases/aphids.jpg",
+    "pest": "/static/library/diseases/aphids.jpg",
+    "fungus": "/static/library/diseases/leaf-blight.jpg",
+    "bacteria": "/static/library/diseases/bacterial-spot.jpg",
+    "virus": "/static/library/diseases/mosaic-disease.jpg",
+    "disease": "/static/library/diseases/leaf-blight.jpg",
+}
 STORE_PRODUCT_FALLBACK_IMAGE = "/static/images/store-product-fallback.svg"
 CROP_LIBRARY_REMOTE_IMAGE_FALLBACKS = {
     "barley": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Barley_%28Hordeum_vulgare%29_-_United_States_National_Arboretum_-_24_May_2009.jpg/1280px-Barley_%28Hordeum_vulgare%29_-_United_States_National_Arboretum_-_24_May_2009.jpg",
@@ -236,6 +259,10 @@ STORE_CATEGORY_META = {
         "description": "Eco-friendly farm care for soil, plant vigor, and pest management.",
     },
 }
+
+MAX_PROFILE_PHOTO_BYTES = get_env_int("MAX_PROFILE_PHOTO_BYTES", 5 * 1024 * 1024)
+MAX_PRODUCT_IMAGE_BYTES = get_env_int("MAX_PRODUCT_IMAGE_BYTES", 10 * 1024 * 1024)
+MAX_DISEASE_IMAGE_BYTES = get_env_int("MAX_DISEASE_IMAGE_BYTES", 10 * 1024 * 1024)
 
 # Very small in-memory rate limiter (demo-friendly). Resets on server restart.
 RATE_LIMIT_BUCKET = {}
@@ -366,6 +393,26 @@ STORE_DISEASE_PRODUCT_RULES = [
     (("blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "bacterial", "rot", "scab"), "Bio Pesticide"),
     (("organic", "chemical-free", "bio"), "Organic Pest Spray"),
 ]
+DISEASE_PRODUCT_PREFERENCES = {
+    "healthy": ["Soil Health Booster", "Natural Plant Care Kit"],
+    "brown spot": ["Soil Health Booster", "NPK Fertilizer", "Bio Pesticide"],
+    "rice blast": ["Pesticide Spray", "Bio Pesticide"],
+    "leaf blight": ["Pesticide Spray", "Bio Pesticide"],
+    "early blight": ["Bio Pesticide", "Pesticide Spray"],
+    "late blight": ["Pesticide Spray", "Bio Pesticide"],
+    "yellow rust": ["Bio Pesticide", "Pesticide Spray"],
+    "leaf rust": ["Bio Pesticide", "Pesticide Spray"],
+    "powdery mildew": ["Organic Pest Spray", "Bio Pesticide"],
+    "leaf mold": ["Natural Plant Care Kit", "Bio Pesticide"],
+    "bacterial spot": ["Pesticide Spray", "Bio Pesticide"],
+    "mosaic disease": ["Neem Oil", "Organic Pest Spray"],
+    "leaf curl virus": ["Neem Oil", "Organic Pest Spray"],
+    "spider mite infestation": ["Neem Oil", "Organic Pest Spray"],
+    "fall armyworm": ["Neem Oil", "Pesticide Spray"],
+    "stem borer": ["Neem Oil", "Pesticide Spray"],
+    "whitefly": ["Neem Oil", "Organic Pest Spray"],
+    "aphids": ["Neem Oil", "Organic Pest Spray"],
+}
 RAZORPAY_KEY_ID = (os.getenv("RAZORPAY_KEY_ID") or "rzp_test_SRyeQDEMFrRHwD").strip()
 RAZORPAY_KEY_SECRET = (os.getenv("RAZORPAY_KEY_SECRET") or "b1mY7dNC8mDuxekLF2YmiV0I").strip()
 RAZORPAY_CURRENCY = "INR"
@@ -1208,6 +1255,25 @@ def generate_otp():
     return "".join([str(random.randint(0, 9)) for _ in range(6)])
 
 
+def compute_otp_signature(otp, target_email, otp_type):
+    secret = app.secret_key or ""
+    if isinstance(secret, str):
+        secret_bytes = secret.encode("utf-8", errors="ignore")
+    else:
+        secret_bytes = bytes(secret)
+
+    payload = f"{str(otp_type or '').strip().lower()}|{str(target_email or '').strip().lower()}|{str(otp or '').strip()}"
+    return hmac.new(secret_bytes, payload.encode("utf-8", errors="ignore"), sha256).hexdigest()
+
+
+def verify_otp_signature(user_otp, expected_signature, target_email, otp_type):
+    expected = str(expected_signature or "").strip().lower()
+    if not expected:
+        return False
+    actual = compute_otp_signature(user_otp, target_email, otp_type).strip().lower()
+    return hmac.compare_digest(actual, expected)
+
+
 def is_password_hash(password_value):
     value = (password_value or "").strip()
     return value.startswith("pbkdf2:") or value.startswith("scrypt:")
@@ -1489,13 +1555,39 @@ def admin_required(f):
 def clear_otp_session_state():
     for key in (
         "otp",
+        "otp_sig",
         "otp_target",
         "otp_type",
         "otp_user_id",
         "otp_expiry",
+        "otp_attempts",
+        "otp_notice",
+        "otp_dev_code",
         "pending_user",
     ):
         session.pop(key, None)
+
+
+def read_upload_bytes(file_storage, max_bytes, label="file"):
+    if file_storage is None:
+        raise ValueError("No file uploaded.")
+
+    try:
+        stream = file_storage.stream
+    except Exception as exc:
+        raise ValueError("Upload stream is not available.") from exc
+
+    try:
+        stream.seek(0)
+    except Exception:
+        pass
+
+    data = stream.read(int(max_bytes) + 1)
+    if not data:
+        raise ValueError("Uploaded file is empty.")
+    if len(data) > int(max_bytes):
+        raise ValueError(f"{label} is too large. Please upload a smaller file.")
+    return data
 
 
 def save_profile_photo_upload(file_storage, prefix):
@@ -1504,9 +1596,20 @@ def save_profile_photo_upload(file_storage, prefix):
     if suffix not in ALLOWED_IMAGE_SUFFIXES:
         raise ValueError("Only PNG, JPG, JPEG, or WEBP images are allowed.")
 
-    file_name = f"{prefix}_{uuid.uuid4().hex[:12]}{suffix}"
+    file_name = f"{prefix}_{uuid.uuid4().hex[:12]}.jpg"
     save_path = UPLOADS_DIR / file_name
-    file_storage.save(str(save_path))
+
+    image_bytes = read_upload_bytes(file_storage, MAX_PROFILE_PHOTO_BYTES, label="Profile photo")
+
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)
+        img = img.convert("RGB")
+        img = ImageOps.fit(img, (512, 512), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+        img.save(save_path, format="JPEG", quality=86, optimize=True, progressive=True)
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise ValueError("Could not process profile photo. Please upload a valid image file.") from exc
+
     return file_name
 
 
@@ -1523,7 +1626,8 @@ def save_product_image_upload(file_storage, slug_hint="product"):
 
     # Normalize all uploads to a square JPEG for consistent store UI.
     try:
-        img = Image.open(file_storage.stream)
+        image_bytes = read_upload_bytes(file_storage, MAX_PRODUCT_IMAGE_BYTES, label="Product image")
+        img = Image.open(BytesIO(image_bytes))
         img = ImageOps.exif_transpose(img)
         img = img.convert("RGB")
         img = ImageOps.fit(img, (900, 900), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
@@ -1654,11 +1758,7 @@ def send_otp_email(target_email, otp):
     """
     Sends a 6-digit OTP to the user's email using SMTP.
     """
-    # Debug Print for Terminal
-    print(f"\n--- [DEBUG OTP] OTP for {target_email} is: {otp} ---\n")
-
     if not SMTP_EMAIL or not SMTP_PASSWORD:
-        print("SMTP credentials are not configured. OTP email skipped.")
         return False
 
     logo_bytes = None
@@ -1853,6 +1953,161 @@ def normalize_disease_key(disease_name):
     value = str(disease_name or "").strip().lower()
     value = re.sub(r"\s+", " ", value)
     return value
+
+
+def resolve_disease_library_image(raw_item):
+    item = raw_item if isinstance(raw_item, dict) else {}
+    explicit = str(item.get("image") or "").strip()
+    if explicit:
+        if explicit.startswith(("http://", "https://", "data:image/")):
+            return explicit
+        if explicit.startswith("/static/"):
+            candidate = Path(app.root_path) / explicit.lstrip("/").replace("/", os.sep)
+            if candidate.exists():
+                return explicit
+
+    name = str(item.get("name") or item.get("slug") or "").strip()
+    slug = slugify_crop_name(item.get("slug") or name)
+    tags = [str(tag).strip().lower() for tag in (item.get("tags") or []) if str(tag).strip()]
+    disease_type = str(item.get("type") or "disease").strip().lower()
+
+    candidate_keys = [
+        slug,
+        normalize_disease_key(name).replace(" ", "-"),
+    ]
+
+    alias_map = {
+        "common-rust": "yellow-rust",
+        "leaf-rust": "yellow-rust",
+        "rust-leaf-spot": "yellow-rust",
+        "northern-leaf-blight": "leaf-blight",
+        "gray-leaf-spot": "brown-spot",
+        "spider-mite-infestation": "aphids",
+        "spider-mites-two-spotted-spider-mite": "aphids",
+        "leaf-curl-virus": "leaf-curl-virus",
+        "tomato-yellowleaf-curl-virus": "leaf-curl-virus",
+        "tomato-mosaic-virus": "mosaic-disease",
+        "mosaic-virus": "mosaic-disease",
+        "target-spot": "brown-spot",
+    }
+
+    keyword_candidates = [
+        ("armyworm", "fall-armyworm"),
+        ("stem borer", "stem-borer"),
+        ("hispa", "rice-hispa"),
+        ("thrips", "thrips"),
+        ("whitefly", "whitefly"),
+        ("aphid", "aphids"),
+        ("mite", "aphids"),
+        ("mosaic", "mosaic-disease"),
+        ("curl", "leaf-curl-virus"),
+        ("blast", "rice-blast"),
+        ("powdery mildew", "powdery-mildew"),
+        ("downy mildew", "downy-mildew"),
+        ("mildew", "powdery-mildew"),
+        ("rust", "yellow-rust"),
+        ("leaf mold", "leaf-mold"),
+        ("mold", "leaf-mold"),
+        ("bacterial leaf blight", "bacterial-leaf-blight"),
+        ("bacterial spot", "bacterial-spot"),
+        ("leaf blight", "leaf-blight"),
+        ("blight", "leaf-blight"),
+        ("root rot", "root-rot"),
+        ("damping off", "damping-off"),
+        ("brown spot", "brown-spot"),
+        ("spot", "brown-spot"),
+    ]
+
+    for key in list(candidate_keys):
+        mapped_key = alias_map.get(key)
+        if mapped_key:
+            candidate_keys.append(mapped_key)
+
+    search_text = " ".join(
+        [name.lower(), slug.replace("-", " "), disease_type, " ".join(tags)]
+    )
+    for keyword, asset_key in keyword_candidates:
+        if keyword in search_text:
+            candidate_keys.append(asset_key)
+
+    seen = set()
+    for key in candidate_keys:
+        key = str(key or "").strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        for suffix in ALLOWED_IMAGE_SUFFIXES:
+            image_path = DISEASE_LIBRARY_IMAGE_DIR / f"{key}{suffix}"
+            if image_path.exists():
+                return f"/static/library/diseases/{image_path.name}"
+
+    return DISEASE_LIBRARY_DEFAULT_IMAGES.get(disease_type, DISEASE_LIBRARY_DEFAULT_IMAGES["disease"])
+
+
+def get_best_disease_library_entry(disease_name, crop_name=""):
+    disease_key = normalize_disease_key(disease_name)
+    crop_key = normalize_crop_key(crop_name)
+    if not disease_key:
+        return None
+
+    entries = load_disease_library()
+    scored_matches = []
+
+    for entry in entries:
+        entry_name = str(entry.get("name") or "").strip()
+        entry_key = normalize_disease_key(entry_name)
+        if not entry_key:
+            continue
+
+        score = 0.0
+        if entry_key == disease_key or entry.get("slug") == slugify_crop_name(disease_name):
+            score += 7.0
+        elif disease_key in entry_key or entry_key in disease_key:
+            score += 4.2
+
+        disease_tokens = set(re.findall(r"[a-z0-9]+", disease_key))
+        entry_tokens = set(re.findall(r"[a-z0-9]+", entry_key))
+        score += len(disease_tokens & entry_tokens) * 1.1
+
+        crops = [str(c).strip().lower() for c in (entry.get("crops") or []) if str(c).strip()]
+        if crops:
+            if crop_key != "generic" and any(normalize_crop_key(crop) == crop_key for crop in crops):
+                score += 3.4
+            elif crop_name and any(str(crop_name).strip().lower() == crop for crop in crops):
+                score += 2.0
+
+        if score > 0:
+            scored_matches.append((score, entry))
+
+    if not scored_matches:
+        return None
+
+    scored_matches.sort(key=lambda item: item[0], reverse=True)
+    return scored_matches[0][1]
+
+
+def summarize_disease_symptoms(entry, fallback_text=""):
+    if isinstance(entry, dict):
+        symptoms = [str(item).strip() for item in (entry.get("symptoms") or []) if str(item).strip()]
+        if symptoms:
+            return "; ".join(symptoms[:3])
+    return str(fallback_text or "Visible crop stress markers detected on the leaf surface.").strip()
+
+
+def derive_organic_solution(disease_name="", entry=None, crop_name=""):
+    disease_text = normalize_disease_key(disease_name)
+    crop_label = str(crop_name or "crop").strip() or "crop"
+    entry_type = str((entry or {}).get("type") or "").strip().lower() if isinstance(entry, dict) else ""
+
+    if any(keyword in disease_text for keyword in ("mite", "whitefly", "thrips", "aphid", "armyworm", "borer", "pest", "insect")) or entry_type in {"insect", "pest"}:
+        return f"Spray neem oil during evening hours, remove heavily infested leaves, and keep {crop_label} scouting frequent."
+    if any(keyword in disease_text for keyword in ("virus", "mosaic", "curl")) or entry_type == "virus":
+        return "Rogue infected plants early, sanitize tools, and suppress vector insects with neem-based management."
+    if any(keyword in disease_text for keyword in ("bacterial",)) or entry_type == "bacteria":
+        return "Use copper-compatible organic support, avoid overhead irrigation, and keep tools and hands sanitized."
+    if any(keyword in disease_text for keyword in ("brown spot", "nutrient", "deficiency")):
+        return f"Add compost or soil booster, keep irrigation uniform, and reduce stress on {crop_label} plants."
+    return "Use a bio-protective spray, prune infected leaves, and improve airflow around the crop canopy."
 
 
 def resolve_crop_library_image(slug):
@@ -2096,7 +2351,7 @@ def load_disease_library():
                 "cause": str(item.get("cause") or "").strip(),
                 "solution": str(item.get("solution") or "").strip(),
                 "prevention": [str(p).strip() for p in (item.get("prevention") or []) if str(p).strip()] if isinstance(item.get("prevention"), list) else [],
-                "image": str(item.get("image") or "").strip(),
+                "image": resolve_disease_library_image(item),
                 "tags": [str(t).strip() for t in (item.get("tags") or []) if str(t).strip()] if isinstance(item.get("tags"), list) else [],
             }
         )
@@ -2394,6 +2649,58 @@ def find_store_product_by_name(name):
     return scored_matches[0][2] if scored_matches else None
 
 
+def score_store_product_for_diagnosis(product, crop_name="", disease_name="", diagnostic_text=""):
+    disease_key = normalize_disease_key(disease_name)
+    crop_key = normalize_crop_key(crop_name)
+    product_name = str(product.name or "").strip()
+    product_text = " ".join(
+        [
+            product_name.lower(),
+            str(product.category or "").lower(),
+            str(product.description or "").lower(),
+            " ".join(str(tag).lower() for tag in safe_json_loads(product.tags_json, [])),
+        ]
+    )
+
+    score = float(product.rating or 0) * 0.08
+
+    preferred_names = DISEASE_PRODUCT_PREFERENCES.get(disease_key, [])
+    for index, preferred_name in enumerate(preferred_names):
+        if str(preferred_name).strip().lower() == product_name.lower():
+            score += 8.5 - (index * 0.9)
+
+    if disease_key == "healthy":
+        if product.category in {"Fertilizers", "Organic"}:
+            score += 2.8
+        if "soil" in product_text or "care" in product_text or "booster" in product_text:
+            score += 2.0
+    else:
+        if product.category == "Pesticides":
+            score += 2.8
+        if any(keyword in disease_key for keyword in ("fung", "blight", "spot", "rust", "mildew", "mold")) and any(
+            token in product_text for token in ("pesticide", "spray", "fungicide", "bio")
+        ):
+            score += 1.6
+        if any(keyword in disease_key for keyword in ("virus", "mosaic", "curl", "whitefly", "aphid", "thrips", "mite", "armyworm", "borer", "pest")) and any(
+            token in product_text for token in ("neem", "organic pest", "pesticide", "spray")
+        ):
+            score += 1.9
+        if "brown spot" in disease_key and any(token in product_text for token in ("soil", "npk", "booster", "compost")):
+            score += 1.8
+
+    disease_tokens = set(re.findall(r"[a-z0-9]+", disease_key))
+    crop_tokens = set(re.findall(r"[a-z0-9]+", str(crop_key)))
+    product_tokens = set(re.findall(r"[a-z0-9]+", product_text))
+    score += len(disease_tokens & product_tokens) * 0.8
+    score += len(crop_tokens & product_tokens) * 0.35
+
+    if diagnostic_text:
+        diagnostic_tokens = set(re.findall(r"[a-z0-9]+", diagnostic_text.lower()))
+        score += len(diagnostic_tokens & product_tokens) * 0.12
+
+    return score
+
+
 def apply_store_filters(products, search_query="", active_category="All", sort_option="featured", recommended_slug=None):
     normalized_query = str(search_query or "").strip().lower()
     category = active_category if active_category in STORE_CATEGORY_ORDER else "All"
@@ -2547,7 +2854,7 @@ def get_admin_mapped_product_for_disease(disease_name):
     return mapping.product
 
 
-def resolve_store_recommendation(disease_name="", cause="", organic_solution="", chemical_solution="", best_product_name=""):
+def resolve_store_recommendation(disease_name="", cause="", organic_solution="", chemical_solution="", best_product_name="", crop_name=""):
     admin_mapped = get_admin_mapped_product_for_disease(disease_name)
     if admin_mapped is not None:
         return admin_mapped
@@ -2557,8 +2864,16 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
         if direct_product:
             return direct_product
 
+    disease_key = normalize_disease_key(disease_name)
+    preferred_names = DISEASE_PRODUCT_PREFERENCES.get(disease_key, [])
+    for preferred_name in preferred_names:
+        preferred_product = find_store_product_by_name(preferred_name)
+        if preferred_product is not None:
+            return preferred_product
+
     diagnostic_text = " ".join(
         [
+            str(crop_name or ""),
             str(disease_name or ""),
             str(cause or ""),
             str(organic_solution or ""),
@@ -2578,7 +2893,24 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
         return find_store_product_by_name("Bio Pesticide")
     if "pest" in diagnostic_text or "neem" in diagnostic_text or "vector" in diagnostic_text:
         return find_store_product_by_name("Neem Oil")
-    return None
+
+    products = get_all_store_products()
+    if not products:
+        return None
+
+    scored_products = []
+    for product in products:
+        score = score_store_product_for_diagnosis(
+            product,
+            crop_name=crop_name,
+            disease_name=disease_name,
+            diagnostic_text=diagnostic_text,
+        )
+        scored_products.append((score, float(product.rating or 0), product))
+
+    scored_products.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    best_score, _, best_product = scored_products[0]
+    return best_product if best_score > 0.4 else None
 
 
 def attach_store_recommendation(payload, best_product_name=""):
@@ -2588,6 +2920,7 @@ def attach_store_recommendation(payload, best_product_name=""):
         organic_solution=payload.get("organic_solution"),
         chemical_solution=payload.get("chemical_solution"),
         best_product_name=best_product_name,
+        crop_name=payload.get("crop"),
     )
 
     if recommended_product is None:
@@ -3600,47 +3933,91 @@ def build_recommendations(user, weather, soil, crop_health):
     crop_name = user.crop_type or "your crop"
     location_name = user.location or "your farm"
     recommendations: list[dict] = []
+    crop_key = normalize_crop_key(crop_name)
+    seen_titles = set()
+
+    def add_recommendation(title, detail):
+        key = normalize_disease_key(title)
+        if key in seen_titles:
+            return
+        seen_titles.add(key)
+        recommendations.append({"title": title, "detail": detail})
 
     if weather["rainfall_mm"] < 4:
-        recommendations.append(
-            {
-                "title": "Plan a light irrigation cycle",
-                "detail": f"Rainfall near {location_name} is low, so maintain moisture for {crop_name}.",
-            }
+        add_recommendation(
+            "Plan a light irrigation cycle",
+            f"Rainfall near {location_name} is low, so maintain steady moisture for {crop_name} without sudden dry stress.",
         )
 
     if float(soil.get("ph", 0)) < 6.1:
-        recommendations.append(
-            {
-                "title": "Correct acidic soil balance",
-                "detail": "Add lime or organic compost to bring the field closer to a balanced pH range.",
-            }
+        add_recommendation(
+            "Correct acidic soil balance",
+            "Add lime or mature organic compost to bring the root zone closer to a balanced pH range.",
         )
 
     if weather["temp"] >= 34:
-        recommendations.append(
-            {
-                "title": "Protect plants from heat stress",
-                "detail": "Shift irrigation and field inspection to cooler hours to reduce midday stress.",
-            }
+        add_recommendation(
+            "Protect plants from heat stress",
+            f"Shift irrigation, scouting, and spray work for {crop_name} to early morning or evening hours.",
         )
+
+    if float(weather.get("humidity", 0)) >= 78:
+        humidity_detail = {
+            "rice": "High humidity can quickly raise rice blast or blight pressure, so scout lower and middle leaves closely.",
+            "wheat": "Cool humid air can push rust pressure higher, so inspect stripe or pustule development early.",
+            "tomato": "Dense tomato canopy may trap moisture and trigger blight or mold spread, so improve airflow now.",
+            "potato": "Potato foliage can hold late blight pressure after humid nights, so inspect wet patches first.",
+            "maize": "Humid canopy conditions can accelerate blight and gray leaf spotting in denser sections.",
+        }.get(crop_key, "High humidity can increase disease pressure, so inspect leaf wetness zones and improve airflow.")
+        add_recommendation("Watch disease pressure this week", humidity_detail)
 
     if float(soil.get("nitrogen", 0)) < 45:
-        recommendations.append(
-            {
-                "title": "Boost nitrogen before the next cycle",
-                "detail": f"{crop_name} will benefit from a nutrient top-up within the next few days.",
-            }
+        nitrogen_detail = {
+            "rice": "Rice tillers may weaken under low nitrogen, so plan a split nutrient top-up before the next irrigation cycle.",
+            "wheat": "Wheat can lose canopy strength under low nitrogen, so a balanced feed may help maintain vegetative growth.",
+            "tomato": "Tomato plants may lose vigor under low nitrogen, so support growth with a measured nutrient top-up.",
+            "potato": "Balanced nitrogen can help potato foliage recover without pushing too much soft growth.",
+            "maize": "Maize responds well to staged nitrogen support before visible pale-leaf stress expands.",
+        }.get(crop_key, f"{crop_name} will benefit from a balanced nutrient top-up within the next few days.")
+        add_recommendation("Boost nitrogen before the next cycle", nitrogen_detail)
+
+    crop_specific = {
+        "rice": (
+            "Keep standing water uniform",
+            "Avoid repeated dry-wet shock in paddy blocks and watch for patchy stress in low-lying zones.",
+        ),
+        "wheat": (
+            "Scout rust-prone leaves early",
+            "Check leaf strips on the cooler side of the field first, especially after dew-heavy mornings.",
+        ),
+        "tomato": (
+            "Open the tomato canopy",
+            "Prune crowded lower leaves and improve airflow so fungal pressure does not build up after irrigation.",
+        ),
+        "potato": (
+            "Inspect the lower potato canopy",
+            "Older leaves usually show spotting first, so remove infected foliage before lesions climb upward.",
+        ),
+        "maize": (
+            "Check dense maize rows",
+            "Walk humid inner rows first because disease and pest stress usually builds faster in shaded canopy sections.",
+        ),
+    }.get(crop_key)
+    if crop_specific:
+        add_recommendation(crop_specific[0], crop_specific[1])
+
+    if float(crop_health.get("score", 0)) < 72:
+        add_recommendation(
+            "Review weaker crop zones",
+            "Compare the live map and vegetation preview to inspect weak patches before the stress expands to nearby plants.",
+        )
+    else:
+        add_recommendation(
+            "Review satellite and NDVI zones",
+            "Use the live map and vegetation preview to confirm that all field blocks are staying even and stable.",
         )
 
-    recommendations.append(
-        {
-            "title": "Review satellite and NDVI zones",
-            "detail": "Compare the live map and vegetation preview to inspect weaker field patches early.",
-        }
-    )
-
-    return list(recommendations[:3])  # type: ignore
+    return list(recommendations[:4])  # type: ignore
 
 
 def build_forecast_cards(weather, forecast_payload, onecall_payload):
@@ -3736,7 +4113,7 @@ def build_weather_history_context(weather, forecast_cards):
     low = min(values) if values else weather["temp"]
     mid = round(float(high + low) / 2, 1)  # type: ignore
 
-    y_axis = [f"{round(high)}Â°", f"{round(mid)}Â°", f"{round(low)}Â°"]
+    y_axis = [f"{round(high)}°", f"{round(mid)}°", f"{round(low)}°"]
 
     return {
         "points": chart,
@@ -4959,7 +5336,8 @@ def build_disease_page_context(
     error_message=None,
 ):
     result = diagnosis or build_default_disease_result(user, weather)
-    image_url = preview_url or build_disease_sample_data_uri(result["disease"])
+    matched_entry = get_best_disease_library_entry(result.get("disease"), result.get("crop") or getattr(user, "crop_type", ""))
+    image_url = preview_url or (matched_entry.get("image") if matched_entry else "") or build_disease_sample_data_uri(result["disease"])
 
     return {
         "location_label": user.location or weather["city"],
@@ -5322,10 +5700,11 @@ def register():
                     return render_template("register.html", error=str(exc))
 
         # Store in session for OTP verification
+        password_hash = hash_password(password)
         session["pending_user"] = {
             "name": name,
             "email": email,
-            "password": password,
+            "password_hash": password_hash,
             "location": location,
             "crop": crop,
             "phone": phone,
@@ -5334,15 +5713,20 @@ def register():
         }
         
         otp = generate_otp()
-        session["otp"] = otp
+        session["otp_sig"] = compute_otp_signature(otp, email, "register")
         session["otp_target"] = email
         session["otp_type"] = "register"
         session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
+        session["otp_attempts"] = 0
         
         # Send Real Email
         email_sent = send_otp_email(email, otp)
         if not email_sent:
-            print(f"DEBUG: Email delivery failed. Registration OTP for {email} is {otp} (Simulation)")
+            # Developer-friendly fallback: show OTP on-screen when SMTP isn't configured.
+            # Never enable this in production.
+            if (os.getenv("FLASK_ENV") or "").strip().lower() != "production":
+                session["otp_dev_code"] = otp
+                session["otp_notice"] = "Email service is not configured. Use the on-screen development code to verify."
         
         return redirect("/verify-otp")
 
@@ -5351,25 +5735,69 @@ def register():
 
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
-    if "otp" not in session:
+    if "otp_sig" not in session:
         return redirect("/login")
         
     error = None
+    notice = session.pop("otp_notice", None)
     if request.method == "POST":
         csrf_resp = require_csrf()
         if csrf_resp is not None:
             # verify_otp has its own UI; show toast-like error.
-            return render_template("verify_otp.html", error="Security check failed. Please refresh and try again.")
+            return render_template(
+                "verify_otp.html",
+                error="Security check failed. Please refresh and try again.",
+                notice=notice,
+                dev_otp=session.get("otp_dev_code"),
+                target=session.get("otp_target"),
+            )
 
         if rate_limit_exceeded(f"otp:{_client_ip()}:{session.get('otp_target')}", max_hits=10, window_seconds=5 * 60):
-            return render_template("verify_otp.html", error="Too many OTP attempts. Please request a new OTP and try again.")
+            return render_template(
+                "verify_otp.html",
+                error="Too many OTP attempts. Please request a new OTP and try again.",
+                notice=notice,
+                dev_otp=session.get("otp_dev_code"),
+                target=session.get("otp_target"),
+            )
 
-        user_otp = request.form.get("otp", "")
-        
-        # Check expiry
+        user_otp = str(request.form.get("otp") or "").strip()
+        if not user_otp.isdigit() or len(user_otp) != 6:
+            error = "Enter the 6-digit code."
+            return render_template(
+                "verify_otp.html",
+                target=session.get("otp_target"),
+                error=error,
+                notice=notice,
+                dev_otp=session.get("otp_dev_code"),
+            )
+
+        try:
+            attempts = int(session.get("otp_attempts") or 0)
+        except (TypeError, ValueError):
+            attempts = 0
+
+        if attempts >= 5:
+            clear_otp_session_state()
+            return render_template(
+                "verify_otp.html",
+                error="Too many failed attempts. Please request a new OTP.",
+                notice=None,
+                dev_otp=None,
+                target=None,
+            )
+
         if datetime.now(timezone.utc).timestamp() > session.get("otp_expiry", 0):
-            error = "OTP has expired. Please try again."
-        elif user_otp == session["otp"]:
+            clear_otp_session_state()
+            return render_template(
+                "verify_otp.html",
+                error="OTP has expired. Please request a new OTP.",
+                notice=None,
+                dev_otp=None,
+                target=None,
+            )
+
+        if verify_otp_signature(user_otp, session.get("otp_sig"), session.get("otp_target"), session.get("otp_type")):
             otp_type = session["otp_type"]
             
             if otp_type == "register" and "pending_user" in session:
@@ -5377,7 +5805,7 @@ def verify_otp():
                 new_user = User( # type: ignore
                     name=data["name"],
                     email=data["email"],
-                    password=hash_password(data["password"]),
+                    password=data.get("password_hash") or hash_password(data.get("password") or ""),
                     location=data["location"],
                     crop_type=data["crop"],
                     phone=data["phone"],
@@ -5393,8 +5821,8 @@ def verify_otp():
                     referrer = User.query.filter_by(referral_code=new_user.referred_by).first()
                     if referrer:
                         # Referral rewards:
-                        # - Referrer wallet +₹20
-                        # - New user wallet +₹10 (can be used for subscription discount)
+                        # - Referrer wallet +INR 20
+                        # - New user wallet +INR 10 (can be used for subscription discount)
                         if ReferralReward.query.filter_by(new_user_id=new_user.id).first() is None:
                             wallet_credit(referrer, 20, "referral_bonus", {"new_user_id": new_user.id})
                             wallet_credit(new_user, 10, "referral_signup_bonus", {"referrer_id": referrer.id})
@@ -5435,9 +5863,51 @@ def verify_otp():
                     clear_otp_session_state()
                     return redirect("/dashboard")
         else:
+            session["otp_attempts"] = attempts + 1
             error = "Invalid OTP. Please check and try again."
             
-    return render_template("verify_otp.html", target=session.get("otp_target"), error=error)
+    return render_template(
+        "verify_otp.html",
+        target=session.get("otp_target"),
+        error=error,
+        notice=notice,
+        dev_otp=session.get("otp_dev_code"),
+    )
+
+
+@app.route("/resend-otp", methods=["POST"])
+def resend_otp():
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        session["otp_notice"] = "Security check failed. Please refresh and try again."
+        return redirect("/verify-otp")
+
+    otp_target = session.get("otp_target")
+    otp_type = session.get("otp_type") or "register"
+    if not otp_target or "otp_sig" not in session:
+        return redirect("/login")
+
+    if rate_limit_exceeded(f"otp_resend:{_client_ip()}:{otp_target}", max_hits=3, window_seconds=10 * 60):
+        session["otp_notice"] = "Too many resend requests. Please wait and try again."
+        return redirect("/verify-otp")
+
+    otp = generate_otp()
+    session["otp_sig"] = compute_otp_signature(otp, otp_target, otp_type)
+    session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
+    session["otp_attempts"] = 0
+    session.pop("otp_dev_code", None)
+
+    email_sent = send_otp_email(otp_target, otp)
+    if email_sent:
+        session["otp_notice"] = "A new verification code has been sent."
+    else:
+        if (os.getenv("FLASK_ENV") or "").strip().lower() != "production":
+            session["otp_dev_code"] = otp
+            session["otp_notice"] = "Email service is not configured. Use the on-screen development code to verify."
+        else:
+            session["otp_notice"] = "Email delivery failed. Please try again later."
+
+    return redirect("/verify-otp")
 
 
 @app.route("/api/mandi-rates")
@@ -5802,7 +6272,7 @@ def library_diseases():
         items=items,
         no_results=no_results,
         suggested_items=suggested_items,
-        fallback_image=STORE_PRODUCT_FALLBACK_IMAGE,
+        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
     )
 
 
@@ -5816,7 +6286,12 @@ def library_disease_detail(disease_slug):
     if entry is None:
         abort(404)
 
-    recommended = resolve_store_recommendation(disease_name=entry["name"])
+    recommended = resolve_store_recommendation(
+        disease_name=entry["name"],
+        cause=entry.get("cause"),
+        chemical_solution=entry.get("solution"),
+        crop_name=(entry.get("crops") or [""])[0],
+    )
     recommended_payload = serialize_store_product(recommended) if recommended is not None else None
 
     last_diag = session.get("last_library_diagnosis") if isinstance(session.get("last_library_diagnosis"), dict) else {}
@@ -5828,7 +6303,7 @@ def library_disease_detail(disease_slug):
         user=user,
         disease=entry,
         recommended_product=recommended_payload,
-        fallback_image=STORE_PRODUCT_FALLBACK_IMAGE,
+        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
         last_diagnosis=last_diag,
     )
 
@@ -5886,7 +6361,7 @@ def library_alerts():
         crops=build_library_crop_options(user),
         active_crop=crop_filter if crop_filter else "All",
         alerts=alerts,
-        fallback_image=STORE_PRODUCT_FALLBACK_IMAGE,
+        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
     )
 
 
@@ -6128,345 +6603,35 @@ def store_payment_success():
     )
 
 
-@app.route("/admin/login", methods=["GET", "POST"])
-def admin_login():
-    if is_admin_authenticated():
-        return redirect("/admin")
+from routes.admin_routes import register_admin_routes
 
-    if request.method == "POST":
-        csrf_resp = require_csrf()
-        if csrf_resp is not None:
-            return render_template("admin/login.html", error="Security check failed. Please refresh and try again.", admin_email=ADMIN_EMAIL)
-
-        if rate_limit_exceeded(f"admin_login:{_client_ip()}", max_hits=10, window_seconds=10 * 60):
-            return render_template("admin/login.html", error="Too many attempts. Please wait and try again.", admin_email=ADMIN_EMAIL)
-
-        email = (request.form.get("email") or "").strip().lower()
-        password = (request.form.get("password") or "").strip()
-        if email == ADMIN_EMAIL and check_admin_password(password):
-            session["admin_authed"] = True
-            session["admin_email"] = ADMIN_EMAIL
-            try:
-                admin_row = AdminUser.query.filter_by(email=ADMIN_EMAIL).first()  # type: ignore
-                if admin_row is not None:
-                    session["admin_id"] = int(admin_row.id)
-            except Exception:
-                pass
-            return redirect("/admin")
-
-        return render_template("admin/login.html", error="Invalid admin credentials.", admin_email=ADMIN_EMAIL)
-
-    return render_template("admin/login.html", error=None, admin_email=ADMIN_EMAIL)
-
-
-@app.route("/admin/logout", methods=["GET"])
-def admin_logout():
-    session.pop("admin_authed", None)
-    session.pop("admin_email", None)
-    session.pop("admin_id", None)
-    return redirect("/admin/login")
-
-
-@app.route("/admin", methods=["GET"])
-@admin_required
-def admin_dashboard():
-    products = StoreProduct.query.all()
-    paid_orders = StoreOrder.query.filter_by(status="paid").order_by(StoreOrder.created_at.desc()).all()
-
-    total_products = len(products)
-    total_orders = len(paid_orders)
-    pending_orders = sum(1 for order in paid_orders if get_fulfillment_status(order) == "pending")
-    revenue = sum(int(order.amount or 0) for order in paid_orders) / 100.0
-
-    return render_template(
-        "admin/dashboard.html",
-        total_products=total_products,
-        total_orders=total_orders,
-        pending_orders=pending_orders,
-        revenue=revenue,
-    )
-
-
-@app.route("/admin/products", methods=["GET", "POST"])
-@admin_required
-def admin_products():
-    error = None
-    success = None
-
-    if request.method == "POST":
-        csrf_resp = require_csrf()
-        if csrf_resp is not None:
-            error = "Security check failed. Please refresh and try again."
-        else:
-            name = (request.form.get("name") or "").strip()
-            category = (request.form.get("category") or "Organic").strip() or "Organic"
-            image_url = (request.form.get("image_url") or "").strip()
-            description = (request.form.get("description") or "").strip()
-            is_active = request.form.get("is_active") == "on"
-            image_file = request.files.get("image_file")
-
-            try:
-                price = int(request.form.get("price") or 0)
-            except (TypeError, ValueError):
-                price = 0
-
-            try:
-                stock = int(request.form.get("stock") or 0)
-            except (TypeError, ValueError):
-                stock = 0
-
-            if not name or price <= 0:
-                error = "Product name and price are required."
-            else:
-                slug_base = slugify_crop_name(name)
-                slug = slug_base
-                if StoreProduct.query.filter_by(slug=slug).first() is not None:
-                    slug = f"{slug_base}-{uuid.uuid4().hex[:6]}"
-
-                if image_file and getattr(image_file, "filename", ""):
-                    try:
-                        image_url = save_product_image_upload(image_file, slug_hint=slug_base)
-                    except ValueError as exc:
-                        error = str(exc)
-
-            if not error:
-                product = StoreProduct(
-                    slug=slug,
-                    name=name,
-                    category=category if category in STORE_CATEGORY_ORDER else "Organic",
-                    price=price,
-                    mrp=max(int(estimate_store_mrp(price, category)), price),
-                    discount_pct=compute_store_discount(price, max(int(estimate_store_mrp(price, category)), price)),
-                    rating=4.2,
-                    image_url=image_url,
-                    description=description,
-                    seller=default_store_seller(category),
-                    unit="Pack",
-                    stock=max(0, stock),
-                    is_active=bool(is_active),
-                )
-                db.session.add(product)
-                db.session.commit()
-                success = "Product added."
-
-    products = StoreProduct.query.order_by(StoreProduct.updated_at.desc(), StoreProduct.created_at.desc()).all()
-    return render_template(
-        "admin/products.html",
-        products=products,
-        categories=[c for c in STORE_CATEGORY_ORDER if c != "All"],
-        error=error,
-        success=success,
-    )
-
-
-@app.route("/admin/products/<int:product_id>/edit", methods=["GET", "POST"])
-@admin_required
-def admin_edit_product(product_id):
-    product = db.session.get(StoreProduct, product_id)
-    if product is None:
-        abort(404)
-
-    error = None
-    success = None
-
-    if request.method == "POST":
-        csrf_resp = require_csrf()
-        if csrf_resp is not None:
-            error = "Security check failed. Please refresh and try again."
-            return render_template("admin/product_edit.html", product=product, categories=[c for c in STORE_CATEGORY_ORDER if c != "All"], error=error, success=None)
-
-        name = (request.form.get("name") or "").strip()
-        category = (request.form.get("category") or product.category or "Organic").strip() or "Organic"
-        image_url = (request.form.get("image_url") or "").strip()
-        description = (request.form.get("description") or "").strip()
-        is_active = request.form.get("is_active") == "on"
-        image_file = request.files.get("image_file")
-
-        try:
-            price = int(request.form.get("price") or 0)
-        except (TypeError, ValueError):
-            price = 0
-
-        try:
-            stock = int(request.form.get("stock") or 0)
-        except (TypeError, ValueError):
-            stock = int(product.stock or 0)
-
-        if not name or price <= 0:
-            error = "Product name and price are required."
-        else:
-            if image_file and getattr(image_file, "filename", ""):
-                try:
-                    image_url = save_product_image_upload(image_file, slug_hint=product.slug or name)
-                except ValueError as exc:
-                    error = str(exc)
-
-            product.name = name
-            product.category = category if category in STORE_CATEGORY_ORDER else "Organic"
-            product.price = price
-            product.mrp = max(int(estimate_store_mrp(price, category)), price)
-            product.discount_pct = compute_store_discount(product.price, product.mrp)
-            # Only overwrite image_url if admin provided a new URL or uploaded a file.
-            if image_url:
-                product.image_url = image_url
-            product.description = description
-            product.stock = max(0, stock)
-            product.is_active = bool(is_active)
-            product.slug = product.slug or slugify_crop_name(name)
-
-            if not error:
-                db.session.commit()
-                success = "Product updated."
-
-    return render_template(
-        "admin/product_edit.html",
-        product=product,
-        categories=[c for c in STORE_CATEGORY_ORDER if c != "All"],
-        error=error,
-        success=success,
-    )
-
-
-@app.route("/admin/products/<int:product_id>/delete", methods=["POST"])
-@admin_required
-def admin_delete_product(product_id):
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return redirect("/admin/products")
-
-    product = db.session.get(StoreProduct, product_id)
-    if product is None:
-        abort(404)
-    product.is_active = False
-    db.session.commit()
-    return redirect("/admin/products")
-
-
-@app.route("/admin/orders", methods=["GET"])
-@admin_required
-def admin_orders():
-    status_filter = (request.args.get("status") or "").strip().lower()
-
-    orders = StoreOrder.query.order_by(StoreOrder.created_at.desc()).limit(300).all()
-    if status_filter in FULFILLMENT_STATUS_ORDER:
-        orders = [order for order in orders if get_fulfillment_status(order) == status_filter]
-
-    order_rows = []
-    for order in orders:
-        product = getattr(order, "product", None)
-        buyer = getattr(order, "buyer", None)
-        order_rows.append(
-            {
-                "id": order.id,
-                "product_name": getattr(product, "name", "") or "",
-                "user_name": getattr(buyer, "name", "") or "",
-                "user_email": getattr(buyer, "email", "") or "",
-                "amount_inr": (int(order.amount or 0) / 100.0),
-                "payment_status": str(order.status or ""),
-                "fulfillment_status": get_fulfillment_status(order),
-                "created_at": order.created_at,
-            }
-        )
-
-    return render_template(
-        "admin/orders.html",
-        orders=order_rows,
-        status_filter=status_filter,
-        statuses=FULFILLMENT_STATUS_ORDER,
-    )
-
-
-@app.route("/admin/orders/<int:order_id>/fulfillment", methods=["POST"])
-@admin_required
-def admin_update_order_fulfillment(order_id):
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return redirect("/admin/orders")
-
-    order = db.session.get(StoreOrder, order_id)
-    if order is None:
-        abort(404)
-
-    new_status = (request.form.get("fulfillment_status") or "").strip().lower()
-    try:
-        set_fulfillment_status(order, new_status)
-    except ValueError:
-        return redirect("/admin/orders")
-
-    db.session.commit()
-    return redirect("/admin/orders")
-
-
-@app.route("/admin/mappings", methods=["GET", "POST"])
-@admin_required
-def admin_mappings():
-    error = None
-    success = None
-
-    if request.method == "POST":
-        csrf_resp = require_csrf()
-        if csrf_resp is not None:
-            error = "Security check failed. Please refresh and try again."
-        else:
-            disease_label = (request.form.get("disease") or "").strip()
-            disease_key = normalize_disease_key(disease_label)
-            try:
-                product_id = int(request.form.get("product_id") or 0)
-            except (TypeError, ValueError):
-                product_id = 0
-
-            product = db.session.get(StoreProduct, product_id) if product_id else None
-            if not disease_key or product is None:
-                error = "Disease name and a valid product are required."
-            else:
-                existing = DiseaseProductMapping.query.filter_by(disease_key=disease_key).first()
-                if existing is None:
-                    existing = DiseaseProductMapping(disease_key=disease_key, disease_label=disease_label, product_id=product.id)
-                    db.session.add(existing)
-                else:
-                    existing.disease_label = disease_label
-                    existing.product_id = product.id
-                db.session.commit()
-                success = "Mapping saved."
-
-    mappings = DiseaseProductMapping.query.order_by(DiseaseProductMapping.updated_at.desc()).all()
-    products = StoreProduct.query.filter_by(is_active=True).order_by(StoreProduct.name.asc()).all()
-
-    mapping_rows = []
-    for mapping in mappings:
-        mapping_rows.append(
-            {
-                "id": mapping.id,
-                "disease": mapping.disease_label,
-                "disease_key": mapping.disease_key,
-                "product_id": mapping.product_id,
-                "product_name": getattr(mapping.product, "name", "") if mapping.product else "",
-                "updated_at": mapping.updated_at,
-            }
-        )
-
-    return render_template(
-        "admin/mappings.html",
-        mappings=mapping_rows,
-        products=products,
-        error=error,
-        success=success,
-    )
-
-
-@app.route("/admin/mappings/<int:mapping_id>/delete", methods=["POST"])
-@admin_required
-def admin_delete_mapping(mapping_id):
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return redirect("/admin/mappings")
-
-    mapping = db.session.get(DiseaseProductMapping, mapping_id)
-    if mapping is None:
-        abort(404)
-    db.session.delete(mapping)
-    db.session.commit()
-    return redirect("/admin/mappings")
+register_admin_routes(
+    app,
+    deps={
+        "db": db,
+        "AdminUser": AdminUser,
+        "StoreProduct": StoreProduct,
+        "StoreOrder": StoreOrder,
+        "DiseaseProductMapping": DiseaseProductMapping,
+        "ADMIN_EMAIL": ADMIN_EMAIL,
+        "STORE_CATEGORY_ORDER": STORE_CATEGORY_ORDER,
+        "FULFILLMENT_STATUS_ORDER": FULFILLMENT_STATUS_ORDER,
+        "is_admin_authenticated": is_admin_authenticated,
+        "admin_required": admin_required,
+        "require_csrf": require_csrf,
+        "rate_limit_exceeded": rate_limit_exceeded,
+        "_client_ip": _client_ip,
+        "check_admin_password": check_admin_password,
+        "get_fulfillment_status": get_fulfillment_status,
+        "set_fulfillment_status": set_fulfillment_status,
+        "normalize_disease_key": normalize_disease_key,
+        "slugify_crop_name": slugify_crop_name,
+        "estimate_store_mrp": estimate_store_mrp,
+        "compute_store_discount": compute_store_discount,
+        "save_product_image_upload": save_product_image_upload,
+        "default_store_seller": default_store_seller,
+    },
+)
 
 
 @app.route("/predict-disease", methods=["POST"])
@@ -6493,9 +6658,10 @@ def predict_disease():
     if suffix and suffix not in ALLOWED_IMAGE_SUFFIXES:
         return jsonify({"error": "Please upload a PNG, JPG, JPEG, or WEBP image."}), 400
 
-    image_bytes = uploaded_file.read()
-    if not image_bytes:
-        return jsonify({"error": "Uploaded image is empty."}), 400
+    try:
+        image_bytes = read_upload_bytes(uploaded_file, MAX_DISEASE_IMAGE_BYTES, label="Image")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         image = Image.open(io.BytesIO(image_bytes))
@@ -6505,13 +6671,56 @@ def predict_disease():
 
     weather = fetch_weather_bundle(user.location or "Bhubaneswar")
     preview_url = save_uploaded_leaf_image(image, uploaded_file.filename)
+    crop_key = normalize_crop_key(user.crop_type or "generic")
+
+    def build_library_context(payload):
+        disease_name = str(payload.get("disease") or "").strip()
+        crop_name = str(payload.get("crop") or user.crop_type or crop_key.title()).strip()
+        if not disease_name:
+            return None
+
+        if normalize_disease_key(disease_name) in {"healthy", "no disease", "no-disease"}:
+            payload["library_url"] = "/library/tips"
+            session["last_library_diagnosis"] = {
+                "slug": "healthy",
+                "confidence": int(payload.get("confidence") or 0),
+                "risk_level": str(payload.get("risk_level") or ""),
+                "note": "No major pest or disease detected. Keep monitoring regularly.",
+                "image_url": preview_url,
+            }
+            return None
+
+        entry = get_best_disease_library_entry(disease_name, crop_name)
+        slug = slugify_crop_name(disease_name)
+        payload["library_url"] = (
+            f"/library/disease/{entry['slug']}" if entry is not None else f"/library/diseases?q={quote(disease_name)}"
+        )
+        session["last_library_diagnosis"] = {
+            "slug": entry["slug"] if entry is not None else slug,
+            "confidence": int(payload.get("confidence") or 0),
+            "risk_level": str(payload.get("risk_level") or ""),
+            "note": "Nearby crop conditions suggest this issue should be checked quickly in the field.",
+            "image_url": preview_url,
+        }
+        return entry
     
     # Integrate PyTorch model + disease_knowledge as primary detection
     class_index, conf_float, class_name, confidence_pct = predict_with_pytorch(image)
-    if class_name is not None and conf_float is not None:
+    model_label = str(class_name or "").strip()
+    if model_label and conf_float is not None and float(conf_float) >= 0.46 and "plantvillage" not in model_label.lower():
         disease_info = get_disease_info(class_index, conf_float)
-        crop_display = class_name.split("___")[0] if "___" in class_name else class_name
-        
+        crop_display = model_label.split("___")[0] if "___" in model_label else (user.crop_type or crop_key.title())
+        crop_display = crop_display.replace("_", " ").strip() or (user.crop_type or crop_key.title())
+        library_entry = get_best_disease_library_entry(disease_info["disease"], crop_display)
+        prevention_tips = list((library_entry or {}).get("prevention") or [])
+        if not prevention_tips:
+            prevention_tips = unique_crop_list(
+                [
+                    *([str(tip).strip() for tip in disease_info.get("prevention_tips", []) if str(tip).strip()] if isinstance(disease_info.get("prevention_tips"), list) else []),
+                    str(disease_info.get("recommendation") or "").strip(),
+                ]
+            )[:3]
+
         new_history = DiseaseHistory(
             user_id=user.id,
             crop_type=crop_display,
@@ -6525,58 +6734,22 @@ def predict_disease():
             "success": True,
             "disease": disease_info["disease"],
             "confidence": confidence_pct,
-            "cause": disease_info["cause"],
-            "symptoms": disease_info.get("recommendation", disease_info["cause"]),
-            "organic_solution": disease_info.get("recommendation", ""),
-            "chemical_solution": disease_info["solution"],
-            "prevention": [disease_info.get("recommendation", "")],
+            "cause": (library_entry or {}).get("cause") or disease_info["cause"],
+            "symptoms": summarize_disease_symptoms(library_entry, disease_info.get("symptoms") or disease_info.get("recommendation", disease_info["cause"])),
+            "organic_solution": disease_info.get("organic_solution") or derive_organic_solution(disease_info["disease"], library_entry, crop_display),
+            "chemical_solution": (library_entry or {}).get("solution") or disease_info["solution"],
+            "prevention": prevention_tips,
             "explanation_hinglish": disease_info["explanation_hinglish"],
-            "diagnostic_reason": f"PyTorch model detected {class_name} ({confidence_pct}%)",
+            "diagnostic_reason": f"PyTorch model detected {model_label} ({confidence_pct}%)",
             "risk_level": "Low" if int(confidence_pct) > 85 else "Medium" if int(confidence_pct) > 70 else "High",
             "best_product": disease_info.get("best_product", ""),
             "product_link": disease_info.get("product_link", ""),
             "image_url": preview_url,
             "crop": crop_display
         }
-        disease_name = str(response_payload.get("disease") or "").strip()
-        if disease_name:
-            # "Healthy" is not a pest/disease guide; route users to tips instead.
-            if normalize_disease_key(disease_name) in {"healthy", "no disease", "no-disease"}:
-                response_payload["library_url"] = "/library/tips"
-                session["last_library_diagnosis"] = {
-                    "slug": "healthy",
-                    "confidence": int(response_payload.get("confidence") or 0),
-                    "risk_level": str(response_payload.get("risk_level") or ""),
-                    "note": "No major pest or disease detected. Keep monitoring regularly.",
-                    "image_url": preview_url,
-                }
-                return jsonify(attach_store_recommendation(response_payload, disease_info.get("best_product", "")))
-
-            slug = slugify_crop_name(disease_name)
-            entry = get_disease_library_entry(slug) or next(
-                (item for item in load_disease_library() if str(item.get("name") or "").strip().lower() == disease_name.lower()),
-                None,
-            )
-            response_payload["library_url"] = (
-                f"/library/disease/{entry['slug']}" if entry is not None else f"/library/diseases?q={quote(disease_name)}"
-            )
-            session["last_library_diagnosis"] = {
-                "slug": entry["slug"] if entry is not None else slug,
-                "confidence": int(response_payload.get("confidence") or 0),
-                "risk_level": str(response_payload.get("risk_level") or ""),
-                "note": "We have a high amount of farmers reporting this issue in crops near you.",
-                "image_url": preview_url,
-            }
+        build_library_context(response_payload)
 
         return jsonify(attach_store_recommendation(response_payload, disease_info.get("best_product", "")))
-    
-    crop_input = (user.crop_type or "generic").lower().strip()
-    if crop_input in ["paddy", "peddy", "dhan", "paddi"]:
-        crop_key = "rice"
-    elif crop_input in ["corn"]:
-        crop_key = "maize"
-    else:
-        crop_key = crop_input
 
     # Advanced Prompt for Expert Analysis
     prompt = f"""
@@ -6628,27 +6801,51 @@ def predict_disease():
              raise ValueError("All models failed")
     except Exception as e:
         print(f"AI Detection failed: {e}")
-        library = CROP_DISEASE_LIBRARY.get(crop_key, CROP_DISEASE_LIBRARY.get("generic", []))
-        if library:
-            # Diverse fallback: Use a deterministic index based on the image size & content hash
-            import hashlib
-            img_hash = int(hashlib.md5(image_bytes).hexdigest(), 16)
-            idx = img_hash % len(library)
-            fallback_entry = library[idx]
-            
-            diagnosis = {
-                "disease": fallback_entry["name"],
-                "confidence": 65, # Higher confidence for "detected" fallback
-                "symptoms": "Visible spots and pattern stress observed on leaf.",
-                "cause": fallback_entry["cause"],
-                "organic_solution": "Apply organic neem oil spray.",
-                "chemical_solution": fallback_entry["solution"],
-                "prevention": fallback_entry["prevention_tips"],
-                "explanation_hinglish": f"Ye scan aapke crop '{crop_key}' ke liye '{fallback_entry['name']}' ki sambhavna dikha raha hai.",
-                "diagnostic_reason": "Pattern recognition fallback (Visual Analysis).",
-                "risk_level": "Medium",
-                "crop": crop_key.capitalize()
-            }
+        features, signals, base_confidence = extract_leaf_features(image, weather)
+        seed_value = int(sha1(image_bytes[:2048]).hexdigest(), 16) % 65537
+        fallback_entry, fallback_crop_display, confidence = select_visual_disease_entry(
+            user.crop_type or crop_key,
+            features,
+            weather,
+            signals,
+            seed=seed_value,
+        )
+        library_entry = get_best_disease_library_entry(fallback_entry["name"], fallback_crop_display)
+
+        diagnosis = {
+            "disease": fallback_entry["name"],
+            "confidence": max(int(confidence), int(base_confidence)),
+            "symptoms": summarize_disease_symptoms(library_entry, "Visible lesion and stress patterns detected on the leaf."),
+            "cause": (library_entry or {}).get("cause") or fallback_entry["cause"],
+            "organic_solution": derive_organic_solution(fallback_entry["name"], library_entry, fallback_crop_display),
+            "chemical_solution": (library_entry or {}).get("solution") or fallback_entry["solution"],
+            "prevention": list((library_entry or {}).get("prevention") or fallback_entry["prevention_tips"]),
+            "explanation_hinglish": f"Ye scan {fallback_crop_display} mein '{fallback_entry['name']}' jaisa stress pattern dikha raha hai. Field me same symptoms compare karke jaldi action lo.",
+            "diagnostic_reason": "Visual symptom scoring used leaf color, lesion pattern, humidity context, and crop-specific disease profiles.",
+            "risk_level": "Low" if int(confidence) >= 88 else "Medium" if int(confidence) >= 72 else "High",
+            "crop": fallback_crop_display,
+        }
+
+    diagnosis_crop = str(diagnosis.get("crop") or user.crop_type or crop_key.title()).strip() or (user.crop_type or "Crop")
+    diagnosis_entry = get_best_disease_library_entry(diagnosis.get("disease"), diagnosis_crop)
+    diagnosis["crop"] = diagnosis_crop
+    diagnosis["symptoms"] = summarize_disease_symptoms(diagnosis_entry, diagnosis.get("symptoms"))
+    diagnosis["cause"] = str(diagnosis.get("cause") or (diagnosis_entry or {}).get("cause") or "").strip()
+    diagnosis["chemical_solution"] = str(
+        diagnosis.get("chemical_solution") or (diagnosis_entry or {}).get("solution") or "Consult a local expert for a confirmed spray schedule."
+    ).strip()
+    diagnosis["organic_solution"] = str(
+        diagnosis.get("organic_solution") or derive_organic_solution(diagnosis.get("disease"), diagnosis_entry, diagnosis_crop)
+    ).strip()
+    prevention_items = diagnosis.get("prevention", [])
+    if not isinstance(prevention_items, list):
+        prevention_items = [prevention_items]
+    diagnosis["prevention"] = unique_crop_list(
+        [
+            *[str(item).strip() for item in prevention_items if str(item).strip()],
+            *([str(item).strip() for item in (diagnosis_entry or {}).get("prevention", []) if str(item).strip()] if diagnosis_entry else []),
+        ]
+    )[:4]
 
     new_history = DiseaseHistory( # type: ignore
         user_id=user.id,
@@ -6674,36 +6871,8 @@ def predict_disease():
         "image_url": preview_url,
         "crop": diagnosis.get("crop", user.crop_type or "Crop")
     }
-    disease_name = str(response_payload.get("disease") or "").strip()
-    if disease_name:
-        if normalize_disease_key(disease_name) in {"healthy", "no disease", "no-disease"}:
-            response_payload["library_url"] = "/library/tips"
-            session["last_library_diagnosis"] = {
-                "slug": "healthy",
-                "confidence": int(response_payload.get("confidence") or 0),
-                "risk_level": str(response_payload.get("risk_level") or ""),
-                "note": "No major pest or disease detected. Keep monitoring regularly.",
-                "image_url": preview_url,
-            }
-            return jsonify(attach_store_recommendation(response_payload))
-
-        slug = slugify_crop_name(disease_name)
-        entry = get_disease_library_entry(slug) or next(
-            (item for item in load_disease_library() if str(item.get("name") or "").strip().lower() == disease_name.lower()),
-            None,
-        )
-        response_payload["library_url"] = (
-            f"/library/disease/{entry['slug']}" if entry is not None else f"/library/diseases?q={quote(disease_name)}"
-        )
-        session["last_library_diagnosis"] = {
-            "slug": entry["slug"] if entry is not None else slug,
-            "confidence": int(response_payload.get("confidence") or 0),
-            "risk_level": str(response_payload.get("risk_level") or ""),
-            "note": "We have a high amount of farmers reporting this issue in crops near you.",
-            "image_url": preview_url,
-        }
-
-    return jsonify(attach_store_recommendation(response_payload))
+    build_library_context(response_payload)
+    return jsonify(attach_store_recommendation(response_payload, diagnosis.get("best_product", "")))
 
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -6743,11 +6912,10 @@ def profile():
             # Handle photo upload
             photo_file = request.files.get("profile_photo")
             if not error and photo_file and photo_file.filename:
-                ext = Path(photo_file.filename).suffix.lower()
-                if ext in ALLOWED_IMAGE_SUFFIXES:
+                try:
                     user.profile_photo = save_profile_photo_upload(photo_file, f"profile_{user.id}")
-                else:
-                    error = "Only PNG, JPG, JPEG, or WEBP images are allowed."
+                except ValueError as exc:
+                    error = str(exc)
 
             # Password change
             if not error and (new_pw or confirm_pw or current_pw):
@@ -7631,9 +7799,9 @@ with app.app_context():
             if col_name not in _existing_cols:
                 try:
                     _cur.execute(f"ALTER TABLE user ADD COLUMN {col_name} {col_type}")
-                    print(f"[MIGRATION] âœ… Added column '{col_name}' to user table.")
+                    print(f"[MIGRATION] Added column '{col_name}' to user table.")
                 except Exception as e:
-                    print(f"[MIGRATION] âš  Skipping '{col_name}': {e}")
+                    print(f"[MIGRATION] Skipping '{col_name}': {e}")
         _cur.execute("PRAGMA table_info(store_product)")
         _store_product_cols = {row[1] for row in _cur.fetchall()}
         if "stock" not in _store_product_cols:

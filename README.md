@@ -1,121 +1,47 @@
-# 🌱 AgroVision AI  
-### 🚀 See Your Farm Smarter with AI
+﻿# AgroVision AI
 
-![AI](https://img.shields.io/badge/AI-Powered-brightgreen)
-![Python](https://img.shields.io/badge/Python-3.10-blue)
-![TensorFlow](https://img.shields.io/badge/TensorFlow-DeepLearning-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
-![Status](https://img.shields.io/badge/Status-Active-success)
+AgroVision AI is a Flask-based agriculture platform with dashboards for weather, soil health, crop monitoring, disease detection, alerts, and an admin panel for store products/orders.
 
----
+## Key Features
+- Crop disease detection (optional PyTorch model)
+- Weather and soil insights
+- Smart alerts and recommendations
+- Store + orders + admin management
+- Light/Dark mode UI
 
-## 🌍 Overview
+## Quick Start
 
-AgroVision AI is an advanced AI-powered agriculture platform designed to help farmers make data-driven decisions using modern technology.
+1) Create a virtualenv and install deps:
 
-The platform integrates:
+    python -m venv .venv
+    .venv\Scripts\activate
+    pip install -r requirements.txt
 
-- 🤖 Artificial Intelligence
-- 🛰 Satellite Monitoring
-- 🌦 Weather Analysis
-- 🌱 Soil Health Monitoring
-- 📷 Crop Disease Detection
+2) Run the app:
 
-AgroVision AI helps farmers increase productivity, detect crop diseases early, and adapt to climate changes.
+    python app.py
 
----
+Then open the printed local URL and log in.
 
-# ✨ Core Features
+## Configuration (Env)
+Common variables:
+- `FLASK_SECRET_KEY`: session signing key
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD`: admin login
+- `SMTP_EMAIL`, `SMTP_PASSWORD`, `SMTP_SERVER`, `SMTP_PORT`: OTP email
+- `GEMINI_API_KEY` (or `GOOGLE_API_KEY`): AI assistant features
 
-## 🌾 AI Crop Disease Detection
+## Development
 
-Farmers can upload crop images and the AI system will:
+Install dev tools:
 
-✔ Detect the crop disease  
-✔ Show disease cause  
-✔ Provide treatment recommendation  
-✔ Suggest best product for recovery  
+    pip install -r requirements-dev.txt
 
-Powered by MobileNetV2 Deep Learning Model.
+Run checks:
 
----
+    ruff check .
+    black --check .
+    pytest -q
 
-## 🌦 Weather Intelligence
+## Optional: PyTorch
+Disease prediction uses PyTorch if installed. The app falls back gracefully if `torch/torchvision` are missing.
 
-Real-time climate monitoring including:
-
-- Temperature analysis
-- Rainfall prediction
-- Humidity tracking
-- Climate alerts
-
----
-
-## 🌱 Soil Health Monitoring
-
-Analyze soil conditions to improve crop productivity:
-
-- Soil moisture detection
-- Nutrient insights
-- Fertility recommendations
-
----
-
-## 🛰 Satellite Crop Monitoring
-
-Uses satellite vegetation data to detect:
-
-- Crop stress
-- Vegetation health
-- Drought signals
-
----
-
-## 🤖 AI Insights Engine
-
-The AI engine combines weather, soil, and crop data to provide:
-
-- Smart irrigation advice
-- Crop risk analysis
-- Climate adaptation suggestions
-
----
-
-## 🌍 Digital Farm Twin
-
-A virtual farm simulation that predicts:
-
-- Crop growth
-- Climate impact
-- Yield potential
-
----
-
-## 🔔 Smart Alert System
-
-Farmers receive alerts such as:
-
-- Heatwave warnings
-- Heavy rainfall alerts
-- Pest outbreak risks
-- Irrigation recommendations
-
----
-
-## 💳 Subscription System
-
-Users get 3-day free access to explore the platform and can upgrade to premium plans.
-
----
-
-## 🎁 Refer & Earn
-
-Users can invite other farmers and earn rewards through a referral program.
-
----
-
-# 🧠 AI Model
-
-The Crop Disease Detection system uses Transfer Learning with MobileNetV2.
-
-### Model Pipeline

@@ -17,8 +17,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body class="dashboard-page library-page">
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
 
   <main class="dashboard-shell">
@@ -107,9 +107,12 @@
 
       <div class="library-grid" style="margin-top:0;">
         {% if items and items|length %}
-          {% for item in items %}
-            <a class="library-tile" href="/library/disease/{{ item.slug }}" style="grid-column: span 12; text-decoration:none; min-height: 96px;">
-              <div>
+            {% for item in items %}
+            <a class="library-tile library-disease-tile" href="/library/disease/{{ item.slug }}" style="text-decoration:none;">
+              <div class="library-tile-thumb">
+                <img src="{{ item.image or fallback_image }}" data-fallback-src="{{ fallback_image }}" loading="lazy" decoding="async" alt="{{ item.name }}">
+              </div>
+              <div class="library-tile-copy">
                 <h3 style="margin:0 0 4px;">{{ item.name }}</h3>
                 <p>{{ item.type }}{% if item.crops and item.crops|length %} | {{ item.crops[0] }}{% endif %}</p>
               </div>
@@ -122,9 +125,12 @@
           <div class="library-subtitle" style="grid-column: span 12; font-weight: 800;">
             No entries to show yet. Try removing filters or open a guide from below.
           </div>
-          {% for item in suggested_items or [] %}
-            <a class="library-tile" href="/library/disease/{{ item.slug }}" style="grid-column: span 12; text-decoration:none; min-height: 96px;">
-              <div>
+            {% for item in suggested_items or [] %}
+            <a class="library-tile library-disease-tile" href="/library/disease/{{ item.slug }}" style="grid-column: span 12; text-decoration:none;">
+              <div class="library-tile-thumb">
+                <img src="{{ item.image or fallback_image }}" data-fallback-src="{{ fallback_image }}" loading="lazy" decoding="async" alt="{{ item.name }}">
+              </div>
+              <div class="library-tile-copy">
                 <h3 style="margin:0 0 4px;">{{ item.name }}</h3>
                 <p>{{ item.type }}{% if item.crops and item.crops|length %} | {{ item.crops[0] }}{% endif %}</p>
               </div>
@@ -141,7 +147,7 @@
   </main>
 
   <script src="/static/library.js"></script>
-  {% include "_mobile_sidebar_script.html" %}
+  {# Mobile sidebar script is injected globally (static/mobile-sidebar.js). #}
 </body>
 </html>
 

@@ -2873,10 +2873,10 @@ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   color: inherit;
 }
 
-.weather-card,
-.soil-card,
-.crop-health-card,
-.chart-card {
+[data-theme="dark"] .weather-card,
+[data-theme="dark"] .soil-card,
+[data-theme="dark"] .crop-health-card,
+[data-theme="dark"] .chart-card {
   background: linear-gradient(145deg, #406daf 0%, #18365f 100%);
   color: #f7fbff;
 }
@@ -9760,6 +9760,10 @@ body, .dash-card, .dashboard-sidebar, .card-topbar, .feature-grid, .about-panel,
   transition: all 0.3s ease;
 }
 
+.mobile-menu-toggle i {
+  pointer-events: none;
+}
+
 [data-theme="dark"] .mobile-menu-toggle {
   background: #1e293b;
   color: #fbbf24;
@@ -9770,14 +9774,31 @@ body, .dash-card, .dashboard-sidebar, .card-topbar, .feature-grid, .about-panel,
   transform: scale(1.1);
 }
 
+.mobile-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  z-index: 9997;
+}
+
+body.mobile-sidebar-open {
+  overflow: hidden;
+}
+
 @media (max-width: 780px) {
   .mobile-menu-toggle {
     display: flex;
+    top: max(14px, calc(env(safe-area-inset-top, 0px) + 10px));
+    right: max(14px, calc(env(safe-area-inset-right, 0px) + 14px));
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
   }
   
   /* Reset dashboard-shell padding so that content spreads properly when sidebar is hidden */
   .dashboard-shell {
     padding-left: 0;
+    overflow: visible;
   }
   
   .dashboard-page .dashboard-sidebar {
@@ -11845,6 +11866,115 @@ body.dashboard-page {
   color: #5b6b7d;
 }
 
+.dashboard-page .dashboard-grid .weather-meta span {
+  color: #5b6b7d;
+}
+
+.dashboard-page .dashboard-grid .dot-menu {
+  color: rgba(16, 36, 63, 0.46);
+}
+
+.dashboard-page .dashboard-grid .card-title-row i {
+  color: rgba(16, 36, 63, 0.72);
+  opacity: 0.84 !important;
+}
+
+.dashboard-page .dashboard-grid .weather-rain-icon {
+  color: rgba(16, 36, 63, 0.72);
+}
+
+/* Dashboard soil metrics: fix light-mode contrast (pH / Nitrogen / Moisture) */
+.dashboard-page .dashboard-grid .soil-metric {
+  color: #10243f;
+  border-top: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-page .dashboard-grid .soil-metric span {
+  color: #5b6b7d;
+}
+
+.dashboard-page .dashboard-grid .soil-metric strong {
+  color: #10243f;
+}
+
+.dashboard-page .dashboard-grid .metric-bar {
+  background: rgba(15, 23, 42, 0.1);
+}
+
+.dashboard-page .dashboard-grid .iot-status-row {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.dashboard-page .dashboard-grid .slider-toggle {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-page .dashboard-grid .status-on {
+  background: rgba(34, 197, 94, 0.14);
+  color: #166534;
+}
+
+.dashboard-page .dashboard-grid .status-off {
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .soil-metric {
+  color: #f1f7ff;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .soil-metric span,
+[data-theme="dark"] .dashboard-page .dashboard-grid .soil-metric strong {
+  color: #f1f7ff;
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .metric-bar {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .iot-status-row {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .slider-toggle {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .status-on {
+  background: rgba(87, 224, 141, 0.18);
+  color: #92ffbb;
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .status-off {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(237, 245, 255, 0.74);
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-content-area .agro-card,
+[data-theme="dark"] .dashboard-page .dashboard-grid .agro-card {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .weather-meta span {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .dot-menu {
+  color: #bbc5d3;
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .card-title-row i {
+  color: rgba(237, 246, 255, 0.78);
+  opacity: 0.86 !important;
+}
+
+[data-theme="dark"] .dashboard-page .dashboard-grid .weather-rain-icon {
+  color: rgba(237, 246, 255, 0.84);
+}
+
 .dashboard-page .dashboard-grid .recommendation-item,
 .dashboard-page .dashboard-grid .operation-stat,
 .dashboard-page .dashboard-grid .mandi-item,
@@ -11862,6 +11992,30 @@ body.dashboard-page {
 .dashboard-page .ai-tips-banner {
   border: 1px solid rgba(22, 163, 74, 0.14);
   background: linear-gradient(135deg, rgba(236, 253, 245, 0.96), rgba(239, 246, 255, 0.98));
+}
+
+.dashboard-page .ai-tips-content h4 {
+  color: #6b7280;
+}
+
+.dashboard-page .ai-tips-content p {
+  color: #6b7280;
+  opacity: 1;
+}
+
+.dashboard-page .weather-advisory-item-stable {
+  border-left-color: #9ca3af;
+}
+
+.dashboard-page .weather-advisory-item-stable .weather-advisory-icon {
+  background: rgba(156, 163, 175, 0.18);
+  color: #6b7280;
+}
+
+.dashboard-page .weather-advisory-item-stable .weather-advisory-copy strong,
+.dashboard-page .weather-advisory-item-stable .weather-advisory-copy span,
+.dashboard-page .mandi-change.stable {
+  color: #6b7280;
 }
 
 .alerts-toolbar,
@@ -12627,18 +12781,22 @@ body.dashboard-page {
 
 @media (max-width: 780px) {
   .dashboard-shell {
-    width: min(100%, calc(100% - 12px));
-    margin: 8px auto 14px;
+    width: min(100%, calc(100% - 8px));
+    margin: 4px auto 12px;
     min-height: calc(100vh - 16px);
     border-radius: 24px;
     grid-template-columns: 1fr;
+    overflow: visible;
   }
 
   .dashboard-sidebar {
     width: min(330px, calc(100vw - 28px));
+    max-width: calc(100vw - 20px);
     min-height: 100vh;
-    padding: 22px 16px 18px;
+    padding: max(20px, calc(env(safe-area-inset-top, 0px) + 18px)) 16px 18px;
     border-radius: 0 24px 24px 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .dashboard-sidebar .sidebar-nav > a[href="/weather"],
@@ -12657,6 +12815,7 @@ body.dashboard-page {
   .dashboard-main {
     min-height: auto;
     padding-bottom: 18px;
+    overflow-x: hidden;
   }
 
   .dashboard-main > :not(.dashboard-hero):not(.weather-hero-banner):not(.soil-hero-banner):not(.crop-hero-banner):not(.disease-hero-banner):not(.farm-twin-hero-banner):not(.language-switcher) {
@@ -12692,11 +12851,68 @@ body.dashboard-page {
 
   .quick-actions-bar {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .quick-action-btn {
     justify-content: center;
+    min-height: 54px;
+    padding: 12px 14px;
+    font-size: 0.92rem;
+    text-align: center;
+  }
+
+  .hero-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .hero-chip {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .dashboard-hero-media {
+    min-height: 220px;
+  }
+
+  .card-title-row,
+  .operation-item-top {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .recommendation-item,
+  .operation-item {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .timeline-container {
+    gap: 10px;
+    padding-bottom: 4px;
+  }
+
+  .timeline-day {
+    flex-basis: 92px;
+  }
+
+  .sidebar-link,
+  .sidebar-logout {
+    min-height: 56px;
+    padding: 0 14px;
+    gap: 12px;
+    border-radius: 18px;
+  }
+
+  .sidebar-icon {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 12px;
   }
 
   .operations-summary {
@@ -12708,6 +12924,18 @@ body.dashboard-page {
   .weather-location-fallback,
   .farm-twin-map-card {
     min-height: 260px;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-actions-bar,
+  .hero-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-page .dashboard-main {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
   }
 }
 
@@ -13563,27 +13791,37 @@ body.dashboard-page {
 
 @media (max-width: 780px) {
   body.dashboard-page {
-    overflow: auto;
+    overflow: auto !important;
   }
 
   .dashboard-page .dashboard-shell {
     display: block !important;
     height: auto;
     min-height: 100vh;
+    overflow: visible !important;
   }
 
   .dashboard-page .dashboard-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform: translateX(-110%);
-    width: min(330px, calc(100vw - 28px));
-    border-radius: 0 24px 24px 0;
-    transition: transform 0.28s ease;
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: min(330px, calc(100vw - 28px)) !important;
+    max-width: calc(100vw - 20px) !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    border-radius: 0 24px 24px 0 !important;
+    transform: translateX(-110%) !important;
+    transition: transform 0.28s ease !important;
+    padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 18px)) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    z-index: 9998 !important;
   }
 
   .dashboard-page .dashboard-sidebar.sidebar-open {
-    transform: translateX(0);
+    transform: translateX(0) !important;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5) !important;
   }
 
   .dashboard-page .dashboard-main {
@@ -13593,6 +13831,7 @@ body.dashboard-page {
     height: auto;
     padding: 72px 12px 20px;
     overflow: visible;
+    overflow-x: hidden;
   }
 
   .dashboard-page .language-switcher {

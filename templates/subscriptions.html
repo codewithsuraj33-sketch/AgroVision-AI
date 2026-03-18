@@ -243,8 +243,8 @@
     data-user-plan="{{ user.plan or 'free' }}"
     data-wallet-balance="{{ user.wallet_balance or 0 }}"
   >
-    <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-      <i class="fas fa-bars"></i>
+    <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+      <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
     </button>
 
     <main class="dashboard-shell">
@@ -344,7 +344,7 @@
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="/static/subscriptions.js"></script>
-    {% include "_mobile_sidebar_script.html" %}
+    {# Mobile sidebar script is injected globally (static/mobile-sidebar.js). #}
   </body>
 </html>
 

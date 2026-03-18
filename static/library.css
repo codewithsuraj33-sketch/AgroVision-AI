@@ -97,6 +97,35 @@
   transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
+.library-disease-tile{
+  grid-column: span 12;
+  min-height: 96px;
+  padding: 14px;
+  align-items: center;
+}
+
+.library-tile-thumb{
+  width: 84px;
+  height: 68px;
+  border-radius: 16px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid rgba(180, 206, 232, 0.58);
+  background: rgba(241, 245, 249, 0.86);
+}
+
+.library-tile-thumb img{
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.library-tile-copy{
+  flex: 1;
+  min-width: 0;
+}
+
 .library-tile:hover{
   transform: translateY(-2px);
   box-shadow: 0 24px 56px rgba(18, 49, 84, 0.16);
