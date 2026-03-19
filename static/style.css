@@ -1373,7 +1373,11 @@ body.dashboard-page {
 }
 
 .disease-store-recommendation {
+<<<<<<< HEAD
   margin-top: 24px;
+=======
+  margin-top: 12px;
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 }
 
 .disease-store-head {
@@ -1399,7 +1403,11 @@ body.dashboard-page {
 
 .disease-store-card {
   display: grid;
+<<<<<<< HEAD
   grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
+=======
+  grid-template-columns: 200px minmax(0, 1fr);
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
   gap: 24px;
   padding: 24px;
   border-radius: 28px;
@@ -1425,7 +1433,11 @@ body.dashboard-page {
 
 .disease-store-media {
   display: block;
+<<<<<<< HEAD
   min-height: 190px;
+=======
+  min-height: 180px;
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
   border-radius: 18px;
   overflow: hidden;
   background:

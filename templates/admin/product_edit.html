@@ -55,11 +55,14 @@
       <span>Description</span>
       <textarea name="description" rows="4">{{ product.description or '' }}</textarea>
     </label>
+<<<<<<< HEAD
     <label class="admin-field admin-field-wide">
       <span>Use-case Tags</span>
       <input name="tags" type="text" value="{{ product_tags_text or '' }}" placeholder="For blight, For sucking pests, Organic">
       <small class="admin-hint">Diagnosis-based filters aur recommendation review ke liye comma-separated tags use karo.</small>
     </label>
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     <label class="admin-check">
       <input type="checkbox" name="is_active" {% if product.is_active %}checked{% endif %}>
       <span>Active</span>
@@ -70,4 +73,8 @@
     </div>
   </form>
 </section>
+<<<<<<< HEAD
 {% endblock %}
+=======
+{% endblock %}
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057

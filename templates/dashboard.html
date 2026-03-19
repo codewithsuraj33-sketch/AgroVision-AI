@@ -93,6 +93,23 @@
             <small>{{ dashboard.crop_health.label }} for {{ dashboard.crop_health.crop_name }}</small>
           </div>
         </div>
+        <div class="dashboard-hero-media" aria-hidden="true">
+          <span class="dashboard-hero-badge">Live AI Field View</span>
+          <span class="dashboard-hero-orb"></span>
+          <span class="dashboard-hero-cloud dashboard-hero-cloud-one"></span>
+          <span class="dashboard-hero-cloud dashboard-hero-cloud-two"></span>
+          <span class="dashboard-hero-stars"></span>
+          <div class="dashboard-hero-landscape">
+            <span class="dashboard-hero-hill dashboard-hero-hill-back"></span>
+            <span class="dashboard-hero-hill dashboard-hero-hill-mid"></span>
+            <span class="dashboard-hero-hill dashboard-hero-hill-front"></span>
+          </div>
+          <div class="dashboard-hero-panel">
+            <strong>Field Outlook</strong>
+            <span>{{ dashboard.weather.description }}</span>
+            <small>{{ dashboard.crop_health.label }} for {{ dashboard.crop_health.crop_name }}</small>
+          </div>
+        </div>
       </header>
 
       <section class="dashboard-content-area">
@@ -577,6 +594,17 @@
         setTimeout(() => map.invalidateSize(), 400);
       }
 
+<<<<<<< HEAD
+=======
+      // Voice FAB & Bubble
+      const voiceBtn = document.getElementById('voiceBtn');
+      const voiceBubble = document.getElementById('voiceBubble');
+      if (voiceBtn && voiceBubble) {
+        voiceBtn.addEventListener('click', () => {
+          voiceBubble.style.display = (voiceBubble.style.display === 'flex') ? 'none' : 'flex';
+        });
+      }
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     });
 
     // Mandi update (Mock for now)
@@ -612,6 +640,25 @@
     });
   </script>
   
+<<<<<<< HEAD
+=======
+  <!-- Voice Assistant UI -->
+  <div class="voice-assistant-fab" id="voiceBtn" title="Ask Kisan Dost">
+    <i class="fas fa-microphone"></i>
+  </div>
+  <div class="voice-assistant-bubble" id="voiceBubble" style="display:none;">
+    <div class="bubble-header">
+      <span><i class="fas fa-robot"></i> Kisan Dost</span>
+      <i class="fas fa-times" onclick="document.getElementById('voiceBubble').style.display='none'" style="cursor:pointer;"></i>
+    </div>
+    <div class="bubble-content" id="voiceText">Namaste! Main aapka Kisan Dost hoon. Kaise madad kar sakta hoon?</div>
+    <div class="bubble-actions">
+      <input type="text" placeholder="Sawal yahan likhein..." style="flex:1; padding:8px; border-radius:8px; border:1px solid #ccc;">
+      <button class="bubble-send" style="padding: 8px 12px;"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
   <!-- Google Translate -->
   <script>
     function googleTranslateElementInit() {

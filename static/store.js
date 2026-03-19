@@ -270,14 +270,21 @@
     const searchInput = document.getElementById("storeSearch");
     const sortSelect = document.getElementById("storeSort");
     const categoryInput = document.getElementById("storeCategoryInput");
+<<<<<<< HEAD
     const useCaseInput = document.getElementById("storeUseCaseInput");
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     const emptyState = document.getElementById("storeEmptyState");
     const countLabel = document.getElementById("storeResultsCount");
     const filterForm = document.getElementById("storeFilterForm");
     const tabs = Array.from(document.querySelectorAll("[data-store-category]"));
+<<<<<<< HEAD
     const useCaseTabs = Array.from(document.querySelectorAll("[data-store-use-case]"));
     const initialCategory = root.dataset.activeCategory || "All";
     const initialUseCase = root.dataset.activeUseCase || "";
+=======
+    const initialCategory = root.dataset.activeCategory || "All";
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     const initialQuery = root.dataset.searchQuery || "";
     const initialSort = root.dataset.sortOption || "featured";
     const recommendedSlug = root.dataset.recommendedSlug || "";
@@ -291,11 +298,16 @@
     if (categoryInput) {
       categoryInput.value = initialCategory;
     }
+<<<<<<< HEAD
     if (useCaseInput) {
       useCaseInput.value = initialUseCase;
     }
 
     function updateUrl(query, category, sort, useCase) {
+=======
+
+    function updateUrl(query, category, sort) {
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
       const nextUrl = new URL(window.location.href);
       if (query) {
         nextUrl.searchParams.set("q", query);
@@ -315,12 +327,15 @@
         nextUrl.searchParams.delete("sort");
       }
 
+<<<<<<< HEAD
       if (useCase) {
         nextUrl.searchParams.set("use_case", useCase);
       } else {
         nextUrl.searchParams.delete("use_case");
       }
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
       if (recommendedSlug) {
         nextUrl.searchParams.set("recommended", recommendedSlug);
       }
@@ -338,6 +353,7 @@
       }
     }
 
+<<<<<<< HEAD
     function setActiveUseCase(useCase) {
       useCaseTabs.forEach(function (tab) {
         const isActive = tab.dataset.storeUseCase === useCase;
@@ -348,6 +364,8 @@
       }
     }
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     function sortCards(visibleCards, sortOption) {
       visibleCards.sort(function (left, right) {
         const leftSlug = left.dataset.productSlug || "";
@@ -388,7 +406,10 @@
     function updateCatalog() {
       const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
       const category = categoryInput ? categoryInput.value || "All" : "All";
+<<<<<<< HEAD
       const useCase = useCaseInput ? useCaseInput.value || "" : "";
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
       const sortOption = sortSelect ? sortSelect.value || "featured" : "featured";
       const visibleCards = [];
 
@@ -397,11 +418,17 @@
         const fallbackSearch = ((card.dataset.productName || "") + " " + (card.textContent || "")).trim();
         const searchText = (rawSearch ? rawSearch : fallbackSearch).toLowerCase();
         const categoryText = card.dataset.productCategory || "";
+<<<<<<< HEAD
         const useCaseText = (card.textContent || "").toLowerCase();
         const matchesQuery = !query || searchText.indexOf(query) !== -1;
         const matchesCategory = category === "All" || categoryText === category;
         const matchesUseCase = !useCase || useCaseText.indexOf(useCase.toLowerCase()) !== -1;
         const isVisible = matchesQuery && matchesCategory && matchesUseCase;
+=======
+        const matchesQuery = !query || searchText.indexOf(query) !== -1;
+        const matchesCategory = category === "All" || categoryText === category;
+        const isVisible = matchesQuery && matchesCategory;
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
         card.hidden = !isVisible;
         if (isVisible) {
@@ -418,7 +445,11 @@
         emptyState.hidden = visibleCards.length > 0;
       }
 
+<<<<<<< HEAD
       updateUrl(query, category, sortOption, useCase);
+=======
+      updateUrl(query, category, sortOption);
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
       root.classList.add("is-ready");
 
       if (!recommendationFocused && recommendedSlug) {
@@ -439,6 +470,7 @@
       });
     });
 
+<<<<<<< HEAD
     useCaseTabs.forEach(function (tab) {
       tab.addEventListener("click", function () {
         const nextUseCase = useCaseInput && useCaseInput.value === (tab.dataset.storeUseCase || "") ? "" : (tab.dataset.storeUseCase || "");
@@ -447,6 +479,8 @@
       });
     });
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     searchInput && searchInput.addEventListener("input", updateCatalog);
     sortSelect && sortSelect.addEventListener("change", updateCatalog);
 
@@ -458,7 +492,10 @@
     }
 
     setActiveTab(initialCategory);
+<<<<<<< HEAD
     setActiveUseCase(initialUseCase);
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     window.requestAnimationFrame(updateCatalog);
   }
 

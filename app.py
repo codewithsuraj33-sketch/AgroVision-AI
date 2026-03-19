@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 import random
 import re
@@ -38,6 +38,10 @@ app = Flask(__name__)
 
 SHARED_UI_CSS_TAG = '<link rel="stylesheet" href="/static/shared-ui.css">'
 SHARED_UI_JS_TAG = '<script src="/static/shared-ui.js"></script>'
+<<<<<<< HEAD
+=======
+MOBILE_SIDEBAR_JS_TAG = '<script src="/static/mobile-sidebar.js"></script>'
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.template_filter("static_version")
@@ -71,6 +75,7 @@ def inject_shared_ui_assets(response):
     except (RuntimeError, UnicodeDecodeError):
         return response
 
+<<<<<<< HEAD
     if not html or "/static/shared-ui.js" in html:
         return response
 
@@ -85,6 +90,55 @@ def inject_shared_ui_assets(response):
         html = f"{html}\n{SHARED_UI_JS_TAG}"
 
     response.set_data(html)
+=======
+    if not html:
+        return response
+
+    changed = False
+
+    if "/static/shared-ui.js" not in html:
+        if "</head>" in html:
+            html = html.replace("</head>", f"  {SHARED_UI_CSS_TAG}\n</head>", 1)
+        else:
+            html = f"{SHARED_UI_CSS_TAG}\n{html}"
+
+        if "</body>" in html:
+            html = html.replace("</body>", f"  {SHARED_UI_JS_TAG}\n</body>", 1)
+        else:
+            html = f"{html}\n{SHARED_UI_JS_TAG}"
+        changed = True
+
+    # Inject mobile sidebar behavior on pages that include the hamburger button.
+    if 'id="mobileMenuToggle"' in html and "/static/mobile-sidebar.js" not in html:
+        if "</body>" in html:
+            html = html.replace("</body>", f"  {MOBILE_SIDEBAR_JS_TAG}\n</body>", 1)
+        else:
+            html = f"{html}\n{MOBILE_SIDEBAR_JS_TAG}"
+        changed = True
+
+    if changed:
+        response.set_data(html)
+    return response
+
+
+@app.after_request
+def set_csrf_cookie(response):
+    """Expose a CSRF token to JavaScript via cookie (double-submit pattern)."""
+    try:
+        token = get_csrf_token()
+    except Exception:
+        return response
+
+    # Not HttpOnly on purpose: JS fetch() reads it and sends back in X-CSRFToken.
+    response.set_cookie(
+        "csrf_token",
+        token,
+        samesite="Lax",
+        secure=bool(app.config.get("SESSION_COOKIE_SECURE")),
+        httponly=False,
+        max_age=60 * 60 * 24 * 30,
+    )
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     return response
 
 
@@ -173,6 +227,7 @@ PRODUCTS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = str(UPLOADS_DIR)
 KISAN_DOST_KNOWLEDGE_PATH = Path(app.root_path) / "dataset" / "kisan_dost_faq.json"
+<<<<<<< HEAD
 AI_CROP_DOCTOR_FAQ_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_project_faq.txt"
 AI_CROP_DOCTOR_LOCAL_QA_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_local_qa.json"
 DISEASE_SYMPTOM_RULES_PATH = Path(app.root_path) / "dataset" / "disease_symptom_rules.json"
@@ -180,6 +235,12 @@ CROP_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "crop_library.json"
 STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "store_products.json"
 DISEASE_STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "disease_store_products.json"
 DISEASE_PRODUCT_MAPPINGS_DATA_PATH = Path(app.root_path) / "dataset" / "disease_product_mappings.json"
+=======
+CROP_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "crop_library.json"
+STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "store_products.json"
+DISEASE_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "disease_data.json"
+CULTIVATION_TIPS_DATA_PATH = Path(app.root_path) / "dataset" / "cultivation_tips.json"
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 EMAIL_LOGO_PATH = Path(app.root_path) / "static" / "brand" / "agrovision-email-logo.png"
 EMAIL_LOGO_FILENAME = EMAIL_LOGO_PATH.name
 EMAIL_LOGO_SUBTYPE = "png"
@@ -192,8 +253,24 @@ CROP_DISEASE_LABELS_PATH = Path(
 ALLOWED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 DISEASE_MODEL_CACHE = {"attempted": False, "model": None, "labels": None}
 CROP_LIBRARY_CACHE = None
+<<<<<<< HEAD
 CROP_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "images" / "crops"
 CROP_LIBRARY_DEFAULT_IMAGE = "/static/images/default_crop.png"
+=======
+DISEASE_LIBRARY_CACHE = {"mtime": 0.0, "items": []}
+CULTIVATION_TIPS_CACHE = {"mtime": 0.0, "payload": {}}
+CROP_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "images" / "crops"
+CROP_LIBRARY_DEFAULT_IMAGE = "/static/images/default_crop.png"
+DISEASE_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "library" / "diseases"
+DISEASE_LIBRARY_DEFAULT_IMAGES = {
+    "insect": "/static/library/diseases/aphids.jpg",
+    "pest": "/static/library/diseases/aphids.jpg",
+    "fungus": "/static/library/diseases/leaf-blight.jpg",
+    "bacteria": "/static/library/diseases/bacterial-spot.jpg",
+    "virus": "/static/library/diseases/mosaic-disease.jpg",
+    "disease": "/static/library/diseases/leaf-blight.jpg",
+}
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 STORE_PRODUCT_FALLBACK_IMAGE = "/static/images/store-product-fallback.svg"
 CROP_LIBRARY_REMOTE_IMAGE_FALLBACKS = {
     "barley": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Barley_%28Hordeum_vulgare%29_-_United_States_National_Arboretum_-_24_May_2009.jpg/1280px-Barley_%28Hordeum_vulgare%29_-_United_States_National_Arboretum_-_24_May_2009.jpg",
@@ -230,10 +307,24 @@ STORE_CATEGORY_META = {
     },
 }
 
+<<<<<<< HEAD
+=======
+MAX_PROFILE_PHOTO_BYTES = get_env_int("MAX_PROFILE_PHOTO_BYTES", 5 * 1024 * 1024)
+MAX_PRODUCT_IMAGE_BYTES = get_env_int("MAX_PRODUCT_IMAGE_BYTES", 10 * 1024 * 1024)
+MAX_DISEASE_IMAGE_BYTES = get_env_int("MAX_DISEASE_IMAGE_BYTES", 10 * 1024 * 1024)
+
+# Very small in-memory rate limiter (demo-friendly). Resets on server restart.
+RATE_LIMIT_BUCKET = {}
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 # Admin Panel (defaults requested by user; override via environment for safety)
 ADMIN_EMAIL = (os.getenv("ADMIN_EMAIL") or "admin123@gmail.com").strip().lower()
 ADMIN_PASSWORD = (os.getenv("ADMIN_PASSWORD") or "123").strip()
 ADMIN_NOTIFY_EMAIL = (os.getenv("ADMIN_NOTIFY_EMAIL") or ADMIN_EMAIL).strip().lower()
+<<<<<<< HEAD
+=======
+RAZORPAY_WEBHOOK_SECRET = (os.getenv("RAZORPAY_WEBHOOK_SECRET") or "").strip()
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 STORE_CATEGORY_HIGHLIGHTS = {
     "Pesticides": [
         "Targets disease and pest hotspots quickly.",
@@ -261,6 +352,7 @@ STORE_CATEGORY_HIGHLIGHTS = {
         "Pair with mulch, compost, and scouting for best results.",
     ],
 }
+<<<<<<< HEAD
 STORE_DISEASE_PRODUCT_RULES = [
     (("healthy",), None),
     (("bacterial", "blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "rot"), "Bio Pesticide"),
@@ -296,6 +388,121 @@ DISEASE_PRODUCT_RECOMMENDATION_PROFILES = {
         "category_boosts": {"Organic": 4, "Pesticides": 4, "Tools": 1},
         "keywords": {"bio pesticide": 5, "neem oil": 5, "organic pest spray": 5, "soil health booster": 4},
     },
+=======
+
+
+STATIC_PRODUCTS_DIR = Path(app.root_path) / "static" / "products"
+ALLOWED_LOCAL_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
+_STORE_PRODUCT_IMAGE_INDEX = None
+
+
+def _tokenize_filename(value):
+    return set(re.findall(r"[a-z0-9]+", str(value or "").lower()))
+
+
+def _build_store_product_image_index():
+    """Cache a lightweight index of local product images for fuzzy matching."""
+    global _STORE_PRODUCT_IMAGE_INDEX
+    if _STORE_PRODUCT_IMAGE_INDEX is not None:
+        return _STORE_PRODUCT_IMAGE_INDEX
+
+    index = []
+    try:
+        for path in STATIC_PRODUCTS_DIR.iterdir():
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in ALLOWED_LOCAL_IMAGE_SUFFIXES:
+                continue
+            tokens = _tokenize_filename(path.stem)
+            index.append(
+                {
+                    "name": path.name,
+                    "tokens": tokens,
+                    "url": f"/static/products/{path.name}",
+                }
+            )
+    except OSError:
+        index = []
+
+    _STORE_PRODUCT_IMAGE_INDEX = index
+    return _STORE_PRODUCT_IMAGE_INDEX
+
+
+def _local_static_path_from_url(static_url):
+    url = str(static_url or "").strip()
+    if not url.startswith("/static/products/"):
+        return None
+    filename = url.split("/static/products/", 1)[1]
+    if not filename or "/" in filename or "\\" in filename:
+        return None
+    return STATIC_PRODUCTS_DIR / filename
+
+
+def resolve_store_product_image_url(product):
+    """Prefer a stable local image URL when possible (avoids external Unsplash dependency)."""
+    raw = str(getattr(product, "image_url", "") or "").strip()
+
+    # If admin provided a remote URL, keep it.
+    if raw and (raw.startswith("http://") or raw.startswith("https://")):
+        return raw
+
+    # If it's a local static products URL and the file exists, use it.
+    local_path = _local_static_path_from_url(raw) if raw else None
+    if local_path is not None and local_path.exists():
+        return raw
+
+    # Try exact matches by slug / name.
+    slug = str(getattr(product, "slug", "") or "").strip().lower()
+    name_slug = slugify_crop_name(getattr(product, "name", "") or "")
+    for candidate_base in [slug, name_slug]:
+        if not candidate_base:
+            continue
+        for ext in [".jpg", ".jpeg", ".png", ".webp"]:
+            candidate = STATIC_PRODUCTS_DIR / f"{candidate_base}{ext}"
+            if candidate.exists():
+                return f"/static/products/{candidate.name}"
+
+    # Fuzzy match against local images by token overlap.
+    tokens = _tokenize_filename(slug) | _tokenize_filename(name_slug) | _tokenize_filename(getattr(product, "name", ""))
+    best = None
+    best_score = 0
+    for item in _build_store_product_image_index():
+        overlap = len(tokens & (item.get("tokens") or set()))
+        if overlap > best_score:
+            best_score = overlap
+            best = item
+
+    if best is not None and best_score >= 2:
+        return best.get("url") or STORE_PRODUCT_FALLBACK_IMAGE
+
+    return STORE_PRODUCT_FALLBACK_IMAGE
+STORE_DISEASE_PRODUCT_RULES = [
+    (("healthy",), None),
+    # Keep mappings aligned with products that actually exist in dataset/store_products.json.
+    (("pest", "insect", "mite", "aphid", "vector", "whitefly", "thrips", "armyworm", "worm", "caterpillar", "mosaic", "curl virus"), "Neem Oil"),
+    (("blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "bacterial", "rot", "scab"), "Bio Pesticide"),
+    (("organic", "chemical-free", "bio"), "Organic Pest Spray"),
+]
+DISEASE_PRODUCT_PREFERENCES = {
+    "healthy": ["Soil Health Booster", "Natural Plant Care Kit"],
+    "brown spot": ["Soil Health Booster", "NPK Fertilizer", "Bio Pesticide"],
+    "rice blast": ["Pesticide Spray", "Bio Pesticide"],
+    "leaf blight": ["Pesticide Spray", "Bio Pesticide"],
+    "early blight": ["Bio Pesticide", "Pesticide Spray"],
+    "late blight": ["Pesticide Spray", "Bio Pesticide"],
+    "yellow rust": ["Bio Pesticide", "Pesticide Spray"],
+    "leaf rust": ["Bio Pesticide", "Pesticide Spray"],
+    "powdery mildew": ["Organic Pest Spray", "Bio Pesticide"],
+    "leaf mold": ["Natural Plant Care Kit", "Bio Pesticide"],
+    "bacterial spot": ["Pesticide Spray", "Bio Pesticide"],
+    "mosaic disease": ["Neem Oil", "Organic Pest Spray"],
+    "leaf curl virus": ["Neem Oil", "Organic Pest Spray"],
+    "spider mite infestation": ["Neem Oil", "Organic Pest Spray"],
+    "fall armyworm": ["Neem Oil", "Pesticide Spray"],
+    "stem borer": ["Neem Oil", "Pesticide Spray"],
+    "whitefly": ["Neem Oil", "Organic Pest Spray"],
+    "aphids": ["Neem Oil", "Organic Pest Spray"],
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 }
 RAZORPAY_KEY_ID = (os.getenv("RAZORPAY_KEY_ID") or "rzp_test_SRyeQDEMFrRHwD").strip()
 RAZORPAY_KEY_SECRET = (os.getenv("RAZORPAY_KEY_SECRET") or "b1mY7dNC8mDuxekLF2YmiV0I").strip()
@@ -907,6 +1114,22 @@ class User(db.Model):
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
 
+
+class AdminUser(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, index=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), default="admin")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    def __init__(self, **kwargs):
+        super(AdminUser, self).__init__(**kwargs)
+
 class DiseaseHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -1123,6 +1346,25 @@ def generate_otp():
     return "".join([str(random.randint(0, 9)) for _ in range(6)])
 
 
+def compute_otp_signature(otp, target_email, otp_type):
+    secret = app.secret_key or ""
+    if isinstance(secret, str):
+        secret_bytes = secret.encode("utf-8", errors="ignore")
+    else:
+        secret_bytes = bytes(secret)
+
+    payload = f"{str(otp_type or '').strip().lower()}|{str(target_email or '').strip().lower()}|{str(otp or '').strip()}"
+    return hmac.new(secret_bytes, payload.encode("utf-8", errors="ignore"), sha256).hexdigest()
+
+
+def verify_otp_signature(user_otp, expected_signature, target_email, otp_type):
+    expected = str(expected_signature or "").strip().lower()
+    if not expected:
+        return False
+    actual = compute_otp_signature(user_otp, target_email, otp_type).strip().lower()
+    return hmac.compare_digest(actual, expected)
+
+
 def is_password_hash(password_value):
     value = (password_value or "").strip()
     return value.startswith("pbkdf2:") or value.startswith("scrypt:")
@@ -1244,12 +1486,21 @@ def require_plan(min_plan_name):
             ensure_user_subscription_state(user, commit=True)
             user_plan = normalize_plan_name(user.plan)
 
+<<<<<<< HEAD
             # Free plan always has access to non-premium routes.
             if plan_rank(user_plan) >= plan_rank(min_plan) and is_paid_subscription_active(user):
                 return f(*args, **kwargs)
 
             # Trial acts like Pro access for a limited window.
             if min_plan == "pro" and is_trial_active(user):
+=======
+            # Trial is full-access for a limited window (all plans, including premium).
+            if is_trial_active(user):
+                return f(*args, **kwargs)
+
+            # Paid access (after trial) requires an active subscription.
+            if plan_rank(user_plan) >= plan_rank(min_plan) and is_paid_subscription_active(user):
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                 return f(*args, **kwargs)
 
             return redirect("/subscriptions?required=1")
@@ -1263,6 +1514,74 @@ def check_subscription(f):
     return require_plan("pro")(f)
 
 
+<<<<<<< HEAD
+=======
+def is_user_paywall_blocked(user):
+    """After the free trial ends, block access unless the user has an active paid plan."""
+    if user is None:
+        return False
+    ensure_user_subscription_state(user, commit=True)
+    if is_trial_active(user):
+        return False
+    return not (normalize_plan_name(user.plan) in {"pro", "premium"} and is_paid_subscription_active(user))
+
+
+def is_paywall_exempt_path(path_value):
+    path = str(path_value or "")
+    if not path or path == "/":
+        return True
+
+    exact_allow = {
+        "/login",
+        "/register",
+        "/verify-otp",
+        "/logout",
+        "/subscriptions",
+    }
+    if path in exact_allow:
+        return True
+
+    prefix_allow = (
+        "/static/",
+        "/admin",
+        "/webhooks/",
+        "/api/subscription/",
+        "/api/apply-wallet",
+    )
+    return any(path.startswith(prefix) for prefix in prefix_allow)
+
+
+@app.before_request
+def enforce_trial_paywall():
+    """Give 7-day full access; after that redirect to subscriptions until paid."""
+    # Skip preflight/health.
+    if request.method == "OPTIONS":
+        return None
+
+    if is_paywall_exempt_path(request.path):
+        return None
+
+    user = get_current_user()
+    if not user:
+        return None
+
+    if not is_user_paywall_blocked(user):
+        return None
+
+    # For API-like routes, return JSON so frontend can handle gracefully.
+    if request.path.startswith("/api/") or request.path == "/predict-disease":
+        return jsonify(
+            {
+                "success": False,
+                "error": "Trial ended. Please subscribe to continue using AgroVision AI.",
+                "redirect_url": "/subscriptions?expired=1",
+            }
+        ), 403
+
+    return redirect("/subscriptions?expired=1")
+
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def check_user_password(user, password_value, upgrade_legacy=True):
     if user is None:
         return False, False
@@ -1285,6 +1604,7 @@ def check_user_password(user, password_value, upgrade_legacy=True):
 
 
 def check_admin_password(candidate_password):
+<<<<<<< HEAD
     stored = (ADMIN_PASSWORD or "").strip()
     candidate = (candidate_password or "").strip()
     if not stored or not candidate:
@@ -1293,11 +1613,51 @@ def check_admin_password(candidate_password):
     if is_password_hash(stored):
         return check_password_hash(stored, candidate)
 
+=======
+    candidate = (candidate_password or "").strip()
+    if not candidate:
+        return False
+
+    # Prefer DB-backed admin users when available.
+    try:
+        admin = AdminUser.query.filter_by(email=ADMIN_EMAIL).first()  # type: ignore
+    except Exception:
+        admin = None
+
+    if admin is not None:
+        return check_password_hash(admin.password_hash or "", candidate)
+
+    # Fallback to env-based credentials (backward compatible).
+    stored = (ADMIN_PASSWORD or "").strip()
+    if not stored:
+        return False
+    if is_password_hash(stored):
+        return check_password_hash(stored, candidate)
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     return stored == candidate
 
 
 def is_admin_authenticated():
+<<<<<<< HEAD
     return bool(session.get("admin_authed") and session.get("admin_email") == ADMIN_EMAIL)
+=======
+    if not session.get("admin_authed"):
+        return False
+    email = (session.get("admin_email") or "").strip().lower()
+    if email and email == ADMIN_EMAIL:
+        return True
+    # If multiple admins are added, fall back to ID check.
+    try:
+        admin_id = int(session.get("admin_id") or 0)
+    except (TypeError, ValueError):
+        admin_id = 0
+    if not admin_id:
+        return False
+    try:
+        return db.session.get(AdminUser, admin_id) is not None
+    except Exception:
+        return False
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 def admin_required(f):
@@ -1313,18 +1673,26 @@ def admin_required(f):
 def clear_otp_session_state():
     for key in (
         "otp",
+        "otp_sig",
         "otp_target",
         "otp_type",
         "otp_user_id",
         "otp_expiry",
+<<<<<<< HEAD
         "otp_notice",
         "otp_debug_available",
         "otp_sent_at",
+=======
+        "otp_attempts",
+        "otp_notice",
+        "otp_dev_code",
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         "pending_user",
     ):
         session.pop(key, None)
 
 
+<<<<<<< HEAD
 def csrf_token():
     token = session.get(CSRF_SESSION_KEY)
     if not token:
@@ -1415,6 +1783,28 @@ def sync_csrf_cookie(response):
             samesite=app.config["SESSION_COOKIE_SAMESITE"],
         )
     return response
+=======
+def read_upload_bytes(file_storage, max_bytes, label="file"):
+    if file_storage is None:
+        raise ValueError("No file uploaded.")
+
+    try:
+        stream = file_storage.stream
+    except Exception as exc:
+        raise ValueError("Upload stream is not available.") from exc
+
+    try:
+        stream.seek(0)
+    except Exception:
+        pass
+
+    data = stream.read(int(max_bytes) + 1)
+    if not data:
+        raise ValueError("Uploaded file is empty.")
+    if len(data) > int(max_bytes):
+        raise ValueError(f"{label} is too large. Please upload a smaller file.")
+    return data
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 def save_profile_photo_upload(file_storage, prefix):
@@ -1423,9 +1813,20 @@ def save_profile_photo_upload(file_storage, prefix):
     if suffix not in ALLOWED_IMAGE_SUFFIXES:
         raise ValueError("Only PNG, JPG, JPEG, or WEBP images are allowed.")
 
-    file_name = f"{prefix}_{uuid.uuid4().hex[:12]}{suffix}"
+    file_name = f"{prefix}_{uuid.uuid4().hex[:12]}.jpg"
     save_path = UPLOADS_DIR / file_name
-    file_storage.save(str(save_path))
+
+    image_bytes = read_upload_bytes(file_storage, MAX_PROFILE_PHOTO_BYTES, label="Profile photo")
+
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)
+        img = img.convert("RGB")
+        img = ImageOps.fit(img, (512, 512), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+        img.save(save_path, format="JPEG", quality=86, optimize=True, progressive=True)
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise ValueError("Could not process profile photo. Please upload a valid image file.") from exc
+
     return file_name
 
 
@@ -1442,7 +1843,12 @@ def save_product_image_upload(file_storage, slug_hint="product"):
 
     # Normalize all uploads to a square JPEG for consistent store UI.
     try:
+<<<<<<< HEAD
         img = Image.open(file_storage.stream)
+=======
+        image_bytes = read_upload_bytes(file_storage, MAX_PRODUCT_IMAGE_BYTES, label="Product image")
+        img = Image.open(BytesIO(image_bytes))
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         img = ImageOps.exif_transpose(img)
         img = img.convert("RGB")
         img = ImageOps.fit(img, (900, 900), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
@@ -1580,12 +1986,13 @@ def send_otp_email(target_email, otp):
     """
     Sends a 6-digit OTP to the user's email using SMTP.
     """
-    # Debug Print for Terminal
-    print(f"\n--- [DEBUG OTP] OTP for {target_email} is: {otp} ---\n")
-
     if not SMTP_EMAIL or not SMTP_PASSWORD:
+<<<<<<< HEAD
         print("SMTP credentials are not configured. OTP email skipped.")
         return False, "SMTP credentials are not configured."
+=======
+        return False
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
     logo_bytes = None
     logo_cid = None
@@ -1684,8 +2091,86 @@ def send_admin_order_email(order, user, product):
         return False
 
 
+def send_admin_order_email(order, user, product):
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        print("SMTP credentials are not configured. Admin order email skipped.")
+        return False
+
+    if not ADMIN_NOTIFY_EMAIL:
+        print("Admin notification email is not configured. Admin order email skipped.")
+        return False
+
+    order_id = getattr(order, "id", None)
+    amount_paise = int(getattr(order, "amount", 0) or 0)
+    amount_inr = amount_paise / 100.0
+    currency = str(getattr(order, "currency", "INR") or "INR")
+    buyer_name = str(getattr(user, "name", "") or "").strip() or "Customer"
+    buyer_email = str(getattr(user, "email", "") or "").strip()
+    product_name = str(getattr(product, "name", "") or "").strip() or "Store Product"
+
+    subject = f"New Order Received #{order_id}" if order_id else "New Order Received"
+    body_lines = [
+        "New Order Received!",
+        "",
+        f"Order: #{order_id}" if order_id else "Order: (unknown id)",
+        f"Product: {product_name}",
+        f"User: {buyer_name}" + (f" ({buyer_email})" if buyer_email else ""),
+        f"Amount: {currency} {amount_inr:.2f}",
+        f"Status: {get_fulfillment_status(order).title()}",
+    ]
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
+    msg["To"] = ADMIN_NOTIFY_EMAIL
+    msg["Reply-To"] = SMTP_EMAIL
+    msg.set_content("\n".join(body_lines))
+
+    try:
+        if SMTP_USE_SSL or SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"SMTP Error (admin order email): {e}")
+        return False
+
+
 def clamp(value, lower, upper):
     return max(lower, min(value, upper))
+
+
+def _client_ip():
+    # If behind a proxy, set proper proxy headers in production (not enabled by default).
+    return (request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown").split(",")[0].strip()
+
+
+def rate_limit_exceeded(bucket_key, max_hits, window_seconds):
+    """Return True if exceeded, else False."""
+    now = time.time()
+    window = float(window_seconds or 1)
+    limit = int(max_hits or 1)
+    key = str(bucket_key or "")
+    if not key:
+        return False
+
+    hits = RATE_LIMIT_BUCKET.get(key) or []
+    hits = [ts for ts in hits if now - float(ts) <= window]
+    if len(hits) >= limit:
+        RATE_LIMIT_BUCKET[key] = hits
+        return True
+
+    hits.append(now)
+    RATE_LIMIT_BUCKET[key] = hits
+    return False
 
 def calculate_carbon_credits(user):
     """
@@ -1745,6 +2230,7 @@ def load_kisan_dost_knowledge():
         return []
 
 
+<<<<<<< HEAD
 def load_ai_crop_doctor_faq_reference():
     if not AI_CROP_DOCTOR_FAQ_PATH.exists():
         return ""
@@ -2125,6 +2611,8 @@ def match_disease_symptom_rule(*values):
     return {"key": best_key, **best_rule}
 
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def slugify_crop_name(name):
     parts = re.findall(r"[a-z0-9]+", (name or "").lower())
     return "-".join(parts) or "crop"
@@ -2136,6 +2624,164 @@ def normalize_disease_key(disease_name):
     return value
 
 
+<<<<<<< HEAD
+=======
+def resolve_disease_library_image(raw_item):
+    item = raw_item if isinstance(raw_item, dict) else {}
+    explicit = str(item.get("image") or "").strip()
+    if explicit:
+        if explicit.startswith(("http://", "https://", "data:image/")):
+            return explicit
+        if explicit.startswith("/static/"):
+            candidate = Path(app.root_path) / explicit.lstrip("/").replace("/", os.sep)
+            if candidate.exists():
+                return explicit
+
+    name = str(item.get("name") or item.get("slug") or "").strip()
+    slug = slugify_crop_name(item.get("slug") or name)
+    tags = [str(tag).strip().lower() for tag in (item.get("tags") or []) if str(tag).strip()]
+    disease_type = str(item.get("type") or "disease").strip().lower()
+
+    candidate_keys = [
+        slug,
+        normalize_disease_key(name).replace(" ", "-"),
+    ]
+
+    alias_map = {
+        "common-rust": "yellow-rust",
+        "leaf-rust": "yellow-rust",
+        "rust-leaf-spot": "yellow-rust",
+        "northern-leaf-blight": "leaf-blight",
+        "gray-leaf-spot": "brown-spot",
+        "spider-mite-infestation": "aphids",
+        "spider-mites-two-spotted-spider-mite": "aphids",
+        "leaf-curl-virus": "leaf-curl-virus",
+        "tomato-yellowleaf-curl-virus": "leaf-curl-virus",
+        "tomato-mosaic-virus": "mosaic-disease",
+        "mosaic-virus": "mosaic-disease",
+        "target-spot": "brown-spot",
+    }
+
+    keyword_candidates = [
+        ("armyworm", "fall-armyworm"),
+        ("stem borer", "stem-borer"),
+        ("hispa", "rice-hispa"),
+        ("thrips", "thrips"),
+        ("whitefly", "whitefly"),
+        ("aphid", "aphids"),
+        ("mite", "aphids"),
+        ("mosaic", "mosaic-disease"),
+        ("curl", "leaf-curl-virus"),
+        ("blast", "rice-blast"),
+        ("powdery mildew", "powdery-mildew"),
+        ("downy mildew", "downy-mildew"),
+        ("mildew", "powdery-mildew"),
+        ("rust", "yellow-rust"),
+        ("leaf mold", "leaf-mold"),
+        ("mold", "leaf-mold"),
+        ("bacterial leaf blight", "bacterial-leaf-blight"),
+        ("bacterial spot", "bacterial-spot"),
+        ("leaf blight", "leaf-blight"),
+        ("blight", "leaf-blight"),
+        ("root rot", "root-rot"),
+        ("damping off", "damping-off"),
+        ("brown spot", "brown-spot"),
+        ("spot", "brown-spot"),
+    ]
+
+    for key in list(candidate_keys):
+        mapped_key = alias_map.get(key)
+        if mapped_key:
+            candidate_keys.append(mapped_key)
+
+    search_text = " ".join(
+        [name.lower(), slug.replace("-", " "), disease_type, " ".join(tags)]
+    )
+    for keyword, asset_key in keyword_candidates:
+        if keyword in search_text:
+            candidate_keys.append(asset_key)
+
+    seen = set()
+    for key in candidate_keys:
+        key = str(key or "").strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        for suffix in ALLOWED_IMAGE_SUFFIXES:
+            image_path = DISEASE_LIBRARY_IMAGE_DIR / f"{key}{suffix}"
+            if image_path.exists():
+                return f"/static/library/diseases/{image_path.name}"
+
+    return DISEASE_LIBRARY_DEFAULT_IMAGES.get(disease_type, DISEASE_LIBRARY_DEFAULT_IMAGES["disease"])
+
+
+def get_best_disease_library_entry(disease_name, crop_name=""):
+    disease_key = normalize_disease_key(disease_name)
+    crop_key = normalize_crop_key(crop_name)
+    if not disease_key:
+        return None
+
+    entries = load_disease_library()
+    scored_matches = []
+
+    for entry in entries:
+        entry_name = str(entry.get("name") or "").strip()
+        entry_key = normalize_disease_key(entry_name)
+        if not entry_key:
+            continue
+
+        score = 0.0
+        if entry_key == disease_key or entry.get("slug") == slugify_crop_name(disease_name):
+            score += 7.0
+        elif disease_key in entry_key or entry_key in disease_key:
+            score += 4.2
+
+        disease_tokens = set(re.findall(r"[a-z0-9]+", disease_key))
+        entry_tokens = set(re.findall(r"[a-z0-9]+", entry_key))
+        score += len(disease_tokens & entry_tokens) * 1.1
+
+        crops = [str(c).strip().lower() for c in (entry.get("crops") or []) if str(c).strip()]
+        if crops:
+            if crop_key != "generic" and any(normalize_crop_key(crop) == crop_key for crop in crops):
+                score += 3.4
+            elif crop_name and any(str(crop_name).strip().lower() == crop for crop in crops):
+                score += 2.0
+
+        if score > 0:
+            scored_matches.append((score, entry))
+
+    if not scored_matches:
+        return None
+
+    scored_matches.sort(key=lambda item: item[0], reverse=True)
+    return scored_matches[0][1]
+
+
+def summarize_disease_symptoms(entry, fallback_text=""):
+    if isinstance(entry, dict):
+        symptoms = [str(item).strip() for item in (entry.get("symptoms") or []) if str(item).strip()]
+        if symptoms:
+            return "; ".join(symptoms[:3])
+    return str(fallback_text or "Visible crop stress markers detected on the leaf surface.").strip()
+
+
+def derive_organic_solution(disease_name="", entry=None, crop_name=""):
+    disease_text = normalize_disease_key(disease_name)
+    crop_label = str(crop_name or "crop").strip() or "crop"
+    entry_type = str((entry or {}).get("type") or "").strip().lower() if isinstance(entry, dict) else ""
+
+    if any(keyword in disease_text for keyword in ("mite", "whitefly", "thrips", "aphid", "armyworm", "borer", "pest", "insect")) or entry_type in {"insect", "pest"}:
+        return f"Spray neem oil during evening hours, remove heavily infested leaves, and keep {crop_label} scouting frequent."
+    if any(keyword in disease_text for keyword in ("virus", "mosaic", "curl")) or entry_type == "virus":
+        return "Rogue infected plants early, sanitize tools, and suppress vector insects with neem-based management."
+    if any(keyword in disease_text for keyword in ("bacterial",)) or entry_type == "bacteria":
+        return "Use copper-compatible organic support, avoid overhead irrigation, and keep tools and hands sanitized."
+    if any(keyword in disease_text for keyword in ("brown spot", "nutrient", "deficiency")):
+        return f"Add compost or soil booster, keep irrigation uniform, and reduce stress on {crop_label} plants."
+    return "Use a bio-protective spray, prune infected leaves, and improve airflow around the crop canopy."
+
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def resolve_crop_library_image(slug):
     for suffix in (".jpg", ".jpeg", ".png", ".webp"):
         image_path = CROP_LIBRARY_IMAGE_DIR / f"{slug}{suffix}"
@@ -2323,6 +2969,7 @@ def build_crop_library_context():
     }
 
 
+<<<<<<< HEAD
 def infer_library_disease_type(entry):
     text = " ".join(
         [
@@ -2768,6 +3415,8 @@ def build_admin_audit_context():
     }
 
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def safe_json_loads(raw_value, default):
     if raw_value in (None, ""):
         return default
@@ -2777,6 +3426,105 @@ def safe_json_loads(raw_value, default):
         return default
 
 
+<<<<<<< HEAD
+=======
+def _cache_file_mtime(path):
+    try:
+        return float(path.stat().st_mtime)
+    except OSError:
+        return 0.0
+
+
+def load_disease_library():
+    """Load pests & disease reference data from dataset/disease_data.json (cached)."""
+    global DISEASE_LIBRARY_CACHE
+
+    mtime = _cache_file_mtime(DISEASE_LIBRARY_DATA_PATH)
+    if DISEASE_LIBRARY_CACHE.get("items") and DISEASE_LIBRARY_CACHE.get("mtime") == mtime:
+        return DISEASE_LIBRARY_CACHE["items"]
+
+    if not DISEASE_LIBRARY_DATA_PATH.exists():
+        DISEASE_LIBRARY_CACHE = {"mtime": 0.0, "items": []}
+        return []
+
+    try:
+        raw = json.loads(DISEASE_LIBRARY_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        DISEASE_LIBRARY_CACHE = {"mtime": mtime, "items": []}
+        return []
+
+    items = raw if isinstance(raw, list) else []
+    normalized = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        slug = slugify_crop_name(item.get("slug") or name)
+        normalized.append(
+            {
+                "slug": slug,
+                "name": name,
+                "type": str(item.get("type") or "Disease").strip() or "Disease",
+                "crops": [str(c).strip() for c in (item.get("crops") or []) if str(c).strip()] if isinstance(item.get("crops"), list) else [],
+                "stages": [str(s).strip().lower() for s in (item.get("stages") or []) if str(s).strip()] if isinstance(item.get("stages"), list) else [],
+                "symptoms": [str(s).strip() for s in (item.get("symptoms") or []) if str(s).strip()] if isinstance(item.get("symptoms"), list) else [],
+                "cause": str(item.get("cause") or "").strip(),
+                "solution": str(item.get("solution") or "").strip(),
+                "prevention": [str(p).strip() for p in (item.get("prevention") or []) if str(p).strip()] if isinstance(item.get("prevention"), list) else [],
+                "image": resolve_disease_library_image(item),
+                "tags": [str(t).strip() for t in (item.get("tags") or []) if str(t).strip()] if isinstance(item.get("tags"), list) else [],
+            }
+        )
+
+    DISEASE_LIBRARY_CACHE = {"mtime": mtime, "items": normalized}
+    return normalized
+
+
+def get_disease_library_entry(slug_or_name):
+    key = slugify_crop_name(slug_or_name)
+    return next((entry for entry in load_disease_library() if entry["slug"] == key), None)
+
+
+def load_cultivation_tips():
+    """Load cultivation tips reference data from dataset/cultivation_tips.json (cached)."""
+    global CULTIVATION_TIPS_CACHE
+
+    mtime = _cache_file_mtime(CULTIVATION_TIPS_DATA_PATH)
+    if CULTIVATION_TIPS_CACHE.get("payload") and CULTIVATION_TIPS_CACHE.get("mtime") == mtime:
+        return CULTIVATION_TIPS_CACHE["payload"]
+
+    if not CULTIVATION_TIPS_DATA_PATH.exists():
+        CULTIVATION_TIPS_CACHE = {"mtime": 0.0, "payload": {}}
+        return {}
+
+    try:
+        raw = json.loads(CULTIVATION_TIPS_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        CULTIVATION_TIPS_CACHE = {"mtime": mtime, "payload": {}}
+        return {}
+
+    payload = raw if isinstance(raw, dict) else {}
+    CULTIVATION_TIPS_CACHE = {"mtime": mtime, "payload": payload}
+    return payload
+
+
+def build_library_crop_options(user=None):
+    crops = load_crop_library()
+    names = [crop["name"] for crop in crops]
+    # Prefer the user's crop first when possible.
+    preferred = str(getattr(user, "crop_type", "") or "").strip()
+    if preferred:
+        for item in list(names):
+            if item.lower() == preferred.lower():
+                names.remove(item)
+                names.insert(0, item)
+                break
+    return ["All"] + names[:40]
+
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def truncate_text(text, limit=120):
     value = str(text or "").strip()
     if len(value) <= limit:
@@ -2827,6 +3575,7 @@ def get_store_category_meta(category):
 
 
 def load_store_seed_dataset():
+<<<<<<< HEAD
     seed_rows = []
     for path in (STORE_PRODUCTS_DATA_PATH, DISEASE_STORE_PRODUCTS_DATA_PATH):
         if not path.exists():
@@ -2846,6 +3595,13 @@ def load_disease_product_mapping_seed_dataset():
 
     try:
         raw_data = json.loads(DISEASE_PRODUCT_MAPPINGS_DATA_PATH.read_text(encoding="utf-8"))
+=======
+    if not STORE_PRODUCTS_DATA_PATH.exists():
+        return []
+
+    try:
+        raw_data = json.loads(STORE_PRODUCTS_DATA_PATH.read_text(encoding="utf-8"))
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         return raw_data if isinstance(raw_data, list) else []
     except (OSError, ValueError, TypeError):
         return []
@@ -2927,6 +3683,7 @@ def seed_store_products():
     return seeded_count
 
 
+<<<<<<< HEAD
 def seed_disease_product_mappings():
     seed_data = load_disease_product_mapping_seed_dataset()
     if not seed_data:
@@ -2965,6 +3722,8 @@ def seed_disease_product_mappings():
     return seeded_count
 
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def build_store_product_highlights(product):
     tags = safe_json_loads(product.tags_json, [])
     if not isinstance(tags, list):
@@ -3003,6 +3762,11 @@ def serialize_store_product(product):
         ]
     ).lower()
 
+<<<<<<< HEAD
+=======
+    image_url = resolve_store_product_image_url(product)
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     return {
         "id": product.id,
         "slug": product.slug,
@@ -3018,6 +3782,7 @@ def serialize_store_product(product):
         "rating": rating_value,
         "rating_label": f"{rating_value:.1f}",
         "rating_count": 48 + (product.id * 13),
+<<<<<<< HEAD
         "image_url": (
             str(product.image_url or "").strip() 
             if str(product.image_url or "").strip()
@@ -3032,6 +3797,9 @@ def serialize_store_product(product):
             if "fertilizer" in product.name.lower()
             else f"https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&q=80&w=600&sig={product.id}"
         ),
+=======
+        "image_url": image_url,
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         "fallback_image": STORE_PRODUCT_FALLBACK_IMAGE,
         "description": description,
         "short_description": truncate_text(description, 96),
@@ -3087,6 +3855,61 @@ def find_store_product_by_name(name):
     return scored_matches[0][2] if scored_matches else None
 
 
+<<<<<<< HEAD
+=======
+def score_store_product_for_diagnosis(product, crop_name="", disease_name="", diagnostic_text=""):
+    disease_key = normalize_disease_key(disease_name)
+    crop_key = normalize_crop_key(crop_name)
+    product_name = str(product.name or "").strip()
+    product_text = " ".join(
+        [
+            product_name.lower(),
+            str(product.category or "").lower(),
+            str(product.description or "").lower(),
+            " ".join(str(tag).lower() for tag in safe_json_loads(product.tags_json, [])),
+        ]
+    )
+
+    score = float(product.rating or 0) * 0.08
+
+    preferred_names = DISEASE_PRODUCT_PREFERENCES.get(disease_key, [])
+    for index, preferred_name in enumerate(preferred_names):
+        if str(preferred_name).strip().lower() == product_name.lower():
+            score += 8.5 - (index * 0.9)
+
+    if disease_key == "healthy":
+        if product.category in {"Fertilizers", "Organic"}:
+            score += 2.8
+        if "soil" in product_text or "care" in product_text or "booster" in product_text:
+            score += 2.0
+    else:
+        if product.category == "Pesticides":
+            score += 2.8
+        if any(keyword in disease_key for keyword in ("fung", "blight", "spot", "rust", "mildew", "mold")) and any(
+            token in product_text for token in ("pesticide", "spray", "fungicide", "bio")
+        ):
+            score += 1.6
+        if any(keyword in disease_key for keyword in ("virus", "mosaic", "curl", "whitefly", "aphid", "thrips", "mite", "armyworm", "borer", "pest")) and any(
+            token in product_text for token in ("neem", "organic pest", "pesticide", "spray")
+        ):
+            score += 1.9
+        if "brown spot" in disease_key and any(token in product_text for token in ("soil", "npk", "booster", "compost")):
+            score += 1.8
+
+    disease_tokens = set(re.findall(r"[a-z0-9]+", disease_key))
+    crop_tokens = set(re.findall(r"[a-z0-9]+", str(crop_key)))
+    product_tokens = set(re.findall(r"[a-z0-9]+", product_text))
+    score += len(disease_tokens & product_tokens) * 0.8
+    score += len(crop_tokens & product_tokens) * 0.35
+
+    if diagnostic_text:
+        diagnostic_tokens = set(re.findall(r"[a-z0-9]+", diagnostic_text.lower()))
+        score += len(diagnostic_tokens & product_tokens) * 0.12
+
+    return score
+
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def apply_store_filters(products, search_query="", active_category="All", sort_option="featured", recommended_slug=None):
     normalized_query = str(search_query or "").strip().lower()
     category = active_category if active_category in STORE_CATEGORY_ORDER else "All"
@@ -3240,6 +4063,7 @@ def get_admin_mapped_product_for_disease(disease_name):
     return mapping.product
 
 
+<<<<<<< HEAD
 def infer_disease_type_from_text(*values):
     diagnostic_text = " ".join(str(value or "") for value in values).lower()
     if not diagnostic_text.strip():
@@ -3485,6 +4309,9 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
     if any(term in diagnostic_summary for term in ("healthy", "no disease", "routine care", "continue monitoring")):
         return None
 
+=======
+def resolve_store_recommendation(disease_name="", cause="", organic_solution="", chemical_solution="", best_product_name="", crop_name=""):
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     admin_mapped = get_admin_mapped_product_for_disease(disease_name)
     if admin_mapped is not None:
         return admin_mapped
@@ -3494,8 +4321,27 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
         if direct_product:
             return direct_product
 
+<<<<<<< HEAD
     diagnostic_text = diagnostic_summary
     disease_type = infer_disease_type_from_text(disease_name, cause, organic_solution, chemical_solution)
+=======
+    disease_key = normalize_disease_key(disease_name)
+    preferred_names = DISEASE_PRODUCT_PREFERENCES.get(disease_key, [])
+    for preferred_name in preferred_names:
+        preferred_product = find_store_product_by_name(preferred_name)
+        if preferred_product is not None:
+            return preferred_product
+
+    diagnostic_text = " ".join(
+        [
+            str(crop_name or ""),
+            str(disease_name or ""),
+            str(cause or ""),
+            str(organic_solution or ""),
+            str(chemical_solution or ""),
+        ]
+    ).lower()
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
     for keywords, mapped_name in STORE_DISEASE_PRODUCT_RULES:
         if any(keyword in diagnostic_text for keyword in keywords):
@@ -3505,6 +4351,7 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
             if mapped_product:
                 return mapped_product
 
+<<<<<<< HEAD
     scored_matches = []
     for product in get_all_store_products():
         score = score_store_product_for_diagnosis(product, disease_type, diagnostic_text, crop_name=crop_name)
@@ -3522,6 +4369,33 @@ def attach_store_recommendation(payload, best_product_name=""):
         payload.get("organic_solution"),
         payload.get("chemical_solution"),
     )
+=======
+    if "fungicide" in diagnostic_text or "copper" in diagnostic_text:
+        return find_store_product_by_name("Bio Pesticide")
+    if "pest" in diagnostic_text or "neem" in diagnostic_text or "vector" in diagnostic_text:
+        return find_store_product_by_name("Neem Oil")
+
+    products = get_all_store_products()
+    if not products:
+        return None
+
+    scored_products = []
+    for product in products:
+        score = score_store_product_for_diagnosis(
+            product,
+            crop_name=crop_name,
+            disease_name=disease_name,
+            diagnostic_text=diagnostic_text,
+        )
+        scored_products.append((score, float(product.rating or 0), product))
+
+    scored_products.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    best_score, _, best_product = scored_products[0]
+    return best_product if best_score > 0.4 else None
+
+
+def attach_store_recommendation(payload, best_product_name=""):
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     recommended_product = resolve_store_recommendation(
         disease_name=payload.get("disease"),
         cause=payload.get("cause"),
@@ -3538,7 +4412,13 @@ def attach_store_recommendation(payload, best_product_name=""):
         return payload
 
     serialized_product = serialize_store_product(recommended_product)
+<<<<<<< HEAD
     serialized_product["reason"] = build_store_recommendation_reason(payload, serialized_product, disease_type)
+=======
+    serialized_product["reason"] = (
+        f"Recommended for {payload.get('disease', 'the detected issue')} based on the AI diagnosis and treatment context."
+    )
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload["recommended_product"] = serialized_product
     payload["best_product"] = serialized_product["name"]
     payload["product_link"] = serialized_product["detail_url"]
@@ -3593,6 +4473,117 @@ def verify_razorpay_signature(order_id, payment_id, signature):
     return hmac.compare_digest(generated_signature, signature)
 
 
+<<<<<<< HEAD
+=======
+def verify_razorpay_webhook_signature(raw_body, signature):
+    """Verify Razorpay webhook signature (X-Razorpay-Signature) using webhook secret."""
+    if not (raw_body and signature and RAZORPAY_WEBHOOK_SECRET):
+        return False
+
+    generated = hmac.new(
+        RAZORPAY_WEBHOOK_SECRET.encode("utf-8"),
+        raw_body,
+        sha256,
+    ).hexdigest()
+
+    try:
+        return hmac.compare_digest(generated, str(signature))
+    except Exception:
+        return False
+
+
+def _wallet_debit_exists_for_subscription_payment(user_id, payment_id):
+    """Best-effort idempotency: check if a wallet debit was already applied for a subscription payment."""
+    if not (user_id and payment_id):
+        return False
+    try:
+        recent = (
+            WalletTransaction.query.filter_by(user_id=int(user_id), direction="debit", reason="subscription_wallet_applied")
+            .order_by(WalletTransaction.created_at.desc())
+            .limit(50)
+            .all()
+        )
+    except Exception:
+        return False
+
+    for tx in recent:
+        meta = safe_json_loads(getattr(tx, "meta_json", None), {}) if tx is not None else {}
+        if str(meta.get("payment_id") or "") == str(payment_id):
+            return True
+    return False
+
+
+@app.route("/webhooks/razorpay", methods=["POST"])
+def razorpay_webhook():
+    """Razorpay webhook receiver (best-effort). Keeps orders/subscriptions in sync even if client verify fails."""
+    signature = request.headers.get("X-Razorpay-Signature") or ""
+    raw_body = request.get_data(cache=False) or b""
+
+    # If webhook secret isn't configured, do not accept webhooks silently.
+    if not RAZORPAY_WEBHOOK_SECRET:
+        return jsonify({"success": False, "error": "Webhook secret not configured."}), 400
+
+    if not verify_razorpay_webhook_signature(raw_body, signature):
+        return jsonify({"success": False, "error": "Invalid webhook signature."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    event_type = str(payload.get("event") or "").strip().lower()
+
+    payment_entity = (
+        (((payload.get("payload") or {}).get("payment") or {}).get("entity") or {})
+        if isinstance(payload, dict)
+        else {}
+    )
+    order_id = str(payment_entity.get("order_id") or "").strip()
+    payment_id = str(payment_entity.get("id") or "").strip()
+
+    if not order_id:
+        # Signature is valid but payload isn't useful. Ack to avoid retries.
+        return jsonify({"success": True, "message": "No order_id in webhook."}), 200
+
+    # Subscription payments
+    sub_payment = SubscriptionPayment.query.filter_by(razorpay_order_id=order_id).first()
+    if sub_payment is not None:
+        if sub_payment.status == "paid":
+            return jsonify({"success": True, "message": "Subscription already paid."}), 200
+
+        user = db.session.get(User, sub_payment.user_id) if sub_payment.user_id else None
+        sub_payment.razorpay_payment_id = payment_id or sub_payment.razorpay_payment_id
+
+        wallet_use = int(sub_payment.wallet_used_inr or 0)
+        if user is not None and wallet_use and not _wallet_debit_exists_for_subscription_payment(user.id, sub_payment.id):
+            # If wallet debit fails (balance changed), proceed without wallet discount to avoid blocking paid access.
+            if not wallet_debit(user, wallet_use, "subscription_wallet_applied", {"payment_id": sub_payment.id, "plan": sub_payment.plan}):
+                sub_payment.wallet_used_inr = 0
+
+        if user is not None:
+            apply_user_subscription(user, sub_payment.plan)
+
+        sub_payment.status = "paid" if event_type in {"payment.captured", "payment.authorized"} or payment_id else "paid"
+        db.session.commit()
+        return jsonify({"success": True, "message": "Subscription updated via webhook."}), 200
+
+    # Store orders
+    order_record = StoreOrder.query.filter_by(razorpay_order_id=order_id).first()
+    if order_record is not None:
+        if str(order_record.status or "").strip().lower() == "paid":
+            return jsonify({"success": True, "message": "Store order already paid."}), 200
+
+        order_record.razorpay_payment_id = payment_id or order_record.razorpay_payment_id
+        order_record.status = "paid"
+        notes = get_order_notes(order_record)
+        notes["verified_by_webhook"] = True
+        notes["webhook_event"] = event_type or "unknown"
+        notes["webhook_seen_at"] = datetime.now(timezone.utc).isoformat()
+        set_order_notes(order_record, notes)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Store order updated via webhook."}), 200
+
+    # Unknown order id: acknowledge to avoid retries.
+    return jsonify({"success": True, "message": "No matching order found."}), 200
+
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def lookup_kisan_dost_knowledge(query_text, crop_name):
     query_lower = (query_text or "").lower()
     query_tokens = set(re.findall(r"[a-z0-9]+", query_lower))
@@ -4361,6 +5352,45 @@ def remember_notice(session_key, text, tone="success"):
     session[session_key] = {"text": text, "tone": tone}
 
 
+def get_csrf_token():
+    token = session.get("csrf_token")
+    if token and isinstance(token, str):
+        return token
+    token = uuid.uuid4().hex
+    session["csrf_token"] = token
+    return token
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": get_csrf_token}
+
+
+def csrf_matches(candidate):
+    expected = session.get("csrf_token") or ""
+    cand = str(candidate or "")
+    if not expected or not cand:
+        return False
+    try:
+        return hmac.compare_digest(str(expected), cand)
+    except Exception:
+        return False
+
+
+def require_csrf():
+    """Validate CSRF for form posts / JSON posts. Returns a response on failure, else None."""
+    token = request.form.get("csrf_token") if request.form else None
+    if not token:
+        token = request.headers.get("X-CSRFToken") or request.headers.get("X-CSRF-Token")
+
+    if csrf_matches(token):
+        return None
+
+    # JSON-friendly response for API callers.
+    if request.path.startswith("/api/") or request.is_json:
+        return jsonify({"success": False, "error": "CSRF validation failed. Please refresh and try again."}), 400
+    return render_template("login.html", error="Security check failed. Please refresh the page and try again."), 400
+
 def get_current_user():
     user = None
     if "user_id" in session:
@@ -4370,6 +5400,13 @@ def get_current_user():
         user = User.query.filter_by(name=session["user"]).first()
 
     if user is not None:
+        # Backward compatible: if older users don't have a trial start date, start it now.
+        if getattr(user, "trial_start_date", None) is None:
+            try:
+                user.trial_start_date = datetime.now(timezone.utc)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         ensure_user_farm_setup(user)
         get_or_create_user_preferences(user)
 
@@ -4624,47 +5661,91 @@ def build_recommendations(user, weather, soil, crop_health):
     crop_name = user.crop_type or "your crop"
     location_name = user.location or "your farm"
     recommendations: list[dict] = []
+    crop_key = normalize_crop_key(crop_name)
+    seen_titles = set()
+
+    def add_recommendation(title, detail):
+        key = normalize_disease_key(title)
+        if key in seen_titles:
+            return
+        seen_titles.add(key)
+        recommendations.append({"title": title, "detail": detail})
 
     if weather["rainfall_mm"] < 4:
-        recommendations.append(
-            {
-                "title": "Plan a light irrigation cycle",
-                "detail": f"Rainfall near {location_name} is low, so maintain moisture for {crop_name}.",
-            }
+        add_recommendation(
+            "Plan a light irrigation cycle",
+            f"Rainfall near {location_name} is low, so maintain steady moisture for {crop_name} without sudden dry stress.",
         )
 
     if float(soil.get("ph", 0)) < 6.1:
-        recommendations.append(
-            {
-                "title": "Correct acidic soil balance",
-                "detail": "Add lime or organic compost to bring the field closer to a balanced pH range.",
-            }
+        add_recommendation(
+            "Correct acidic soil balance",
+            "Add lime or mature organic compost to bring the root zone closer to a balanced pH range.",
         )
 
     if weather["temp"] >= 34:
-        recommendations.append(
-            {
-                "title": "Protect plants from heat stress",
-                "detail": "Shift irrigation and field inspection to cooler hours to reduce midday stress.",
-            }
+        add_recommendation(
+            "Protect plants from heat stress",
+            f"Shift irrigation, scouting, and spray work for {crop_name} to early morning or evening hours.",
         )
+
+    if float(weather.get("humidity", 0)) >= 78:
+        humidity_detail = {
+            "rice": "High humidity can quickly raise rice blast or blight pressure, so scout lower and middle leaves closely.",
+            "wheat": "Cool humid air can push rust pressure higher, so inspect stripe or pustule development early.",
+            "tomato": "Dense tomato canopy may trap moisture and trigger blight or mold spread, so improve airflow now.",
+            "potato": "Potato foliage can hold late blight pressure after humid nights, so inspect wet patches first.",
+            "maize": "Humid canopy conditions can accelerate blight and gray leaf spotting in denser sections.",
+        }.get(crop_key, "High humidity can increase disease pressure, so inspect leaf wetness zones and improve airflow.")
+        add_recommendation("Watch disease pressure this week", humidity_detail)
 
     if float(soil.get("nitrogen", 0)) < 45:
-        recommendations.append(
-            {
-                "title": "Boost nitrogen before the next cycle",
-                "detail": f"{crop_name} will benefit from a nutrient top-up within the next few days.",
-            }
+        nitrogen_detail = {
+            "rice": "Rice tillers may weaken under low nitrogen, so plan a split nutrient top-up before the next irrigation cycle.",
+            "wheat": "Wheat can lose canopy strength under low nitrogen, so a balanced feed may help maintain vegetative growth.",
+            "tomato": "Tomato plants may lose vigor under low nitrogen, so support growth with a measured nutrient top-up.",
+            "potato": "Balanced nitrogen can help potato foliage recover without pushing too much soft growth.",
+            "maize": "Maize responds well to staged nitrogen support before visible pale-leaf stress expands.",
+        }.get(crop_key, f"{crop_name} will benefit from a balanced nutrient top-up within the next few days.")
+        add_recommendation("Boost nitrogen before the next cycle", nitrogen_detail)
+
+    crop_specific = {
+        "rice": (
+            "Keep standing water uniform",
+            "Avoid repeated dry-wet shock in paddy blocks and watch for patchy stress in low-lying zones.",
+        ),
+        "wheat": (
+            "Scout rust-prone leaves early",
+            "Check leaf strips on the cooler side of the field first, especially after dew-heavy mornings.",
+        ),
+        "tomato": (
+            "Open the tomato canopy",
+            "Prune crowded lower leaves and improve airflow so fungal pressure does not build up after irrigation.",
+        ),
+        "potato": (
+            "Inspect the lower potato canopy",
+            "Older leaves usually show spotting first, so remove infected foliage before lesions climb upward.",
+        ),
+        "maize": (
+            "Check dense maize rows",
+            "Walk humid inner rows first because disease and pest stress usually builds faster in shaded canopy sections.",
+        ),
+    }.get(crop_key)
+    if crop_specific:
+        add_recommendation(crop_specific[0], crop_specific[1])
+
+    if float(crop_health.get("score", 0)) < 72:
+        add_recommendation(
+            "Review weaker crop zones",
+            "Compare the live map and vegetation preview to inspect weak patches before the stress expands to nearby plants.",
+        )
+    else:
+        add_recommendation(
+            "Review satellite and NDVI zones",
+            "Use the live map and vegetation preview to confirm that all field blocks are staying even and stable.",
         )
 
-    recommendations.append(
-        {
-            "title": "Review satellite and NDVI zones",
-            "detail": "Compare the live map and vegetation preview to inspect weaker field patches early.",
-        }
-    )
-
-    return list(recommendations[:3])  # type: ignore
+    return list(recommendations[:4])  # type: ignore
 
 
 def build_forecast_cards(weather, forecast_payload, onecall_payload):
@@ -5983,7 +7064,8 @@ def build_disease_page_context(
     error_message=None,
 ):
     result = diagnosis or build_default_disease_result(user, weather)
-    image_url = preview_url or build_disease_sample_data_uri(result["disease"])
+    matched_entry = get_best_disease_library_entry(result.get("disease"), result.get("crop") or getattr(user, "crop_type", ""))
+    image_url = preview_url or (matched_entry.get("image") if matched_entry else "") or build_disease_sample_data_uri(result["disease"])
 
     return {
         "location_label": user.location or weather["city"],
@@ -6271,18 +7353,39 @@ def login():
     if request.method == "POST":
         csrf_resp = require_csrf()
         if csrf_resp is not None:
+<<<<<<< HEAD
             return render_template("login.html", error="Security check failed. Please refresh and try again.")
 
         email = (request.form.get("email") or "").strip().lower()
+=======
+            return csrf_resp
+
+        if rate_limit_exceeded(f"login:{_client_ip()}", max_hits=10, window_seconds=5 * 60):
+            return render_template("login.html", error="Too many login attempts. Please wait a few minutes and try again.")
+
+        email = (request.form.get("email") or "").strip()
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         password = request.form.get("password") or ""
 
         # Shortcut: allow admin credentials on the normal user login form.
         if email.strip().lower() == ADMIN_EMAIL and check_admin_password(password):
             session["admin_authed"] = True
             session["admin_email"] = ADMIN_EMAIL
+<<<<<<< HEAD
             return redirect("/admin")
 
         user = User.query.filter(User.email.ilike(email)).first()
+=======
+            try:
+                admin_row = AdminUser.query.filter_by(email=ADMIN_EMAIL).first()  # type: ignore
+                if admin_row is not None:
+                    session["admin_id"] = int(admin_row.id)
+            except Exception:
+                pass
+            return redirect("/admin")
+
+        user = User.query.filter_by(email=email).first()
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         password_ok, upgraded = check_user_password(user, password)
 
         if user and password_ok:
@@ -6303,7 +7406,14 @@ def register():
     if request.method == "POST":
         csrf_resp = require_csrf()
         if csrf_resp is not None:
+<<<<<<< HEAD
             return render_template("register.html", error="Security check failed. Please refresh and try again.")
+=======
+            return csrf_resp
+
+        if rate_limit_exceeded(f"register:{_client_ip()}", max_hits=8, window_seconds=10 * 60):
+            return render_template("register.html", error="Too many attempts. Please wait and try again.")
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
         name = (request.form.get("name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
@@ -6336,10 +7446,15 @@ def register():
                     return render_template("register.html", error=str(exc))
 
         # Store in session for OTP verification
+        password_hash = hash_password(password)
         session["pending_user"] = {
             "name": name,
             "email": email,
+<<<<<<< HEAD
             "password_hash": hash_password(password),
+=======
+            "password_hash": password_hash,
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
             "location": location,
             "crop": crop,
             "phone": phone,
@@ -6348,6 +7463,7 @@ def register():
         }
         
         otp = generate_otp()
+<<<<<<< HEAD
         email_sent, failure_reason = send_otp_email(email, otp)
         update_otp_session_state(
             otp,
@@ -6356,6 +7472,23 @@ def register():
             email_sent=email_sent,
             notice=build_otp_notice(email_sent, failure_reason),
         )
+=======
+        session["otp_sig"] = compute_otp_signature(otp, email, "register")
+        session["otp_target"] = email
+        session["otp_type"] = "register"
+        session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
+        session["otp_attempts"] = 0
+        
+        # Send Real Email
+        email_sent = send_otp_email(email, otp)
+        if not email_sent:
+            # Developer-friendly fallback: show OTP on-screen when SMTP isn't configured.
+            # Never enable this in production.
+            if (os.getenv("FLASK_ENV") or "").strip().lower() != "production":
+                session["otp_dev_code"] = otp
+                session["otp_notice"] = "Email service is not configured. Use the on-screen development code to verify."
+        
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         return redirect("/verify-otp")
 
     return render_template("register.html")
@@ -6363,18 +7496,24 @@ def register():
 
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
+<<<<<<< HEAD
     if (
         "otp" not in session
         or session.get("otp_type") != "register"
         or "pending_user" not in session
     ):
         clear_otp_session_state()
+=======
+    if "otp_sig" not in session:
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         return redirect("/login")
         
     error = None
+    notice = session.pop("otp_notice", None)
     if request.method == "POST":
         csrf_resp = require_csrf()
         if csrf_resp is not None:
+<<<<<<< HEAD
             return render_template("verify_otp.html", **get_otp_page_context(error="Security check failed. Please refresh and try again."))
 
         user_otp = re.sub(r"\D", "", request.form.get("otp", ""))
@@ -6384,11 +7523,75 @@ def verify_otp():
             error = "OTP has expired. Please try again."
         elif user_otp == session["otp"]:
             if "pending_user" in session:
+=======
+            # verify_otp has its own UI; show toast-like error.
+            return render_template(
+                "verify_otp.html",
+                error="Security check failed. Please refresh and try again.",
+                notice=notice,
+                dev_otp=session.get("otp_dev_code"),
+                target=session.get("otp_target"),
+            )
+
+        if rate_limit_exceeded(f"otp:{_client_ip()}:{session.get('otp_target')}", max_hits=10, window_seconds=5 * 60):
+            return render_template(
+                "verify_otp.html",
+                error="Too many OTP attempts. Please request a new OTP and try again.",
+                notice=notice,
+                dev_otp=session.get("otp_dev_code"),
+                target=session.get("otp_target"),
+            )
+
+        user_otp = str(request.form.get("otp") or "").strip()
+        if not user_otp.isdigit() or len(user_otp) != 6:
+            error = "Enter the 6-digit code."
+            return render_template(
+                "verify_otp.html",
+                target=session.get("otp_target"),
+                error=error,
+                notice=notice,
+                dev_otp=session.get("otp_dev_code"),
+            )
+
+        try:
+            attempts = int(session.get("otp_attempts") or 0)
+        except (TypeError, ValueError):
+            attempts = 0
+
+        if attempts >= 5:
+            clear_otp_session_state()
+            return render_template(
+                "verify_otp.html",
+                error="Too many failed attempts. Please request a new OTP.",
+                notice=None,
+                dev_otp=None,
+                target=None,
+            )
+
+        if datetime.now(timezone.utc).timestamp() > session.get("otp_expiry", 0):
+            clear_otp_session_state()
+            return render_template(
+                "verify_otp.html",
+                error="OTP has expired. Please request a new OTP.",
+                notice=None,
+                dev_otp=None,
+                target=None,
+            )
+
+        if verify_otp_signature(user_otp, session.get("otp_sig"), session.get("otp_target"), session.get("otp_type")):
+            otp_type = session["otp_type"]
+            
+            if otp_type == "register" and "pending_user" in session:
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                 data = session["pending_user"]
                 new_user = User( # type: ignore
                     name=data["name"],
                     email=data["email"],
+<<<<<<< HEAD
                     password=data.get("password_hash") or hash_password(data.get("password", "")),
+=======
+                    password=data.get("password_hash") or hash_password(data.get("password") or ""),
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                     location=data["location"],
                     crop_type=data["crop"],
                     phone=data["phone"],
@@ -6404,8 +7607,13 @@ def verify_otp():
                     referrer = User.query.filter_by(referral_code=new_user.referred_by).first()
                     if referrer:
                         # Referral rewards:
+<<<<<<< HEAD
                         # - Referrer wallet +₹20
                         # - New user wallet +₹10 (can be used for subscription discount)
+=======
+                        # - Referrer wallet +INR 20
+                        # - New user wallet +INR 10 (can be used for subscription discount)
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                         if ReferralReward.query.filter_by(new_user_id=new_user.id).first() is None:
                             wallet_credit(referrer, 20, "referral_bonus", {"new_user_id": new_user.id})
                             wallet_credit(new_user, 10, "referral_signup_bonus", {"referrer_id": referrer.id})
@@ -6437,13 +7645,25 @@ def verify_otp():
                 session["user"] = new_user.name
                 return redirect("/dashboard")
         else:
+            session["otp_attempts"] = attempts + 1
             error = "Invalid OTP. Please check and try again."
             
+<<<<<<< HEAD
     return render_template("verify_otp.html", **get_otp_page_context(error=error))
+=======
+    return render_template(
+        "verify_otp.html",
+        target=session.get("otp_target"),
+        error=error,
+        notice=notice,
+        dev_otp=session.get("otp_dev_code"),
+    )
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.route("/resend-otp", methods=["POST"])
 def resend_otp():
+<<<<<<< HEAD
     if (
         "otp_target" not in session
         or session.get("otp_type") != "register"
@@ -6478,6 +7698,39 @@ def resend_otp():
         notice=build_otp_notice(email_sent, failure_reason),
     )
     return render_template("verify_otp.html", **get_otp_page_context())
+=======
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        session["otp_notice"] = "Security check failed. Please refresh and try again."
+        return redirect("/verify-otp")
+
+    otp_target = session.get("otp_target")
+    otp_type = session.get("otp_type") or "register"
+    if not otp_target or "otp_sig" not in session:
+        return redirect("/login")
+
+    if rate_limit_exceeded(f"otp_resend:{_client_ip()}:{otp_target}", max_hits=3, window_seconds=10 * 60):
+        session["otp_notice"] = "Too many resend requests. Please wait and try again."
+        return redirect("/verify-otp")
+
+    otp = generate_otp()
+    session["otp_sig"] = compute_otp_signature(otp, otp_target, otp_type)
+    session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
+    session["otp_attempts"] = 0
+    session.pop("otp_dev_code", None)
+
+    email_sent = send_otp_email(otp_target, otp)
+    if email_sent:
+        session["otp_notice"] = "A new verification code has been sent."
+    else:
+        if (os.getenv("FLASK_ENV") or "").strip().lower() != "production":
+            session["otp_dev_code"] = otp
+            session["otp_notice"] = "Email service is not configured. Use the on-screen development code to verify."
+        else:
+            session["otp_notice"] = "Email delivery failed. Please try again later."
+
+    return redirect("/verify-otp")
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.route("/api/mandi-rates")
@@ -6515,6 +7768,10 @@ def add_farm():
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
 
     _, farms = ensure_user_farm_setup(user)
     name = (request.form.get("name") or "").strip() or build_default_farm_name(user, len(farms) + 1)
@@ -6555,6 +7812,10 @@ def set_primary_farm(farm_id):
     if not user:
         return redirect("/login")
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     farm = Farm.query.filter_by(id=farm_id, user_id=user.id).first()
     if farm is None:
         remember_notice("farms_notice", "Farm not found.", tone="warning")
@@ -6577,6 +7838,10 @@ def delete_farm(farm_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
 
     farms = Farm.query.filter_by(user_id=user.id).order_by(Farm.created_at.asc()).all()
     farm = next((item for item in farms if item.id == farm_id), None)
@@ -6609,6 +7874,10 @@ def add_farm_task():
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
 
     title = (request.form.get("title") or "").strip()
     if not title:
@@ -6643,6 +7912,10 @@ def update_task_status(task_id):
     if not user:
         return redirect("/login")
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
     task = FarmTask.query.filter_by(id=task_id, user_id=user.id).first()
     if task is None:
         remember_notice("farms_notice", "Task not found.", tone="warning")
@@ -6665,6 +7938,10 @@ def delete_task(task_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
 
     task = FarmTask.query.filter_by(id=task_id, user_id=user.id).first()
     if task is None:
@@ -6718,6 +7995,7 @@ def crop_library():
     return render_template("crop_library.html", user=user, crop_library=crop_library_page)
 
 
+<<<<<<< HEAD
 @app.route("/library")
 def library_home():
     user = get_current_user()
@@ -6835,6 +8113,8 @@ def library_alerts():
     )
 
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 @app.route("/crop/<crop_slug>")
 def crop_detail(crop_slug):
     user = get_current_user()
@@ -6849,7 +8129,190 @@ def crop_detail(crop_slug):
     return render_template("crop_detail.html", user=user, crop=crop, related_crops=related_crops)
 
 
+<<<<<<< HEAD
+=======
+@app.route("/library")
+def library_home():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crops = load_crop_library()
+    diseases = load_disease_library()
+    tips_payload = load_cultivation_tips()
+    return render_template(
+        "library_home.html",
+        user=user,
+        crop_count=len(crops),
+        disease_count=len(diseases),
+        tip_task_count=len((tips_payload or {}).get("tasks") or []),
+        tip_stage_count=len((tips_payload or {}).get("stages") or []),
+    )
+
+
+@app.route("/library/crops")
+def library_crops():
+    return redirect("/crop-library")
+
+
+@app.route("/library/diseases")
+def library_diseases():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crop_filter = (request.args.get("crop") or "All").strip()
+    query = (request.args.get("q") or "").strip().lower()
+    kind = (request.args.get("type") or "all").strip().lower()
+
+    all_items = load_disease_library()
+    items = list(all_items)
+    if crop_filter and crop_filter != "All":
+        items = [item for item in items if crop_filter in (item.get("crops") or [])]
+    if kind in {"insect", "virus", "fungus", "bacteria", "disease", "pest"}:
+        items = [item for item in items if str(item.get("type") or "").strip().lower() == kind]
+    if query:
+        def _matches(item):
+            hay = " ".join(
+                [
+                    str(item.get("name") or ""),
+                    str(item.get("type") or ""),
+                    " ".join(item.get("crops") or []),
+                    " ".join(item.get("tags") or []),
+                ]
+            ).lower()
+            return query in hay
+        items = [item for item in items if _matches(item)]
+
+    no_results = False
+    suggested_items = []
+    if not items and (query or kind != "all" or (crop_filter and crop_filter != "All")):
+        no_results = True
+        # Provide a helpful fallback so the page never looks empty.
+        suggested_items = all_items[:12]
+
+    # Group by stage for the Plantix-like sections.
+    stage_order = ["seedling", "vegetative", "flowering", "harvesting", "post_harvest"]
+    stage_labels = {
+        "seedling": "Seedling Stage",
+        "vegetative": "Vegetative Stage",
+        "flowering": "Flowering Stage",
+        "harvesting": "Harvesting Stage",
+        "post_harvest": "Post Harvest",
+    }
+    stage_sections = []
+    for stage_key in stage_order:
+        stage_items = [item for item in items if stage_key in (item.get("stages") or [])]
+        if stage_items:
+            stage_sections.append({"key": stage_key, "label": stage_labels.get(stage_key, stage_key.title()), "items": stage_items[:10]})
+
+    return render_template(
+        "library_diseases.html",
+        user=user,
+        crops=build_library_crop_options(user),
+        active_crop=crop_filter if crop_filter else "All",
+        query=query,
+        active_type=kind,
+        stage_sections=stage_sections,
+        items=items,
+        no_results=no_results,
+        suggested_items=suggested_items,
+        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
+    )
+
+
+@app.route("/library/disease/<disease_slug>")
+def library_disease_detail(disease_slug):
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    entry = get_disease_library_entry(disease_slug)
+    if entry is None:
+        abort(404)
+
+    recommended = resolve_store_recommendation(
+        disease_name=entry["name"],
+        cause=entry.get("cause"),
+        chemical_solution=entry.get("solution"),
+        crop_name=(entry.get("crops") or [""])[0],
+    )
+    recommended_payload = serialize_store_product(recommended) if recommended is not None else None
+
+    last_diag = session.get("last_library_diagnosis") if isinstance(session.get("last_library_diagnosis"), dict) else {}
+    if last_diag.get("slug") != entry["slug"]:
+        last_diag = {}
+
+    return render_template(
+        "library_disease_detail.html",
+        user=user,
+        disease=entry,
+        recommended_product=recommended_payload,
+        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
+        last_diagnosis=last_diag,
+    )
+
+
+@app.route("/library/tips")
+def library_tips():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crop_filter = (request.args.get("crop") or "All").strip()
+    payload = load_cultivation_tips()
+    return render_template(
+        "library_tips.html",
+        user=user,
+        crops=build_library_crop_options(user),
+        active_crop=crop_filter if crop_filter else "All",
+        tips=payload,
+    )
+
+
+@app.route("/library/alerts")
+def library_alerts():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crop_filter = (request.args.get("crop") or "All").strip()
+    items = load_disease_library()
+    if crop_filter and crop_filter != "All":
+        items = [item for item in items if crop_filter in (item.get("crops") or [])]
+
+    # Mock risk: stable by user id + crop to keep it consistent per user.
+    rng = random.Random(str(user.id) + "|" + crop_filter)
+    picks = items[:]
+    rng.shuffle(picks)
+    picks = picks[:6]
+
+    alerts = []
+    for idx, item in enumerate(picks):
+        alerts.append(
+            {
+                "severity": "high" if idx < 2 else "medium" if idx < 4 else "low",
+                "crop": (item.get("crops") or ["Crop"])[0] if item.get("crops") else "Crop",
+                "name": item.get("name") or "",
+                "type": item.get("type") or "",
+                "slug": item.get("slug") or "",
+                "image": item.get("image") or "",
+            }
+        )
+
+    return render_template(
+        "library_alerts.html",
+        user=user,
+        crops=build_library_crop_options(user),
+        active_crop=crop_filter if crop_filter else "All",
+        alerts=alerts,
+        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
+    )
+
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 @app.route("/farm-twin")
+@require_plan("premium")
 def farm_twin():
     user = get_current_user()
     if not user:
@@ -6927,6 +8390,13 @@ def store_checkout():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+<<<<<<< HEAD
+=======
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     product = get_store_product_by_id(payload.get("product_id"))
     if product is None:
@@ -7003,6 +8473,13 @@ def store_payment_success():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+<<<<<<< HEAD
+=======
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     product = get_store_product_by_id(payload.get("product_id"))
     if product is None:
@@ -7037,6 +8514,17 @@ def store_payment_success():
     razorpay_signature = str(payload.get("razorpay_signature") or "")
     signature_verified = verify_razorpay_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
 
+<<<<<<< HEAD
+=======
+    is_demo = str(payload.get("checkout_mode") or order_record.checkout_mode or "demo").strip().lower() == "demo"
+    if not is_demo and not signature_verified:
+        order_record.status = "failed"
+        notes.update({"verified": False, "failure": "signature_failed"})
+        set_order_notes(order_record, notes)
+        db.session.commit()
+        return jsonify({"success": False, "error": "Payment verification failed."}), 400
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     order_record.status = "paid"
     order_record.checkout_mode = str(payload.get("checkout_mode") or order_record.checkout_mode or "demo")
     order_record.source = str(payload.get("source") or order_record.source or "store")
@@ -7070,6 +8558,7 @@ def store_payment_success():
     )
 
 
+<<<<<<< HEAD
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if is_admin_authenticated():
@@ -7372,6 +8861,37 @@ def admin_delete_mapping(mapping_id):
     db.session.delete(mapping)
     db.session.commit()
     return redirect("/admin/mappings")
+=======
+from routes.admin_routes import register_admin_routes
+
+register_admin_routes(
+    app,
+    deps={
+        "db": db,
+        "AdminUser": AdminUser,
+        "StoreProduct": StoreProduct,
+        "StoreOrder": StoreOrder,
+        "DiseaseProductMapping": DiseaseProductMapping,
+        "ADMIN_EMAIL": ADMIN_EMAIL,
+        "STORE_CATEGORY_ORDER": STORE_CATEGORY_ORDER,
+        "FULFILLMENT_STATUS_ORDER": FULFILLMENT_STATUS_ORDER,
+        "is_admin_authenticated": is_admin_authenticated,
+        "admin_required": admin_required,
+        "require_csrf": require_csrf,
+        "rate_limit_exceeded": rate_limit_exceeded,
+        "_client_ip": _client_ip,
+        "check_admin_password": check_admin_password,
+        "get_fulfillment_status": get_fulfillment_status,
+        "set_fulfillment_status": set_fulfillment_status,
+        "normalize_disease_key": normalize_disease_key,
+        "slugify_crop_name": slugify_crop_name,
+        "estimate_store_mrp": estimate_store_mrp,
+        "compute_store_discount": compute_store_discount,
+        "save_product_image_upload": save_product_image_upload,
+        "default_store_seller": default_store_seller,
+    },
+)
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.route("/predict-disease", methods=["POST"])
@@ -7385,6 +8905,11 @@ def predict_disease():
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
 
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        # Return JSON because this endpoint is always called via fetch().
+        return jsonify({"success": False, "error": "Security check failed. Please refresh and try again."}), 400
+
     uploaded_file = request.files.get("crop_image")
     if not uploaded_file or not uploaded_file.filename:
         return jsonify({"error": "Upload a crop leaf image before starting analysis."}), 400
@@ -7393,9 +8918,10 @@ def predict_disease():
     if suffix and suffix not in ALLOWED_IMAGE_SUFFIXES:
         return jsonify({"error": "Please upload a PNG, JPG, JPEG, or WEBP image."}), 400
 
-    image_bytes = uploaded_file.read()
-    if not image_bytes:
-        return jsonify({"error": "Uploaded image is empty."}), 400
+    try:
+        image_bytes = read_upload_bytes(uploaded_file, MAX_DISEASE_IMAGE_BYTES, label="Image")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         image = Image.open(io.BytesIO(image_bytes))
@@ -7405,13 +8931,60 @@ def predict_disease():
 
     weather = fetch_weather_bundle(user.location or "Bhubaneswar")
     preview_url = save_uploaded_leaf_image(image, uploaded_file.filename)
+    crop_key = normalize_crop_key(user.crop_type or "generic")
+
+    def build_library_context(payload):
+        disease_name = str(payload.get("disease") or "").strip()
+        crop_name = str(payload.get("crop") or user.crop_type or crop_key.title()).strip()
+        if not disease_name:
+            return None
+
+        if normalize_disease_key(disease_name) in {"healthy", "no disease", "no-disease"}:
+            payload["library_url"] = "/library/tips"
+            session["last_library_diagnosis"] = {
+                "slug": "healthy",
+                "confidence": int(payload.get("confidence") or 0),
+                "risk_level": str(payload.get("risk_level") or ""),
+                "note": "No major pest or disease detected. Keep monitoring regularly.",
+                "image_url": preview_url,
+            }
+            return None
+
+        entry = get_best_disease_library_entry(disease_name, crop_name)
+        slug = slugify_crop_name(disease_name)
+        payload["library_url"] = (
+            f"/library/disease/{entry['slug']}" if entry is not None else f"/library/diseases?q={quote(disease_name)}"
+        )
+        session["last_library_diagnosis"] = {
+            "slug": entry["slug"] if entry is not None else slug,
+            "confidence": int(payload.get("confidence") or 0),
+            "risk_level": str(payload.get("risk_level") or ""),
+            "note": "Nearby crop conditions suggest this issue should be checked quickly in the field.",
+            "image_url": preview_url,
+        }
+        return entry
     
     # Integrate PyTorch model + disease_knowledge as primary detection
     class_index, conf_float, class_name, confidence_pct = predict_with_pytorch(image)
+<<<<<<< HEAD
     if class_name is not None and conf_float is not None:
+=======
+    model_label = str(class_name or "").strip()
+    if model_label and conf_float is not None and float(conf_float) >= 0.46 and "plantvillage" not in model_label.lower():
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         disease_info = get_disease_info(class_index, conf_float)
-        crop_display = class_name.split("___")[0] if "___" in class_name else class_name
-        
+        crop_display = model_label.split("___")[0] if "___" in model_label else (user.crop_type or crop_key.title())
+        crop_display = crop_display.replace("_", " ").strip() or (user.crop_type or crop_key.title())
+        library_entry = get_best_disease_library_entry(disease_info["disease"], crop_display)
+        prevention_tips = list((library_entry or {}).get("prevention") or [])
+        if not prevention_tips:
+            prevention_tips = unique_crop_list(
+                [
+                    *([str(tip).strip() for tip in disease_info.get("prevention_tips", []) if str(tip).strip()] if isinstance(disease_info.get("prevention_tips"), list) else []),
+                    str(disease_info.get("recommendation") or "").strip(),
+                ]
+            )[:3]
+
         new_history = DiseaseHistory(
             user_id=user.id,
             crop_type=crop_display,
@@ -7425,17 +8998,26 @@ def predict_disease():
             "success": True,
             "disease": disease_info["disease"],
             "confidence": confidence_pct,
+<<<<<<< HEAD
             "cause": disease_info["cause"],
             "symptoms": disease_info.get("symptoms", ""),
             "organic_solution": disease_info.get("recommendation", ""),
             "chemical_solution": disease_info["solution"],
             "prevention": [disease_info.get("recommendation", "")],
+=======
+            "cause": (library_entry or {}).get("cause") or disease_info["cause"],
+            "symptoms": summarize_disease_symptoms(library_entry, disease_info.get("symptoms") or disease_info.get("recommendation", disease_info["cause"])),
+            "organic_solution": disease_info.get("organic_solution") or derive_organic_solution(disease_info["disease"], library_entry, crop_display),
+            "chemical_solution": (library_entry or {}).get("solution") or disease_info["solution"],
+            "prevention": prevention_tips,
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
             "explanation_hinglish": disease_info["explanation_hinglish"],
-            "diagnostic_reason": f"PyTorch model detected {class_name} ({confidence_pct}%)",
+            "diagnostic_reason": f"PyTorch model detected {model_label} ({confidence_pct}%)",
             "risk_level": "Low" if int(confidence_pct) > 85 else "Medium" if int(confidence_pct) > 70 else "High",
             "best_product": disease_info.get("best_product", ""),
             "product_link": disease_info.get("product_link", ""),
             "image_url": preview_url,
+<<<<<<< HEAD
             "crop": crop_display,
             "analysis_source": "Vision model",
         }
@@ -7448,6 +9030,13 @@ def predict_disease():
         crop_key = "maize"
     else:
         crop_key = crop_input
+=======
+            "crop": crop_display
+        }
+        build_library_context(response_payload)
+
+        return jsonify(attach_store_recommendation(response_payload, disease_info.get("best_product", "")))
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
     # Advanced Prompt for Expert Analysis
     prompt = f"""
@@ -7499,6 +9088,7 @@ def predict_disease():
              raise ValueError("All models failed")
     except Exception as e:
         print(f"AI Detection failed: {e}")
+<<<<<<< HEAD
         library = CROP_DISEASE_LIBRARY.get(crop_key, CROP_DISEASE_LIBRARY.get("generic", []))
         if library:
             # Diverse fallback: Use a deterministic index based on the image size & content hash
@@ -7520,6 +9110,53 @@ def predict_disease():
                 "risk_level": "Medium",
                 "crop": crop_key.capitalize()
             }
+=======
+        features, signals, base_confidence = extract_leaf_features(image, weather)
+        seed_value = int(sha1(image_bytes[:2048]).hexdigest(), 16) % 65537
+        fallback_entry, fallback_crop_display, confidence = select_visual_disease_entry(
+            user.crop_type or crop_key,
+            features,
+            weather,
+            signals,
+            seed=seed_value,
+        )
+        library_entry = get_best_disease_library_entry(fallback_entry["name"], fallback_crop_display)
+
+        diagnosis = {
+            "disease": fallback_entry["name"],
+            "confidence": max(int(confidence), int(base_confidence)),
+            "symptoms": summarize_disease_symptoms(library_entry, "Visible lesion and stress patterns detected on the leaf."),
+            "cause": (library_entry or {}).get("cause") or fallback_entry["cause"],
+            "organic_solution": derive_organic_solution(fallback_entry["name"], library_entry, fallback_crop_display),
+            "chemical_solution": (library_entry or {}).get("solution") or fallback_entry["solution"],
+            "prevention": list((library_entry or {}).get("prevention") or fallback_entry["prevention_tips"]),
+            "explanation_hinglish": f"Ye scan {fallback_crop_display} mein '{fallback_entry['name']}' jaisa stress pattern dikha raha hai. Field me same symptoms compare karke jaldi action lo.",
+            "diagnostic_reason": "Visual symptom scoring used leaf color, lesion pattern, humidity context, and crop-specific disease profiles.",
+            "risk_level": "Low" if int(confidence) >= 88 else "Medium" if int(confidence) >= 72 else "High",
+            "crop": fallback_crop_display,
+        }
+
+    diagnosis_crop = str(diagnosis.get("crop") or user.crop_type or crop_key.title()).strip() or (user.crop_type or "Crop")
+    diagnosis_entry = get_best_disease_library_entry(diagnosis.get("disease"), diagnosis_crop)
+    diagnosis["crop"] = diagnosis_crop
+    diagnosis["symptoms"] = summarize_disease_symptoms(diagnosis_entry, diagnosis.get("symptoms"))
+    diagnosis["cause"] = str(diagnosis.get("cause") or (diagnosis_entry or {}).get("cause") or "").strip()
+    diagnosis["chemical_solution"] = str(
+        diagnosis.get("chemical_solution") or (diagnosis_entry or {}).get("solution") or "Consult a local expert for a confirmed spray schedule."
+    ).strip()
+    diagnosis["organic_solution"] = str(
+        diagnosis.get("organic_solution") or derive_organic_solution(diagnosis.get("disease"), diagnosis_entry, diagnosis_crop)
+    ).strip()
+    prevention_items = diagnosis.get("prevention", [])
+    if not isinstance(prevention_items, list):
+        prevention_items = [prevention_items]
+    diagnosis["prevention"] = unique_crop_list(
+        [
+            *[str(item).strip() for item in prevention_items if str(item).strip()],
+            *([str(item).strip() for item in (diagnosis_entry or {}).get("prevention", []) if str(item).strip()] if diagnosis_entry else []),
+        ]
+    )[:4]
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
     new_history = DiseaseHistory( # type: ignore
         user_id=user.id,
@@ -7543,10 +9180,17 @@ def predict_disease():
         "diagnostic_reason": diagnosis.get("diagnostic_reason", "Visual cues identified."),
         "risk_level": diagnosis.get("risk_level"),
         "image_url": preview_url,
+<<<<<<< HEAD
         "crop": diagnosis.get("crop", user.crop_type or "Crop"),
         "analysis_source": "Expert AI" if success else "Visual fallback",
     }
     return jsonify(attach_store_recommendation(response_payload))
+=======
+        "crop": diagnosis.get("crop", user.crop_type or "Crop")
+    }
+    build_library_context(response_payload)
+    return jsonify(attach_store_recommendation(response_payload, diagnosis.get("best_product", "")))
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -7559,6 +9203,10 @@ def profile():
     success = None
 
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return csrf_resp
+
         form_type = request.form.get("form_type", "")
 
         if form_type == "user_info":
@@ -7582,11 +9230,10 @@ def profile():
             # Handle photo upload
             photo_file = request.files.get("profile_photo")
             if not error and photo_file and photo_file.filename:
-                ext = Path(photo_file.filename).suffix.lower()
-                if ext in ALLOWED_IMAGE_SUFFIXES:
+                try:
                     user.profile_photo = save_profile_photo_upload(photo_file, f"profile_{user.id}")
-                else:
-                    error = "Only PNG, JPG, JPEG, or WEBP images are allowed."
+                except ValueError as exc:
+                    error = str(exc)
 
             # Password change
             if not error and (new_pw or confirm_pw or current_pw):
@@ -7716,6 +9363,10 @@ def settings_page():
     success = None
 
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return csrf_resp
+
         preferences.crop_alerts = request.form.get("crop_alerts") == "on"
         preferences.disease_alerts = request.form.get("disease_alerts") == "on"
         preferences.weather_alerts = request.form.get("weather_alerts") == "on"
@@ -7929,6 +9580,10 @@ def community_post():
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     title = request.form.get("title")
     content = request.form.get("content")
@@ -7947,6 +9602,10 @@ def community_comment(post_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     content = request.form.get("content")
     if content:
@@ -7973,6 +9632,10 @@ def tool_advisor():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     data = request.json
     if not data:
@@ -8009,6 +9672,10 @@ def predict_yield():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
     
     data = request.json
     if not data:
@@ -8086,11 +9753,20 @@ def subscription_plans():
     if not user:
         return redirect("/login")
     ensure_user_subscription_state(user, commit=True)
+<<<<<<< HEAD
+=======
+    expired = bool(request.args.get("expired")) or bool(request.args.get("required"))
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     return render_template(
         "subscriptions.html",
         user=user,
         plans=SUBSCRIPTION_PLANS,
         trial_active=is_trial_active(user),
+<<<<<<< HEAD
+=======
+        expired=expired,
+        trial_days=SUBSCRIPTION_TRIAL_DAYS,
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     )
 
 
@@ -8150,6 +9826,13 @@ def api_subscription_create_order():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+<<<<<<< HEAD
+=======
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan"))
     if plan == "free":
@@ -8230,6 +9913,13 @@ def api_subscription_verify_payment():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+<<<<<<< HEAD
+=======
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     try:
         payment_id = int(payload.get("payment_id") or 0)
@@ -8306,6 +9996,13 @@ def api_apply_wallet():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
+<<<<<<< HEAD
+=======
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan"))
     if plan == "free":
@@ -8380,6 +10077,13 @@ def upgrade_to_pro():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
+<<<<<<< HEAD
+=======
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan") or "pro")
@@ -8443,6 +10147,77 @@ with app.app_context():
     seeded_mappings = seed_disease_product_mappings()
     if seeded_mappings:
         print(f"[STORE] Seeded or refreshed {seeded_mappings} disease-product mappings.")
+
+    # Seed a DB-backed admin user (keeps env defaults working too).
+    # Requested default: admin123@gmail.com / 123 (override via ADMIN_EMAIL/ADMIN_PASSWORD env vars).
+    try:
+        _admin_email = (ADMIN_EMAIL or "").strip().lower()
+        _admin_pw = (ADMIN_PASSWORD or "").strip()
+        if _admin_email and _admin_pw:
+            _existing_admin = AdminUser.query.filter_by(email=_admin_email).first()  # type: ignore
+            if _existing_admin is None:
+                db.session.add(
+                    AdminUser(  # type: ignore
+                        email=_admin_email,
+                        password_hash=hash_password(_admin_pw),
+                        role="admin",
+                    )
+                )
+                db.session.commit()
+            else:
+                # Upgrade legacy/plain stored password to hash if needed.
+                if not is_password_hash(_existing_admin.password_hash or ""):
+                    _existing_admin.password_hash = hash_password(_admin_pw)
+                    db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    # --- Auto-migrate: add missing columns to existing SQLite tables ---
+    import sqlite3 as _sqlite3
+    _db_path = os.path.join(app.instance_path, "database.db")
+    print(f"[MIGRATION] Looking for database at: {_db_path}")
+    if os.path.exists(_db_path):
+        _conn = _sqlite3.connect(_db_path)
+        _cur = _conn.cursor()
+        _cur.execute("PRAGMA table_info(user)")
+        _existing_cols = {row[1] for row in _cur.fetchall()}
+        print(f"[MIGRATION] Existing columns: {_existing_cols}")
+        _new_columns = {
+            "is_pro": "BOOLEAN DEFAULT 0",
+            "plan": "VARCHAR(16) DEFAULT 'free'",
+            "trial_start_date": "DATETIME",
+            "subscription_start_date": "DATETIME",
+            "subscription_end_date": "DATETIME",
+            "referral_code": "VARCHAR(20)",
+            "referred_by": "VARCHAR(20)",
+            "loyalty_points": "INTEGER DEFAULT 0",
+            "wallet_balance": "INTEGER DEFAULT 0",
+        }
+        for col_name, col_type in _new_columns.items():
+            if col_name not in _existing_cols:
+                try:
+                    _cur.execute(f"ALTER TABLE user ADD COLUMN {col_name} {col_type}")
+                    print(f"[MIGRATION] Added column '{col_name}' to user table.")
+                except Exception as e:
+                    print(f"[MIGRATION] Skipping '{col_name}': {e}")
+        _cur.execute("PRAGMA table_info(store_product)")
+        _store_product_cols = {row[1] for row in _cur.fetchall()}
+        if "stock" not in _store_product_cols:
+            try:
+                _cur.execute("ALTER TABLE store_product ADD COLUMN stock INTEGER DEFAULT 0")
+                print("[MIGRATION] Added column 'stock' to store_product table.")
+            except Exception as e:
+                print(f"[MIGRATION] Skipping 'stock' on store_product: {e}")
+
+        _conn.commit()
+        _conn.close()
+        print("[MIGRATION] Database migration check complete.")
+    else:
+        print(f"[MIGRATION] Database file not found at {_db_path}, skipping migration.")
+
+    seeded_products = seed_store_products()
+    if seeded_products:
+        print(f"[STORE] Seeded or refreshed {seeded_products} store products.")
 
 
 if __name__ == "__main__":

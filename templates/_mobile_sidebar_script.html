@@ -1,0 +1,19 @@
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const mobileToggle = document.getElementById('mobileMenuToggle');
+    const sidebar = document.querySelector('.dashboard-sidebar');
+    if (mobileToggle && sidebar) {
+      mobileToggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        sidebar.classList.toggle('sidebar-open');
+      });
+      document.addEventListener('click', (event) => {
+        if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+          if (!sidebar.contains(event.target) && event.target !== mobileToggle) {
+            sidebar.classList.remove('sidebar-open');
+          }
+        }
+      });
+    }
+  });
+</script>

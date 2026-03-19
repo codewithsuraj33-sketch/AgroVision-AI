@@ -344,6 +344,7 @@
     init();
   }
 })();
+<<<<<<< HEAD
 
 (function () {
   function shouldSkipSharedUi() {
@@ -624,3 +625,5 @@
     init();
   }
 })();
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057

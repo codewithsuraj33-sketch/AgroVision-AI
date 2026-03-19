@@ -66,8 +66,17 @@
 
           <form class="disease-upload-form" method="post" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<<<<<<< HEAD
             <div class="disease-upload-dropzone">
               <span class="disease-upload-icon">&#128247;</span>
+=======
+            <div class="disease-upload-dropzone{% if disease_page.has_upload %} is-filled{% endif %}">
+              {% if disease_page.has_upload %}
+                <img class="disease-upload-preview" src="{{ disease_page.result.image_url }}" alt="Uploaded crop leaf preview">
+              {% else %}
+                <span class="disease-upload-icon">&#128247;</span>
+              {% endif %}
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
               <div class="disease-upload-copy">
                 <strong id="diseaseUploadTitle">{{ disease_page.upload_name or "Upload a clear crop leaf image" }}</strong>
@@ -109,6 +118,7 @@
               <span class="disease-confidence-chip" id="result-confidence"></span>
             </div>
 
+<<<<<<< HEAD
             <div class="disease-result-stats">
               <div class="result-stat-item result-stat-item-success">
                 <i class="fas fa-check-circle" aria-hidden="true"></i>
@@ -119,6 +129,19 @@
                 <i class="fas fa-microscope" aria-hidden="true"></i>
                 <small>Analysis source</small>
                 <strong id="stat-type">AI</strong>
+=======
+            <!-- New Stats Row for Premium Feel -->
+            <div class="disease-result-stats" style="display: flex; gap: 12px; margin-bottom: 20px;">
+              <div class="result-stat-item" style="flex: 1; padding: 12px; background: rgba(125, 255, 46, 0.1); border-radius: 12px; text-align: center;">
+                <i class="fas fa-check-circle" style="color: #7dff2e; margin-bottom: 4px; display: block;"></i>
+                <small style="display: block; opacity: 0.7; font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Accuracy</small>
+                <strong id="stat-accuracy" style="font-size: 1.1rem; color: #173154;">--</strong>
+              </div>
+              <div class="result-stat-item" style="flex: 1; padding: 12px; background: rgba(51, 157, 219, 0.1); border-radius: 12px; text-align: center;">
+                <i class="fas fa-microscope" style="color: #339ddb; margin-bottom: 4px; display: block;"></i>
+                <small style="display: block; opacity: 0.7; font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Analysis</small>
+                <strong id="stat-type" style="font-size: 1.1rem; color: #173154;">AI</strong>
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
               </div>
             </div>
 
@@ -185,11 +208,55 @@
                   </ul>
                 </div>
 
+<<<<<<< HEAD
                 <div class="disease-result-section">
                   <h3>Do this now</h3>
                   <ul class="disease-tips-list" id="resultChecklist"></ul>
                 </div>
 
+=======
+                <div class="disease-result-section disease-store-recommendation" id="resultProductSection" hidden>
+                  <div class="disease-store-head">
+                    <div>
+                      <h3>Recommended Product</h3>
+                      <p id="resultProductReason">AI-linked product suggestion based on the detected crop issue.</p>
+                    </div>
+                    <a class="disease-store-link" id="resultProductLinkInline" href="/market">Open store</a>
+                  </div>
+
+                  <article class="disease-store-card">
+                    <a class="disease-store-media" id="resultProductLink" href="/market">
+                      <img
+                        class="disease-store-image"
+                        id="resultProductImage"
+                        src="/static/images/store-product-fallback.svg"
+                        alt="Recommended product"
+                        loading="lazy"
+                        decoding="async"
+                        data-fallback-src="/static/images/store-product-fallback.svg"
+                      >
+                    </a>
+
+                    <div class="disease-store-copy">
+                      <span class="disease-store-category" id="resultProductCategory">Store recommendation</span>
+                      <strong id="resultProductName">Recommended product will appear here</strong>
+                      <p id="resultProductDescription">Upload and analyze a crop image to see a linked store suggestion.</p>
+
+                      <div class="disease-store-meta">
+                        <span id="resultProductRating">Rating will appear here</span>
+                        <span id="resultProductPrice">Price will appear here</span>
+                      </div>
+
+                      <div class="disease-store-actions">
+                        <a class="store-secondary-button disease-store-details" id="resultProductDetailButton" href="/market">View Details</a>
+                        <button class="store-primary-button disease-store-buy" id="resultProductBuyButton" type="button" hidden>
+                          Buy Now
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
               </div>
 
               <div class="disease-result-visual">
@@ -201,6 +268,7 @@
                     <span>Upload an image to see results</span>
                   </div>
                 {% endif %}
+<<<<<<< HEAD
 
                 <div class="disease-visual-panel">
                   <div class="disease-visual-grid">
@@ -293,6 +361,13 @@
           {% endfor %}
         </div>
       </section> #}
+=======
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     </section>
   </main>
 
@@ -301,7 +376,10 @@
       var body = document.body;
       var form = document.querySelector(".disease-upload-form");
       var dropzone = document.querySelector(".disease-upload-dropzone");
+<<<<<<< HEAD
       var uploadTitle = document.getElementById("diseaseUploadTitle");
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
       var resultCard = document.getElementById("disease-result-card");
       var analyzeButton = document.querySelector(".disease-analyze-button");
       var fileInput = document.getElementById("crop-image");
@@ -311,6 +389,7 @@
       var resultProductLinkInline = document.getElementById("resultProductLinkInline");
       var resultProductDetailButton = document.getElementById("resultProductDetailButton");
       var resultProductBuyButton = document.getElementById("resultProductBuyButton");
+<<<<<<< HEAD
       var resultProductSeller = document.getElementById("resultProductSeller");
       var resultProductHighlights = document.getElementById("resultProductHighlights");
       var matchedSymptomsList = document.getElementById("resultMatchedSymptoms");
@@ -332,6 +411,8 @@
         resultFeedback.textContent = message || "";
         resultFeedback.className = "disease-result-feedback" + (tone ? " disease-result-feedback-" + tone : "");
       }
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
       function hideRecommendation() {
         if (resultProductSection) {
@@ -341,12 +422,15 @@
           resultProductBuyButton.hidden = true;
           resultProductBuyButton.removeAttribute("data-buy-product");
         }
+<<<<<<< HEAD
         if (resultStoreButton) {
           resultStoreButton.href = "/market";
         }
         if (resultProductHighlights) {
           resultProductHighlights.innerHTML = "";
         }
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
       }
 
       function showRecommendation(product) {
@@ -361,9 +445,12 @@
         document.getElementById("resultProductDescription").textContent = product.short_description || product.description || "";
         document.getElementById("resultProductRating").textContent = `Rating ${product.rating_label || product.rating || "0.0"}`;
         document.getElementById("resultProductPrice").textContent = `Rs ${product.price || 0}`;
+<<<<<<< HEAD
         if (resultProductSeller) {
           resultProductSeller.textContent = product.seller || "AgroVision store";
         }
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
         if (resultProductImage) {
           resultProductImage.src = product.image_url || "/static/images/store-product-fallback.svg";
@@ -381,6 +468,7 @@
           resultProductBuyButton.dataset.buySource = "disease-recommendation";
         }
 
+<<<<<<< HEAD
         if (resultStoreButton) {
           resultStoreButton.href = product.detail_url || "/market";
         }
@@ -394,15 +482,32 @@
           });
         }
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         resultProductSection.hidden = false;
       }
 
       if (fileInput) {
         fileInput.addEventListener("change", function () {
           if (this.files && this.files[0]) {
+<<<<<<< HEAD
             if (uploadTitle) {
               uploadTitle.textContent = this.files[0].name;
             }
+=======
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              var existingPreview = dropzone.querySelector(".disease-upload-preview");
+              if (!existingPreview) {
+                existingPreview = document.createElement("img");
+                existingPreview.className = "disease-upload-preview";
+                dropzone.insertBefore(existingPreview, dropzone.firstChild);
+              }
+              existingPreview.src = e.target.result;
+              dropzone.classList.add("is-filled");
+            };
+            reader.readAsDataURL(this.files[0]);
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
           }
         });
       }
@@ -440,6 +545,7 @@
           });
           var result = await resp.json();
 
+<<<<<<< HEAD
           if (result.success) {
             document.getElementById("result-disease").textContent = result.disease || "Unknown";
             document.getElementById("result-confidence").textContent = (result.confidence || 0) + "% confidence";
@@ -469,11 +575,37 @@
             var tipsList = document.getElementById("result-tips");
             tipsList.innerHTML = "";
             (result.prevention || []).forEach(function (tip) {
+=======
+           if (result.success) {
+             if (result.library_url) {
+               window.location.href = result.library_url;
+               return;
+             }
+             document.getElementById("result-disease").textContent = result.disease || "Unknown";
+             document.getElementById("result-confidence").textContent = (result.confidence || 0) + "% confidence";
+             document.getElementById("result-risk").textContent = result.risk_level || "Medium";
+             document.getElementById("result-risk").className = "disease-risk-tag risk-" + (result.risk_level || "Medium").toLowerCase();
+            document.getElementById("result-symptoms").textContent = result.symptoms || "";
+            document.getElementById("result-cause").textContent = result.cause || "";
+            document.getElementById("result-organic").textContent = result.organic_solution || "";
+            document.getElementById("result-chemical").textContent = result.chemical_solution || "";
+
+            // Populate new stats
+            const statAccuracy = document.getElementById("stat-accuracy");
+            const statType = document.getElementById("stat-type");
+            if (statAccuracy) statAccuracy.textContent = (result.confidence || 0) + "%";
+            if (statType) statType.textContent = result.diagnostic_reason && result.diagnostic_reason.includes("PyTorch") ? "AI Model" : "Expert AI";
+
+            var tipsList = document.getElementById("result-tips");
+            tipsList.innerHTML = "";
+            (result.prevention || []).forEach(function(tip) {
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
               var li = document.createElement("li");
               li.textContent = tip;
               tipsList.appendChild(li);
             });
 
+<<<<<<< HEAD
             if (matchedSymptomsList) {
               matchedSymptomsList.innerHTML = "";
               (result.matched_symptoms || []).forEach(function (item) {
@@ -492,6 +624,8 @@
               });
             }
 
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
             var resultImg = resultCard.querySelector(".disease-result-image");
             if (resultImg && result.image_url) {
               resultImg.src = result.image_url;
@@ -507,7 +641,10 @@
             }
 
             showRecommendation(result.recommended_product);
+<<<<<<< HEAD
             setResultFeedback("Diagnosis ready. Symptoms, treatment plan, aur best-fit product neeche compare kar sakte ho.", "success");
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
             form.classList.remove("is-submitting");
             if (dropzone) dropzone.classList.remove("is-scanning");
@@ -529,7 +666,10 @@
           console.error(err);
           hideRecommendation();
           alert("Network error occurred during analysis.");
+<<<<<<< HEAD
           setResultFeedback("Network issue aayi. Dobara try karo.", "error");
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
           form.classList.remove("is-submitting");
           if (dropzone) dropzone.classList.remove("is-scanning");
           if (resultCard) { resultCard.classList.remove("is-scanning"); resultCard.style.display = "none"; }

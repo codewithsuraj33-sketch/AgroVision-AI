@@ -483,6 +483,7 @@
   font-weight: 700;
 }
 
+<<<<<<< HEAD
 .admin-audit-grid,
 .admin-audit-layout{
   display: grid;
@@ -528,6 +529,10 @@
   .admin-cards{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-audit-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-audit-layout{ grid-template-columns: 1fr; }
+=======
+@media (max-width: 980px){
+  .admin-cards{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 }
 
 @media (max-width: 760px){
@@ -604,7 +609,10 @@
   .admin-shell{ padding: 22px 14px 34px; }
   .admin-page-head h1{ font-size: 24px; }
   .admin-cards{ grid-template-columns: 1fr; }
+<<<<<<< HEAD
   .admin-audit-grid{ grid-template-columns: 1fr; }
+=======
+>>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
   .admin-form-grid{ grid-template-columns: 1fr; }
   .admin-panel{ padding: 14px; border-radius: 16px; }
   .admin-field input,
