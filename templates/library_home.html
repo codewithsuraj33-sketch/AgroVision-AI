@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library - AgroVisionAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/library.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page library-page">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+  </button>
+
+  <main class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      {% set active_page = 'library' %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main">
+      <section class="library-shell">
+        <div class="library-topbar">
+          <a href="/dashboard"><i class="fas fa-arrow-left"></i> Back</a>
+          <span class="library-chip"><i class="fas fa-book"></i> Library</span>
+        </div>
+
+    <h1 class="library-title">Plantix-style Library</h1>
+    <p class="library-subtitle">
+      Crops, pests and diseases, cultivation tips, and risk alerts. Everything is driven from JSON so you can update content without code changes.
+    </p>
+    <div class="library-toolbar" style="margin-top: 16px;">
+      <span class="library-chip"><i class="fas fa-seedling"></i> {{ covered_crop_count }} crops covered in disease guides</span>
+      <span class="library-chip"><i class="fas fa-bug"></i> {{ insect_count }} insect guides</span>
+      <span class="library-chip"><i class="fas fa-virus"></i> {{ virus_count }} virus guides</span>
+      <span class="library-chip"><i class="fas fa-flask"></i> {{ fungus_count + bacteria_count }} fungus/bacteria guides</span>
+    </div>
+
+    <section class="library-grid" aria-label="Library modules">
+      <a class="library-tile" href="/library/crops" style="text-decoration:none;">
+        <div>
+          <h3>Crops</h3>
+          <p>Explore crop profiles, requirements, and best practices.</p>
+          <p class="library-subtitle" style="margin-top:10px;"><strong>{{ crop_count }}</strong> crops</p>
+        </div>
+        <div class="library-tile-icon"><i class="fas fa-seedling"></i></div>
+      </a>
+
+      <a class="library-tile" href="/library/diseases" style="text-decoration:none;">
+        <div>
+          <h3>Pests &amp; Diseases</h3>
+          <p>Card-based disease library with images and detailed guides.</p>
+          <p class="library-subtitle" style="margin-top:10px;"><strong>{{ disease_count }}</strong> entries across fungus, bacteria, virus, and insect problems</p>
+        </div>
+        <div class="library-tile-icon"><i class="fas fa-bug"></i></div>
+      </a>
+
+      <a class="library-tile" href="/library/tips" style="text-decoration:none;">
+        <div>
+          <h3>Cultivation Tips</h3>
+          <p>By Task / By Stage tabs with quick actionable checklists.</p>
+          <p class="library-subtitle" style="margin-top:10px;"><strong>{{ tip_task_count }}</strong> tasks, <strong>{{ tip_stage_count }}</strong> stages</p>
+        </div>
+        <div class="library-tile-icon"><i class="fas fa-list-check"></i></div>
+      </a>
+
+      <a class="library-tile" href="/library/alerts" style="text-decoration:none;">
+        <div>
+          <h3>Alerts</h3>
+          <p>High risk pests and diseases near you (mock daily updates).</p>
+          <p class="library-subtitle" style="margin-top:10px;"><strong>Daily</strong> risk cards</p>
+        </div>
+        <div class="library-tile-icon"><i class="fas fa-triangle-exclamation"></i></div>
+      </a>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/library.js"></script>
+  {# Mobile sidebar script is injected globally (static/mobile-sidebar.js). #}
+</body>
+</html>
+

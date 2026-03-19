@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pests & Diseases - Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/library.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page library-page">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+  </button>
+
+  <main class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      {% set active_page = 'library' %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main">
+      <section class="library-shell">
+        <div class="library-topbar">
+          <a href="/library"><i class="fas fa-arrow-left"></i> Library</a>
+          <span class="library-chip"><i class="fas fa-bug"></i> Pests &amp; Diseases</span>
+        </div>
+
+    <h1 class="library-title">Pests &amp; diseases</h1>
+    <p class="library-subtitle">Filter by crop, search by name, and explore stage-wise cards like Plantix.</p>
+
+    <section class="library-panel">
+      <div class="library-toolbar">
+        <label class="library-select" aria-label="Crop filter">
+          <i class="fas fa-apple-whole" aria-hidden="true"></i>
+          <select data-library-crop-filter>
+            {% for c in crops %}
+              <option value="{{ c }}" {% if c == active_crop %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <form class="library-search" action="/library/diseases" method="get">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <input name="q" placeholder="Search pest or disease..." value="{{ query }}">
+          {% if active_crop and active_crop != "All" %}
+            <input type="hidden" name="crop" value="{{ active_crop }}">
+          {% endif %}
+        </form>
+
+        {% set crop_param = '&crop=' ~ (active_crop|urlencode) if active_crop and active_crop != 'All' else '' %}
+        {% set q_param = '&q=' ~ (query|urlencode) if query else '' %}
+        <div class="library-tabs" role="tablist" aria-label="Type tabs">
+          <a class="library-tab{% if active_type == 'all' %} is-active{% endif %}" href="/library/diseases{% if (active_crop and active_crop != 'All') or query %}?{% endif %}{% if active_crop and active_crop != 'All' %}crop={{ active_crop|urlencode }}{% endif %}{% if (active_crop and active_crop != 'All') and query %}&{% endif %}{% if query %}q={{ query|urlencode }}{% endif %}">All</a>
+          <a class="library-tab{% if active_type == 'insect' %} is-active{% endif %}" href="/library/diseases?type=insect{{ crop_param }}{{ q_param }}">Insect</a>
+          <a class="library-tab{% if active_type == 'fungus' %} is-active{% endif %}" href="/library/diseases?type=fungus{{ crop_param }}{{ q_param }}">Fungus</a>
+          <a class="library-tab{% if active_type == 'virus' %} is-active{% endif %}" href="/library/diseases?type=virus{{ crop_param }}{{ q_param }}">Virus</a>
+          <a class="library-tab{% if active_type == 'bacteria' %} is-active{% endif %}" href="/library/diseases?type=bacteria{{ crop_param }}{{ q_param }}">Bacteria</a>
+        </div>
+      </div>
+
+      {% if no_results %}
+        <div class="library-risk" style="margin: 10px 0 14px;">
+          <i class="fas fa-magnifying-glass"></i>
+          No matching entries found{% if query %} for "{{ query }}"{% endif %}. Showing popular guides instead.
+        </div>
+      {% endif %}
+
+      {% for section in stage_sections %}
+        <div class="library-section-head">
+          <h2>{{ section.label }}</h2>
+          <span class="library-subtitle">{{ section["items"]|length }} cards</span>
+        </div>
+        <div class="library-scroll" aria-label="{{ section.label }} cards">
+          {% for item in section["items"] %}
+            <a class="library-dcard is-loading" href="/library/disease/{{ item.slug }}">
+              <div class="library-dcard-media">
+                <img
+                  src="{{ item.image or fallback_image }}"
+                  data-fallback-src="{{ fallback_image }}"
+                  loading="lazy"
+                  decoding="async"
+                  alt="{{ item.name }}"
+                >
+              </div>
+              <div class="library-dcard-body">
+                <div class="library-kicker">{{ item.type }}</div>
+                <h4>{{ item.name }}</h4>
+                <p style="margin:6px 0 0;color:var(--lib-muted);font-weight:700;line-height:1.5;">{{ item.crops[0] if item.crops else 'General' }} • {{ item.symptoms[0] if item.symptoms else item.cause }}</p>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <div class="library-section-head" style="margin-top:18px;">
+        <h2>All results</h2>
+        <span class="library-subtitle">{{ items|length }} entries</span>
+      </div>
+
+      <div class="library-grid" style="margin-top:0;">
+        {% if items and items|length %}
+            {% for item in items %}
+            <a class="library-tile library-disease-tile" href="/library/disease/{{ item.slug }}" style="text-decoration:none;">
+              <div class="library-tile-thumb">
+                <img src="{{ item.image or fallback_image }}" data-fallback-src="{{ fallback_image }}" loading="lazy" decoding="async" alt="{{ item.name }}">
+              </div>
+              <div class="library-tile-copy">
+                <h3 style="margin:0 0 4px;">{{ item.name }}</h3>
+                <p>{{ item.type }}{% if item.crops and item.crops|length %} | {{ item.crops[0] }}{% endif %}</p>
+                <p style="margin:6px 0 0;">{{ item.cause|truncate(110) }}</p>
+              </div>
+              <div class="library-tile-icon" style="background: linear-gradient(135deg, rgba(45,216,255,0.50), rgba(31,163,109,0.32));">
+                <i class="fas fa-arrow-right"></i>
+              </div>
+            </a>
+          {% endfor %}
+        {% else %}
+          <div class="library-subtitle" style="grid-column: span 12; font-weight: 800;">
+            No entries to show yet. Try removing filters or open a guide from below.
+          </div>
+            {% for item in suggested_items or [] %}
+            <a class="library-tile library-disease-tile" href="/library/disease/{{ item.slug }}" style="grid-column: span 12; text-decoration:none;">
+              <div class="library-tile-thumb">
+                <img src="{{ item.image or fallback_image }}" data-fallback-src="{{ fallback_image }}" loading="lazy" decoding="async" alt="{{ item.name }}">
+              </div>
+              <div class="library-tile-copy">
+                <h3 style="margin:0 0 4px;">{{ item.name }}</h3>
+                <p>{{ item.type }}{% if item.crops and item.crops|length %} | {{ item.crops[0] }}{% endif %}</p>
+                <p style="margin:6px 0 0;">{{ item.cause|truncate(110) }}</p>
+              </div>
+              <div class="library-tile-icon" style="background: linear-gradient(135deg, rgba(45,216,255,0.50), rgba(31,163,109,0.32));">
+                <i class="fas fa-arrow-right"></i>
+              </div>
+            </a>
+          {% endfor %}
+        {% endif %}
+      </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/library.js"></script>
+  {# Mobile sidebar script is injected globally (static/mobile-sidebar.js). #}
+</body>
+</html>
+

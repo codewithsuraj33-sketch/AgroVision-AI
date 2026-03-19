@@ -78,8 +78,8 @@
         </article>
         <article>
           <i class="fas fa-envelope-open-text"></i>
-          <strong>Email OTP security</strong>
-          <span>Password check is followed by OTP so account access stays protected.</span>
+          <strong>Password-only login</strong>
+          <span>Sign in directly with your account password and reach the dashboard faster.</span>
         </article>
         <article>
           <i class="fas fa-chart-line"></i>
@@ -93,12 +93,12 @@
       <div class="auth-form-panel__top">
         <span class="section-kicker">Secure login</span>
         <h2>Sign in to AgroVision AI</h2>
-        <p>Password verification is followed by OTP confirmation for extra account security.</p>
+        <p>Enter your registered email and password to open your AgroVision AI dashboard directly.</p>
       </div>
 
       <div class="auth-panel-strip" aria-label="Login highlights">
         <span><i class="fas fa-bolt"></i>Quick sign in</span>
-        <span><i class="fas fa-envelope-open-text"></i>Email OTP check</span>
+        <span><i class="fas fa-unlock-keyhole"></i>Direct account access</span>
         <span><i class="fas fa-shield-halved"></i>Protected dashboard</span>
       </div>
 
@@ -110,6 +110,7 @@
       {% endif %}
 
       <form class="auth-form-modern" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label class="auth-field-group" for="login-email">
           <span>Email address</span>
           <div class="auth-input">
@@ -132,7 +133,7 @@
         <div class="auth-form-modern__support">
           <div class="auth-helper-line">
             <i class="fas fa-circle-check"></i>
-            <span>After password verification, we will send a one-time OTP to your registered email address.</span>
+            <span>Use your registered email and password to access your dashboard directly.</span>
           </div>
           <div class="auth-helper-line auth-helper-line--subtle">
             Use the same email address you used while creating your AgroVision AI account.
@@ -144,14 +145,14 @@
 
         <button class="marketing-button marketing-button--solid marketing-button--full" type="submit">
           <i class="fas fa-right-to-bracket"></i>
-          <span>Continue to OTP</span>
+          <span>Login to Dashboard</span>
         </button>
       </form>
 
       <div class="auth-note-row">
         <div class="auth-note-chip">
           <i class="fas fa-shield-halved"></i>
-          <span>Two-step login</span>
+          <span>Fast login</span>
         </div>
         <div class="auth-note-chip">
           <i class="fas fa-cloud-sun-rain"></i>

@@ -3,6 +3,23 @@
   let razorpayScriptPromise = null;
   let recommendationFocused = false;
 
+  function getCookie(name) {
+    const needle = String(name || "") + "=";
+    const parts = String(document.cookie || "").split(";");
+    for (let i = 0; i < parts.length; i += 1) {
+      const part = parts[i].trim();
+      if (!part) continue;
+      if (part.indexOf(needle) === 0) {
+        return decodeURIComponent(part.slice(needle.length));
+      }
+    }
+    return "";
+  }
+
+  function getCsrfToken() {
+    return getCookie("csrf_token");
+  }
+
   function createToastRoot() {
     let toastRoot = document.getElementById("storeToast");
     if (toastRoot) {
@@ -138,9 +155,13 @@
   }
 
   async function finalizePayment(payload, button) {
+    const csrfToken = getCsrfToken();
     const response = await fetch("/api/store/payment-success", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: Object.assign(
+        { "Content-Type": "application/json" },
+        csrfToken ? { "X-CSRFToken": csrfToken } : {}
+      ),
       body: JSON.stringify(payload),
     });
     const data = await response.json();
@@ -186,9 +207,13 @@
     setBuyButtonLoading(button, true);
 
     try {
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/store/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: Object.assign(
+          { "Content-Type": "application/json" },
+          csrfToken ? { "X-CSRFToken": csrfToken } : {}
+        ),
         body: JSON.stringify({
           product_id: Number(productId),
           source: button.dataset.buySource || "store",
@@ -245,11 +270,14 @@
     const searchInput = document.getElementById("storeSearch");
     const sortSelect = document.getElementById("storeSort");
     const categoryInput = document.getElementById("storeCategoryInput");
+    const useCaseInput = document.getElementById("storeUseCaseInput");
     const emptyState = document.getElementById("storeEmptyState");
     const countLabel = document.getElementById("storeResultsCount");
     const filterForm = document.getElementById("storeFilterForm");
     const tabs = Array.from(document.querySelectorAll("[data-store-category]"));
+    const useCaseTabs = Array.from(document.querySelectorAll("[data-store-use-case]"));
     const initialCategory = root.dataset.activeCategory || "All";
+    const initialUseCase = root.dataset.activeUseCase || "";
     const initialQuery = root.dataset.searchQuery || "";
     const initialSort = root.dataset.sortOption || "featured";
     const recommendedSlug = root.dataset.recommendedSlug || "";
@@ -263,8 +291,11 @@
     if (categoryInput) {
       categoryInput.value = initialCategory;
     }
+    if (useCaseInput) {
+      useCaseInput.value = initialUseCase;
+    }
 
-    function updateUrl(query, category, sort) {
+    function updateUrl(query, category, sort, useCase) {
       const nextUrl = new URL(window.location.href);
       if (query) {
         nextUrl.searchParams.set("q", query);
@@ -284,6 +315,12 @@
         nextUrl.searchParams.delete("sort");
       }
 
+      if (useCase) {
+        nextUrl.searchParams.set("use_case", useCase);
+      } else {
+        nextUrl.searchParams.delete("use_case");
+      }
+
       if (recommendedSlug) {
         nextUrl.searchParams.set("recommended", recommendedSlug);
       }
@@ -298,6 +335,16 @@
       });
       if (categoryInput) {
         categoryInput.value = category;
+      }
+    }
+
+    function setActiveUseCase(useCase) {
+      useCaseTabs.forEach(function (tab) {
+        const isActive = tab.dataset.storeUseCase === useCase;
+        tab.classList.toggle("is-active", isActive);
+      });
+      if (useCaseInput) {
+        useCaseInput.value = useCase;
       }
     }
 
@@ -341,6 +388,7 @@
     function updateCatalog() {
       const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
       const category = categoryInput ? categoryInput.value || "All" : "All";
+      const useCase = useCaseInput ? useCaseInput.value || "" : "";
       const sortOption = sortSelect ? sortSelect.value || "featured" : "featured";
       const visibleCards = [];
 
@@ -349,9 +397,11 @@
         const fallbackSearch = ((card.dataset.productName || "") + " " + (card.textContent || "")).trim();
         const searchText = (rawSearch ? rawSearch : fallbackSearch).toLowerCase();
         const categoryText = card.dataset.productCategory || "";
+        const useCaseText = (card.textContent || "").toLowerCase();
         const matchesQuery = !query || searchText.indexOf(query) !== -1;
         const matchesCategory = category === "All" || categoryText === category;
-        const isVisible = matchesQuery && matchesCategory;
+        const matchesUseCase = !useCase || useCaseText.indexOf(useCase.toLowerCase()) !== -1;
+        const isVisible = matchesQuery && matchesCategory && matchesUseCase;
 
         card.hidden = !isVisible;
         if (isVisible) {
@@ -368,7 +418,7 @@
         emptyState.hidden = visibleCards.length > 0;
       }
 
-      updateUrl(query, category, sortOption);
+      updateUrl(query, category, sortOption, useCase);
       root.classList.add("is-ready");
 
       if (!recommendationFocused && recommendedSlug) {
@@ -389,6 +439,14 @@
       });
     });
 
+    useCaseTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        const nextUseCase = useCaseInput && useCaseInput.value === (tab.dataset.storeUseCase || "") ? "" : (tab.dataset.storeUseCase || "");
+        setActiveUseCase(nextUseCase);
+        updateCatalog();
+      });
+    });
+
     searchInput && searchInput.addEventListener("input", updateCatalog);
     sortSelect && sortSelect.addEventListener("change", updateCatalog);
 
@@ -400,6 +458,7 @@
     }
 
     setActiveTab(initialCategory);
+    setActiveUseCase(initialUseCase);
     window.requestAnimationFrame(updateCatalog);
   }
 

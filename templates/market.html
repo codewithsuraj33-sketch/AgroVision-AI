@@ -17,101 +17,21 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body class="dashboard-page store-page">
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
 
   <main class="dashboard-shell store-shell">
     <aside class="dashboard-sidebar store-sidebar">
-      <div class="sidebar-brand">
-        {% if user and user.profile_photo %}
-          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-        {% else %}
-          <i class="fas fa-user dashboard-avatar"></i>
-        {% endif %}
-        <div class="sidebar-brand-copy">
-          <strong>{{ user.name }}</strong>
-          <span>Smart Farm AI</span>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav" aria-label="Store navigation">
-        <a class="sidebar-link" href="/dashboard">
-          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
-        <a class="sidebar-link" href="/crop-library">
-          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
-          <span>Crop Library</span>
-        </a>
-        <a class="sidebar-link" href="/farms">
-          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
-          <span>Farms</span>
-        </a>
-        <a class="sidebar-link" href="/weather">
-          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
-          <span>Weather</span>
-        </a>
-        <a class="sidebar-link" href="/soil-health">
-          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
-          <span>Soil Health</span>
-        </a>
-        <a class="sidebar-link" href="/crop-monitoring">
-          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
-          <span>Crop Monitoring</span>
-        </a>
-        <a class="sidebar-link" href="/farm-twin">
-          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
-          <span>Farm Twin</span>
-        </a>
-        <a class="sidebar-link" href="/ai-insights">
-          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
-          <span>AI Insights</span>
-        </a>
-        <a class="sidebar-link" href="/tools">
-          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
-          <span>Tools</span>
-        </a>
-        <a class="sidebar-link" href="/disease-detection">
-          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
-          <span>Disease Detection</span>
-        </a>
-        <a class="sidebar-link" href="/alerts">
-          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
-          <span>Alerts</span>
-        </a>
-        <a class="sidebar-link" href="/settings">
-          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
-          <span>Settings</span>
-        </a>
-        <a class="sidebar-link" href="/community">
-          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
-          <span>Community Hub</span>
-        </a>
-        <a class="sidebar-link is-active store-active" href="/market">
-          <i class="fas fa-store sidebar-icon"></i>
-          <span>Market</span>
-        </a>
-        <a class="sidebar-link" href="/subscriptions" style="border: 1px dashed rgba(45, 216, 255, 0.3); margin-top: 5px; background: rgba(45, 216, 255, 0.06);">
-          <i class="fas fa-crown sidebar-icon" style="color: #2dd8ff;"></i>
-          <span style="color: #e0e7ff; font-weight: 700;">Subscriptions</span>
-        </a>
-        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
-          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
-          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
-        </a>
-      </nav>
-
-      <a class="sidebar-logout" href="/logout">
-        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
-        <span>Logout</span>
-      </a>
+      {% set active_page = 'market' %}
+      {% include "_user_sidebar.html" %}
     </aside>
 
     <section
       class="dashboard-main store-main"
       data-store-page
       data-active-category="{{ store_page.active_category }}"
+      data-active-use-case="{{ store_page.active_use_case }}"
       data-search-query="{{ store_page.search_query }}"
       data-sort-option="{{ store_page.sort_option }}"
       {% if store_page.recommended_product %}data-recommended-slug="{{ store_page.recommended_product.slug }}"{% endif %}
@@ -174,6 +94,7 @@
           </label>
 
           <input type="hidden" name="category" id="storeCategoryInput" value="{{ store_page.active_category }}">
+          <input type="hidden" name="use_case" id="storeUseCaseInput" value="{{ store_page.active_use_case }}">
 
           <label class="store-filter-select" for="storeSort">
             <span>Sort by</span>
@@ -188,9 +109,24 @@
 
         <div class="store-toolbar-meta">
           <strong id="storeResultsCount">{{ store_page.count }} products</strong>
-          <span>Search, sort, and tap a card for full product details.</span>
+          <span>Search, diagnosis tags, aur crop-specific filtering se fast shortlist banao.</span>
         </div>
       </section>
+
+      {% if store_page.use_cases %}
+        <section class="store-category-tabs store-use-case-tabs" id="storeUseCaseTabs" aria-label="Store diagnosis filters">
+          {% for use_case in store_page.use_cases %}
+            <button
+              class="store-category-tab{% if use_case.is_active %} is-active{% endif %}"
+              type="button"
+              data-store-use-case="{{ use_case.label }}"
+            >
+              <span>{{ use_case.label }}</span>
+              <small>{{ use_case.count }}</small>
+            </button>
+          {% endfor %}
+        </section>
+      {% endif %}
 
       <section class="store-category-tabs" id="storeCategoryTabs" aria-label="Store categories">
         {% for category in store_page.categories %}
@@ -243,6 +179,14 @@
 
               <a class="store-card-title" href="{{ product.detail_url }}">{{ product.name }}</a>
               <p class="store-card-description">{{ product.short_description }}</p>
+
+              {% if product.use_case_tags %}
+                <div class="store-card-tags">
+                  {% for tag in product.use_case_tags[:4] %}
+                    <span class="store-card-tag">{{ tag }}</span>
+                  {% endfor %}
+                </div>
+              {% endif %}
 
               <div class="store-card-meta">
                 <span>{{ product.unit }}</span>
@@ -315,3 +259,5 @@
   <script src="/static/store.js"></script>
 </body>
 </html>
+
+

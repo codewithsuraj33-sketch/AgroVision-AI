@@ -262,8 +262,8 @@
 </head>
 <body class="dashboard-page">
 
-  <button id="mobileMenuToggle" class="mobile-menu-toggle">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
 
   <main class="dashboard-shell">
@@ -271,87 +271,9 @@
       <div class="language-switcher">
         <div id="google_translate_element"></div>
       </div>
-
     <aside class="dashboard-sidebar">
-      <div class="sidebar-brand">
-          {% if user and user.profile_photo %}
-            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-          {% else %}
-            <i class="fas fa-user dashboard-avatar"></i>
-          {% endif %}
-        <div class="sidebar-brand-copy">
-          <strong>{{ user.name }}</strong>
-          <span>{{ user.email }}</span>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav" aria-label="Tools navigation">
-        <a class="sidebar-link" href="/dashboard">
-          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
-        <a class="sidebar-link" href="/crop-library">
-          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
-          <span>Crop Library</span>
-        </a>
-        <a class="sidebar-link" href="/farms">
-          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
-          <span>Farms</span>
-        </a>
-        <a class="sidebar-link" href="/weather">
-          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
-          <span>Weather</span>
-        </a>
-        <a class="sidebar-link" href="/soil-health">
-          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
-          <span>Soil Health</span>
-        </a>
-        <a class="sidebar-link" href="/crop-monitoring">
-          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
-          <span>Crop Monitoring</span>
-        </a>
-        <a class="sidebar-link" href="/farm-twin">
-          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
-          <span>Farm Twin</span>
-        </a>
-        <a class="sidebar-link" href="/ai-insights">
-          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
-          <span>AI Insights</span>
-        </a>
-        <a class="sidebar-link is-active tools-active" href="/tools">
-          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
-          <span>Tools</span>
-        </a>
-        <a class="sidebar-link" href="/disease-detection">
-          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
-          <span>Disease Detection</span>
-        </a>
-        <a class="sidebar-link" href="/alerts">
-          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
-          <span>Alerts</span>
-        </a>
-        <a class="sidebar-link" href="/settings">
-          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
-          <span>Settings</span>
-        </a>
-        <a class="sidebar-link" href="/community">
-          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
-          <span>Community Hub</span>
-        </a>
-        <a class="sidebar-link" href="/market">
-          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
-          <span>Market</span>
-        </a>
-        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
-          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
-          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
-        </a>
-      </nav>
-
-      <a class="sidebar-logout" href="/logout">
-        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
-        <span>Logout</span>
-      </a>
+      {% set active_page = 'tools' %}
+      {% include "_user_sidebar.html" %}
     </aside>
 
     <section class="dashboard-main tools-workspace">
@@ -648,6 +570,23 @@
     let history = JSON.parse(localStorage.getItem('tool_history')) || [];
     let advisorTimeout = null;
 
+    function getCookie(name) {
+        const needle = String(name || '') + '=';
+        const parts = String(document.cookie || '').split(';');
+        for (let i = 0; i < parts.length; i += 1) {
+            const part = parts[i].trim();
+            if (!part) continue;
+            if (part.indexOf(needle) === 0) {
+                return decodeURIComponent(part.slice(needle.length));
+            }
+        }
+        return '';
+    }
+
+    function getCsrfToken() {
+        return getCookie('csrf_token');
+    }
+
     function saveToHistory(type, summary) {
         history.unshift({ type, summary, date: new Date().toLocaleTimeString() });
         if (history.length > 10) history.pop();
@@ -682,7 +621,10 @@
             try {
                 const res = await fetch('/api/tool-advisor', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: Object.assign(
+                        { 'Content-Type': 'application/json' },
+                        getCsrfToken() ? { 'X-CSRFToken': getCsrfToken() } : {}
+                    ),
                     body: JSON.stringify({ type, inputs, results })
                 });
                 const data = await res.json();
@@ -705,8 +647,8 @@
         const rev = y * p;
         const net = rev - e;
 
-        document.getElementById('res-profit-revenue').textContent = `₹${rev.toLocaleString()}`;
-        document.getElementById('res-profit-net').textContent = `₹${net.toLocaleString()}`;
+        document.getElementById('res-profit-revenue').textContent = `\u20B9${rev.toLocaleString()}`;
+        document.getElementById('res-profit-net').textContent = `\u20B9${net.toLocaleString()}`;
         
         if (y > 0 && p > 0) {
             triggerAI('profit', { yield_kg: y, price_per_kg: p, expenses: e }, { revenue: rev, profit: net });
@@ -717,7 +659,7 @@
         const e = parseFloat(document.getElementById('noloss-expenses').value) || 0;
         const y = parseFloat(document.getElementById('noloss-yield').value) || 0;
         const nl = y > 0 ? (e / y) : 0;
-        document.getElementById('res-noloss-price').textContent = `₹${nl.toFixed(2)}/kg`;
+        document.getElementById('res-noloss-price').textContent = `\u20B9${nl.toFixed(2)}/kg`;
         
         if (e > 0 && y > 0) {
             triggerAI('noloss', { expenses: e, yield_kg: y }, { no_loss_price: nl });
@@ -778,14 +720,17 @@
         try {
             const res = await fetch('/api/predict-yield', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: Object.assign(
+                    { 'Content-Type': 'application/json' },
+                    getCsrfToken() ? { 'X-CSRFToken': getCsrfToken() } : {}
+                ),
                 body: JSON.stringify(inputs)
             });
             const data = await res.json();
             if (data.success) {
                 const p = data.prediction;
                 document.getElementById('res-pred-yield').textContent = `${p.estimated_yield_kg.toLocaleString()} kg`;
-                document.getElementById('res-pred-profit').textContent = `₹${p.estimated_profit_inr.toLocaleString()}`;
+                document.getElementById('res-pred-profit').textContent = `\u20B9${p.estimated_profit_inr.toLocaleString()}`;
                 document.getElementById('res-pred-conf').textContent = `${p.ai_confidence}%`;
                 document.getElementById('res-pred-note').textContent = p.ai_note;
                 document.getElementById('pred-result').style.display = 'block';
@@ -854,7 +799,5 @@
 
 </body>
 </html>
-
-
 
 

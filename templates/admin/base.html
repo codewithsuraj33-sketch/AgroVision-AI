@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/admin.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="/static/admin.js" defer></script>
 </head>
 <body class="admin-page">
   <header class="admin-topbar">
@@ -24,7 +25,18 @@
         <span class="admin-brand-sub">Admin Panel</span>
       </a>
 
-      <nav class="admin-nav">
+      <button
+        class="admin-menu-toggle"
+        type="button"
+        aria-label="Open menu"
+        aria-controls="admin-nav"
+        aria-expanded="false"
+        data-admin-menu-toggle
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true" data-admin-menu-icon></i>
+      </button>
+
+      <nav class="admin-nav" id="admin-nav" data-admin-nav>
         <a href="/admin" class="{% if request.path == '/admin' %}is-active{% endif %}">Dashboard</a>
         <a href="/admin/products" class="{% if request.path.startswith('/admin/products') %}is-active{% endif %}">Products</a>
         <a href="/admin/orders" class="{% if request.path.startswith('/admin/orders') %}is-active{% endif %}">Orders</a>
@@ -33,6 +45,8 @@
       </nav>
     </div>
   </header>
+
+  <div class="admin-menu-overlay" data-admin-menu-overlay hidden></div>
 
   <main class="admin-shell">
     {% block content %}{% endblock %}

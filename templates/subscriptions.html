@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Subscriptions - AgroVision AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/style.css" />
     <link
       rel="stylesheet"
@@ -15,7 +18,7 @@
         padding: 40px 18px;
         background: radial-gradient(circle at top right, #0a2472, #00072d);
         color: #fff;
-        font-family: Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+        font-family: "Manrope", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
       }
 
       .sub-shell {
@@ -233,23 +236,40 @@
     </style>
   </head>
   <body
-    class="sub-page"
+    class="dashboard-page"
     data-user-name="{{ user.name or '' }}"
     data-user-email="{{ user.email or '' }}"
     data-user-phone="{{ user.phone or '' }}"
     data-user-plan="{{ user.plan or 'free' }}"
     data-wallet-balance="{{ user.wallet_balance or 0 }}"
   >
-    <div class="sub-shell">
+    <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+      <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+    </button>
+
+    <main class="dashboard-shell">
+      <aside class="dashboard-sidebar">
+        {% set active_page = 'subscriptions' %}
+        {% include "_user_sidebar.html" %}
+      </aside>
+
+      <section class="dashboard-main">
+        <div class="sub-page">
+          <div class="sub-shell">
       <header class="sub-header">
         <div>
           <a href="/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
           <h1>Choose Your Plan</h1>
           <p>
-            Free plan ke saath basic modules available hain. Pro / Premium ke saath AI features unlock hote hain.
+            Aapko <strong>{{ trial_days }}</strong> din ka full-access trial milta hai. Trial khatam hone ke baad, site use karne ke liye Pro ya Premium lena zaroori hai.
           </p>
+          {% if expired %}
+            <p class="sub-note" style="color: rgba(255, 255, 255, 0.92);">
+              <strong>Trial ended:</strong> Aapka free trial khatam ho gaya hai. Continue karne ke liye Pro ya Premium select kijiye.
+            </p>
+          {% endif %}
           {% if trial_active %}
-            <p class="sub-note"><strong>Trial:</strong> Aapka Pro trial active hai. Trial khatam hone ke baad Pro/Premium lena padega (premium features ke liye).</p>
+            <p class="sub-note"><strong>Trial active:</strong> Aapke paas full access hai. Trial khatam hone ke baad Pro/Premium lena padega.</p>
           {% endif %}
         </div>
         <div class="sub-meta">
@@ -261,17 +281,17 @@
 
       <section class="sub-cards">
         <article class="sub-card">
-          <h2>Free</h2>
-          <div class="sub-price">Rs 0 <small>/ month</small></div>
-          <div style="color:#a5b4fc; font-weight:700;">{{ plans["free"]["description"] }}</div>
+          <h2>Free Trial</h2>
+          <div class="sub-price">Rs 0 <small>/ {{ trial_days }} days</small></div>
+          <div style="color:#a5b4fc; font-weight:700;">Full access trial for new users.</div>
           <ul class="sub-features">
-            <li><i class="fas fa-check-circle"></i> Dashboard, farms, weather, soil tools</li>
-            <li><i class="fas fa-check-circle"></i> Store browsing</li>
-            <li><i class="fas fa-check-circle"></i> Referral link + wallet rewards</li>
+            <li><i class="fas fa-check-circle"></i> All modules unlocked during trial</li>
+            <li><i class="fas fa-check-circle"></i> Library + AI detection + Store + Tools</li>
+            <li><i class="fas fa-check-circle"></i> Referral link + wallet rewards included</li>
           </ul>
           <div class="sub-actions">
             <button class="sub-btn sub-btn-ghost" type="button" disabled>
-              {% if (user.plan or "free")|lower == "free" %}Current Plan{% else %}Available{% endif %}
+              {% if trial_active %}Trial Active{% else %}Trial Used{% endif %}
             </button>
           </div>
         </article>
@@ -317,10 +337,14 @@
           <button class="sub-btn sub-btn-ghost" type="button" id="walletCheckBtn">Check Wallet</button>
         </div>
       </section>
-    </div>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="/static/subscriptions.js"></script>
+    {# Mobile sidebar script is injected globally (static/mobile-sidebar.js). #}
   </body>
 </html>
 

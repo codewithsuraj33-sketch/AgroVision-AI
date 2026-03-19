@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pests & Disease Alerts - Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/library.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .alert-grid{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+    .alert-card{
+      border-radius: 22px;
+      border: 1px solid rgba(180, 206, 232, 0.56);
+      background: var(--lib-card);
+      box-shadow: 0 18px 40px rgba(18, 49, 84, 0.10);
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      display: grid;
+    }
+    .alert-media{
+      aspect-ratio: 16 / 10;
+      background: linear-gradient(180deg, rgba(31, 163, 109, 0.12), rgba(45, 216, 255, 0.08));
+      position: relative;
+    }
+    .alert-media img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .alert-badge{
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-weight: 900;
+      border: 1px solid rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.86);
+      color: #0b2540;
+    }
+    [data-theme="dark"] .alert-badge{
+      background: rgba(15, 23, 42, 0.72);
+      border-color: rgba(148, 163, 184, 0.28);
+      color: rgba(241, 245, 249, 0.96);
+    }
+    .alert-badge.is-high{ border-color: rgba(255, 122, 90, 0.38); background: rgba(255, 122, 90, 0.16); color: #8c2f1b; }
+    .alert-badge.is-medium{ border-color: rgba(245, 158, 11, 0.38); background: rgba(245, 158, 11, 0.16); color: #7a4a00; }
+    .alert-badge.is-low{ border-color: rgba(31, 163, 109, 0.28); background: rgba(31, 163, 109, 0.12); color: #115a41; }
+    .alert-body{ padding: 12px 14px 16px; display: grid; gap: 6px; }
+    .alert-body h3{ margin: 0; color: var(--lib-ink); letter-spacing: -0.02em; font-size: 1.05rem; }
+    .alert-body p{ margin: 0; color: var(--lib-muted); font-weight: 650; line-height: 1.5; }
+    @media (max-width: 720px){
+      .alert-grid{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="dashboard-page library-page">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+  </button>
+
+  <main class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      {% set active_page = 'library' %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main">
+      <section class="library-shell">
+        <div class="library-topbar">
+          <a href="/library"><i class="fas fa-arrow-left"></i> Library</a>
+          <span class="library-chip"><i class="fas fa-triangle-exclamation"></i> Alerts</span>
+        </div>
+
+    <h1 class="library-title">Pests &amp; Disease Alert</h1>
+    <p class="library-subtitle">High risk pests and diseases that might appear in your field (mock daily updates).</p>
+
+    <section class="library-panel">
+      <div class="library-toolbar">
+        <label class="library-select" aria-label="Crop filter">
+          <i class="fas fa-apple-whole" aria-hidden="true"></i>
+          <select data-library-crop-filter>
+            {% for c in crops %}
+              <option value="{{ c }}" {% if c == active_crop %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <span class="library-chip"><i class="fas fa-rotate"></i> Updated daily</span>
+      </div>
+
+      <div class="alert-grid" aria-label="Alert cards">
+        {% for a in alerts %}
+          <a class="alert-card" href="/library/disease/{{ a.slug }}">
+            <div class="alert-media">
+              <span class="alert-badge is-{{ a.severity }}"><i class="fas fa-bell"></i> {{ a.severity|title }} risk</span>
+              <img src="{{ a.image or fallback_image }}" data-fallback-src="{{ fallback_image }}" loading="lazy" decoding="async" alt="{{ a.name }}">
+            </div>
+            <div class="alert-body">
+              <div class="library-kicker">{{ a.crop }}</div>
+              <h3>{{ a.name }}</h3>
+              <p>{{ a.type }}</p>
+              <p>{{ a.cause|truncate(110) }}</p>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/library.js"></script>
+  {# Mobile sidebar script is injected globally (static/mobile-sidebar.js). #}
+</body>
+</html>
+

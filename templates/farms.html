@@ -319,11 +319,12 @@
       }
     }
   </style>
+  </head>
 <body class="dashboard-page farm-operations-page">
 
   <!-- Mobile Menu Toggle Button -->
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
 
   <main class="dashboard-shell farms-hub-shell">
@@ -332,85 +333,8 @@
         <div id="google_translate_element"></div>
       </div>
     <aside class="dashboard-sidebar farm-sidebar">
-      <div class="sidebar-brand">
-          {% if user and user.profile_photo %}
-            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-          {% else %}
-            <i class="fas fa-user dashboard-avatar"></i>
-          {% endif %}
-        <div class="sidebar-brand-copy">
-          <strong>{{ user.name }}</strong>
-          <span>{{ user.email }}</span>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav" aria-label="Farms navigation">
-        <a class="sidebar-link" href="/dashboard">
-          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
-        <a class="sidebar-link" href="/crop-library">
-          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
-          <span>Crop Library</span>
-        </a>
-        <a class="sidebar-link is-active farms-active" href="/farms">
-          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
-          <span>Farms</span>
-        </a>
-        <a class="sidebar-link" href="/weather">
-          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
-          <span>Weather</span>
-        </a>
-        <a class="sidebar-link" href="/soil-health">
-          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
-          <span>Soil Health</span>
-        </a>
-        <a class="sidebar-link" href="/crop-monitoring">
-          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
-          <span>Crop Monitoring</span>
-        </a>
-        <a class="sidebar-link" href="/farm-twin">
-          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
-          <span>Farm Twin</span>
-        </a>
-        <a class="sidebar-link" href="/ai-insights">
-          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
-          <span>AI Insights</span>
-        </a>
-        <a class="sidebar-link" href="/tools">
-          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
-          <span>Tools</span>
-        </a>
-        <a class="sidebar-link" href="/disease-detection">
-          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
-          <span>Disease Detection</span>
-        </a>
-        <a class="sidebar-link" href="/alerts">
-          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
-          <span>Alerts</span>
-        </a>
-        <a class="sidebar-link" href="/settings">
-          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
-          <span>Settings</span>
-        </a>
-        <a class="sidebar-link" href="/community">
-          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
-          <span>Community Hub</span>
-        </a>
-        <a class="sidebar-link" href="/market">
-          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
-          <span>Market</span>
-        </a>
-        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
-          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
-          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
-        </a>
-      </nav>
-
-      <a class="sidebar-logout" href="/logout">
-        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
-        <span>Logout</span>
-      </a>
+      {% set active_page = 'farms' %}
+      {% include "_user_sidebar.html" %}
     </aside>
 
     <section class="dashboard-main farms-workspace">
@@ -561,10 +485,12 @@
                   <div class="farm-card-actions">
                     {% if not farm.is_primary %}
                       <form method="POST" action="/farms/set-primary/{{ farm.id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="farm-action-btn primary">Make Primary</button>
                       </form>
                     {% endif %}
                     <form method="POST" action="/farms/delete/{{ farm.id }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button type="submit" class="farm-action-btn ghost">Delete</button>
                     </form>
                     <span class="farm-note" style="align-self:center;">Saved {{ farm.created_label }}</span>
@@ -585,6 +511,7 @@
 
             <div class="task-layout">
               <form class="task-form" method="POST" action="/farms/tasks/add">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="task-form-grid">
                   <div class="full">
                     <label class="field-label" for="taskTitle">Task Title</label>
@@ -659,6 +586,7 @@
                     <div class="task-card-actions" style="margin-top:14px;">
                       {% if task.status != 'in_progress' and task.status != 'done' %}
                         <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="status" value="in_progress">
                           <button type="submit" class="task-action-btn secondary">Start</button>
                         </form>
@@ -666,17 +594,20 @@
 
                       {% if task.status != 'done' %}
                         <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="status" value="done">
                           <button type="submit" class="task-action-btn primary">Mark Done</button>
                         </form>
                       {% else %}
                         <form method="POST" action="/tasks/{{ task.id }}/status">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           <input type="hidden" name="status" value="todo">
                           <button type="submit" class="task-action-btn secondary">Reopen</button>
                         </form>
                       {% endif %}
 
                       <form method="POST" action="/tasks/{{ task.id }}/delete">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="task-action-btn ghost">Delete</button>
                       </form>
                     </div>
@@ -701,6 +632,7 @@
             </div>
 
             <form method="POST" action="/farms/add">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <div class="form-grid">
                 <div>
                   <label class="field-label" for="farmName">Farm Name</label>
@@ -835,7 +767,6 @@
       }
     });
   </script>
-  </main>
 
   <!-- Google Translate -->
   <script>
@@ -854,7 +785,5 @@
 
 </body>
 </html>
-
-
 
 

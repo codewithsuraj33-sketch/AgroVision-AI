@@ -1,6 +1,15 @@
 {% extends "admin/base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
+  {% set audit = audit if audit is defined else {
+    'mapping_count': 0,
+    'unmapped_count': 0,
+    'missing_content_count': 0,
+    'weak_tag_product_count': 0,
+    'missing_mappings': [],
+    'missing_content': [],
+    'recommendation_review': []
+  } %}
   <section class="admin-page-head">
     <h1>Dashboard</h1>
     <p>Overview of store activity.</p>
@@ -29,6 +38,94 @@
     <a class="admin-quick-link" href="/admin/products">Manage Products</a>
     <a class="admin-quick-link" href="/admin/orders">View Orders</a>
     <a class="admin-quick-link" href="/admin/mappings">AI Disease Mapping</a>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="admin-panel-title">Data Quality Audit</h2>
+    <div class="admin-audit-grid">
+      <article class="admin-audit-card">
+        <span>Manual mappings</span>
+        <strong>{{ audit.mapping_count }}</strong>
+        <small>Disease-to-product rules maintained by admin</small>
+      </article>
+      <article class="admin-audit-card">
+        <span>Unmapped diseases</span>
+        <strong>{{ audit.unmapped_count }}</strong>
+        <small>These still rely on auto recommendation logic</small>
+      </article>
+      <article class="admin-audit-card">
+        <span>Missing disease content</span>
+        <strong>{{ audit.missing_content_count }}</strong>
+        <small>Cause, solution, prevention, or symptoms incomplete</small>
+      </article>
+      <article class="admin-audit-card">
+        <span>Weak product tags</span>
+        <strong>{{ audit.weak_tag_product_count }}</strong>
+        <small>Products with less helpful diagnosis filters</small>
+      </article>
+    </div>
+  </section>
+
+  <section class="admin-audit-layout">
+    <section class="admin-panel">
+      <h2 class="admin-panel-title">Missing Mapping Queue</h2>
+      <div class="admin-audit-list">
+        {% for item in audit.missing_mappings %}
+          <article class="admin-audit-item">
+            <strong>{{ item.name }}</strong>
+            <span>{{ item.type }}</span>
+          </article>
+        {% else %}
+          <article class="admin-audit-item">
+            <strong>All covered</strong>
+            <span>No unmapped diseases right now.</span>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="admin-panel">
+      <h2 class="admin-panel-title">Missing Content Audit</h2>
+      <div class="admin-audit-list">
+        {% for item in audit.missing_content %}
+          <article class="admin-audit-item">
+            <strong>{{ item.name }}</strong>
+            <span>Missing: {{ item.gaps | join(", ") }}</span>
+          </article>
+        {% else %}
+          <article class="admin-audit-item">
+            <strong>Content healthy</strong>
+            <span>Symptoms, cause, solution, and prevention are present.</span>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  </section>
+
+  <section class="admin-panel">
+    <h2 class="admin-panel-title">Recommendation Review</h2>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Disease</th>
+            <th>Crop</th>
+            <th>Suggested Product</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in audit.recommendation_review %}
+            <tr>
+              <td class="admin-td-strong">{{ item.disease }}</td>
+              <td>{{ item.crop }}</td>
+              <td>{{ item.product_name }}</td>
+              <td class="admin-muted">{{ item.status }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </section>
 {% endblock %}
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <script>
@@ -19,97 +19,34 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js@7.2.0/introjs.min.css">
 </head>
 <body class="dashboard-page">
+  {% set dashboard_personalization = dashboard.personalization if dashboard.personalization is defined else {
+    'headline': 'Farm insights ready',
+    'detail': 'Your dashboard is loading the latest farm summary.',
+    'primary_action': {
+      'href': '/disease-detection',
+      'label': 'Detect Disease'
+    }
+  } %}
+  {% set dashboard_onboarding = dashboard.onboarding if dashboard.onboarding is defined else {
+    'completed_count': 0,
+    'total_count': 4,
+    'progress_pct': 0,
+    'steps': [
+      {'title': 'Complete profile', 'detail': 'Add crop and location to personalize insights.', 'done': false, 'href': '/profile', 'cta': 'Update Profile'},
+      {'title': 'Set up farm', 'detail': 'Create your first farm workspace.', 'done': false, 'href': '/farms', 'cta': 'Add Farm'},
+      {'title': 'Plan first task', 'detail': 'Create irrigation, spray, or harvest reminders.', 'done': false, 'href': '/farms#task-planner', 'cta': 'Add Task'},
+      {'title': 'Run AI scan', 'detail': 'Open disease detection to scan crop photos and get suggestions.', 'done': false, 'href': '/disease-detection', 'cta': 'Start Scan'}
+    ]
+  } %}
   <main class="dashboard-shell">
 
   <!-- Mobile Menu Toggle Button -->
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
-
     <aside class="dashboard-sidebar">
-      <div class="sidebar-brand">
-          {% if user and user.profile_photo %}
-            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-          {% else %}
-            <i class="fas fa-user dashboard-avatar"></i>
-          {% endif %}
-        <div class="sidebar-brand-copy">
-          <strong>{{ user.name }}</strong>
-          <span>Smart Farm AI</span>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav" aria-label="Dashboard navigation">
-        <a class="sidebar-link is-active dashboard-active" href="/dashboard">
-          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
-        <a class="sidebar-link" href="/crop-library">
-          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
-          <span>Crop Library</span>
-        </a>
-        <a class="sidebar-link" href="/farms">
-          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
-          <span>Farms</span>
-        </a>
-        <a class="sidebar-link" href="/weather">
-          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
-          <span>Weather</span>
-        </a>
-        <a class="sidebar-link" href="/soil-health">
-          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
-          <span>Soil Health</span>
-        </a>
-        <a class="sidebar-link" href="/crop-monitoring">
-          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
-          <span>Crop Monitoring</span>
-        </a>
-        <a class="sidebar-link" href="/farm-twin">
-          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
-          <span>Farm Twin</span>
-        </a>
-        <a class="sidebar-link" href="/ai-insights">
-          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
-          <span>AI Insights</span>
-        </a>
-        <a class="sidebar-link" href="/tools">
-          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
-          <span>Tools</span>
-        </a>
-        <a class="sidebar-link" href="/disease-detection">
-          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
-          <span>Disease Detection</span>
-        </a>
-        <a class="sidebar-link" href="/alerts">
-          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
-          <span>Alerts</span>
-        </a>
-        <a class="sidebar-link" href="/settings">
-          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
-          <span>Settings</span>
-        </a>
-        <a class="sidebar-link" href="/community">
-          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
-          <span>Community Hub</span>
-        </a>
-        <a class="sidebar-link" href="/market">
-          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
-          <span>Market</span>
-        </a>
-        <a class="sidebar-link" href="/subscriptions" style="border: 1px dashed rgba(45, 216, 255, 0.3); margin-top: 5px; background: rgba(45, 216, 255, 0.06);">
-          <i class="fas fa-crown sidebar-icon" style="color: #2dd8ff;"></i>
-          <span style="color: #e0e7ff; font-weight: 700;">Subscriptions</span>
-        </a>
-        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
-          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
-          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
-        </a>
-      </nav>
-
-      <a class="sidebar-logout" href="/logout">
-        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
-        <span>Logout</span>
-      </a>
+      {% set active_page = 'dashboard' %}
+      {% include "_user_sidebar.html" %}
     </aside>
 
     <section class="dashboard-main">
@@ -120,6 +57,7 @@
 
       <header class="dashboard-hero">
         <div class="dashboard-hero-copy">
+          <span class="section-kicker">Personalized farm workspace</span>
           <h1 id="welcome-title">Welcome, {{ user.name }}</h1>
           <p>{{ dashboard.primary_farm_name }} • {{ user.location or "Bhubaneswar" }}</p>
           <div class="hero-meta">
@@ -128,6 +66,32 @@
             <span class="hero-chip">{{ dashboard.farm_stats.count }} farm{% if dashboard.farm_stats.count != 1 %}s{% endif %}</span>
             <span class="hero-chip">{{ dashboard.task_summary.open_count }} open tasks</span>
           </div>
+          <div class="shared-primary-action">
+            <div class="shared-primary-action-copy">
+              <strong>{{ dashboard_personalization.headline }}</strong>
+              <span>{{ dashboard_personalization.detail }}</span>
+            </div>
+            <a class="shared-primary-action-button" href="{{ dashboard_personalization.primary_action.href }}">
+              {{ dashboard_personalization.primary_action.label }}
+            </a>
+          </div>
+        </div>
+        <div class="dashboard-hero-media" aria-hidden="true">
+          <span class="dashboard-hero-badge">Live AI Field View</span>
+          <span class="dashboard-hero-orb"></span>
+          <span class="dashboard-hero-cloud dashboard-hero-cloud-one"></span>
+          <span class="dashboard-hero-cloud dashboard-hero-cloud-two"></span>
+          <span class="dashboard-hero-stars"></span>
+          <div class="dashboard-hero-landscape">
+            <span class="dashboard-hero-hill dashboard-hero-hill-back"></span>
+            <span class="dashboard-hero-hill dashboard-hero-hill-mid"></span>
+            <span class="dashboard-hero-hill dashboard-hero-hill-front"></span>
+          </div>
+          <div class="dashboard-hero-panel">
+            <strong>Field Outlook</strong>
+            <span>{{ dashboard.weather.description }}</span>
+            <small>{{ dashboard.crop_health.label }} for {{ dashboard.crop_health.crop_name }}</small>
+          </div>
         </div>
       </header>
 
@@ -135,9 +99,31 @@
         <!-- Toast Container -->
         <div id="toast-container"></div>
 
+        <section class="agro-card onboarding-card" id="step0-onboarding">
+          <div class="shared-section-heading">
+            <div>
+              <span class="shared-section-kicker">Guided setup</span>
+              <h2>New user onboarding flow</h2>
+            </div>
+            <span class="shared-section-meta">{{ dashboard_onboarding.completed_count }}/{{ dashboard_onboarding.total_count }} complete</span>
+          </div>
+          <div class="onboarding-progress" aria-hidden="true">
+            <span data-style-width="{{ dashboard_onboarding.progress_pct }}%"></span>
+          </div>
+          <div class="onboarding-step-list">
+            {% for step in dashboard_onboarding.steps %}
+              <a class="onboarding-step{% if step.done %} is-done{% endif %}" href="{{ step.href }}">
+                <strong>{{ step.title }}</strong>
+                <span>{{ step.detail }}</span>
+                <small>{{ "Completed" if step.done else step.cta }}</small>
+              </a>
+            {% endfor %}
+          </div>
+        </section>
+
         <!-- Quick Actions Panel -->
         <div class="quick-actions-bar" id="step1-quick-actions">
-          <a href="/disease-detection" class="quick-action-btn"><i class="fas fa-camera"></i> Detect Disease</a>
+          <a href="/disease-detection" class="quick-action-btn quick-action-btn-primary"><i class="fas fa-camera"></i> Detect Disease</a>
           <a href="/weather" class="quick-action-btn"><i class="fas fa-cloud-sun"></i> Check Weather</a>
           <a href="/soil-health" class="quick-action-btn"><i class="fas fa-vial"></i> Soil Report</a>
           <a href="/farms" class="quick-action-btn"><i class="fas fa-plus"></i> Add Farm</a>
@@ -151,6 +137,7 @@
             <p id="dynamic-ai-tip">Checking field conditions... Optimization suggestion loading.</p>
           </div>
         </div>
+        <script id="dashboardRecommendationData" type="application/json">[{% for item in dashboard.recommendations or [] %}{{ {'title': item.title, 'detail': item.detail}|tojson }}{% if not loop.last %},{% endif %}{% endfor %}]</script>
 
         <section class="dashboard-grid">
           <a href="/weather" class="dash-card-link">
@@ -315,27 +302,27 @@
                <div class="timeline-day">
                  <strong>Today</strong>
                  <i class="fas fa-sun timeline-icon"></i>
-                 <span class="timeline-temp">32°C</span>
+                 <span class="timeline-temp">32Â°C</span>
                </div>
                <div class="timeline-day">
                  <strong>Tue</strong>
                  <i class="fas fa-cloud-rain timeline-icon" style="color: #3b82f6;"></i>
-                 <span class="timeline-temp">28°C</span>
+                 <span class="timeline-temp">28Â°C</span>
                </div>
                <div class="timeline-day">
                  <strong>Wed</strong>
                  <i class="fas fa-cloud timeline-icon"></i>
-                 <span class="timeline-temp">30°C</span>
+                 <span class="timeline-temp">30Â°C</span>
                </div>
                <div class="timeline-day">
                  <strong>Thu</strong>
                  <i class="fas fa-sun timeline-icon"></i>
-                 <span class="timeline-temp">33°C</span>
+                 <span class="timeline-temp">33Â°C</span>
                </div>
                <div class="timeline-day">
                  <strong>Fri</strong>
                  <i class="fas fa-sun timeline-icon"></i>
-                 <span class="timeline-temp">34°C</span>
+                 <span class="timeline-temp">34Â°C</span>
                </div>
             </div>
           </article>
@@ -433,7 +420,7 @@
       intro.setOptions({
         steps: [
           {
-            title: 'Welcome to Smart Farming AI! 🚜',
+            title: 'Welcome to Smart Farming AI! ðŸšœ',
             intro: 'Let us show you how to get the most out of your digital farm.'
           },
           {
@@ -492,12 +479,27 @@
 
     // --- Dynamic AI Tip Demo ---
     function updateAITip() {
-      const tips = [
-        "Rain expected tomorrow. Delay fertilizer application.",
-        "Heat stress alert today! Increase irrigation.",
-        "Ideal time for soil testing detected.",
-        "Weather is perfect for spray application this morning."
-      ];
+      const recommendationNode = document.getElementById('dashboardRecommendationData');
+      let tips = [];
+      if (recommendationNode) {
+        try {
+          const recommendationData = JSON.parse(recommendationNode.textContent || "[]");
+          tips = recommendationData.map(item => {
+            if (item && item.title && item.detail) return `${item.title}: ${item.detail}`;
+            return item && (item.detail || item.title) ? (item.detail || item.title) : "";
+          }).filter(Boolean);
+        } catch (error) {
+          tips = [];
+        }
+      }
+      if (!tips.length) {
+        tips = [
+          "Rain expected tomorrow. Delay fertilizer application.",
+          "Heat stress alert today! Increase irrigation.",
+          "Ideal time for soil testing detected.",
+          "Weather is perfect for spray application this morning."
+        ];
+      }
       const tipEl = document.getElementById('dynamic-ai-tip');
       if (tipEl) tipEl.textContent = tips[Math.floor(Math.random() * tips.length)];
     }
@@ -542,7 +544,7 @@
         var map = L.map('dash-leaflet-map').setView([lat, lng], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
             maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
+            attribution: 'Â© OpenStreetMap contributors'
         }).addTo(map);
         
         // Fetch real farm fields from our API
@@ -575,19 +577,6 @@
         setTimeout(() => map.invalidateSize(), 400);
       }
 
-      // Voice FAB & Bubble
-      const voiceBtn = document.getElementById('voiceBtn');
-      const voiceBubble = document.getElementById('voiceBubble');
-      if (voiceBtn && voiceBubble) {
-        voiceBtn.addEventListener('click', () => {
-          voiceBubble.style.display = (voiceBubble.style.display === 'flex') ? 'none' : 'flex';
-        });
-      }
-    });
-
-    // Mobile Sidebar
-    document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
-      document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
     });
 
     // Mandi update (Mock for now)
@@ -623,22 +612,6 @@
     });
   </script>
   
-  <!-- Voice Assistant UI -->
-  <div class="voice-assistant-fab" id="voiceBtn" title="Ask Kisan Dost">
-    <i class="fas fa-microphone"></i>
-  </div>
-  <div class="voice-assistant-bubble" id="voiceBubble" style="display:none;">
-    <div class="bubble-header">
-      <span><i class="fas fa-robot"></i> Kisan Dost</span>
-      <i class="fas fa-times" onclick="document.getElementById('voiceBubble').style.display='none'" style="cursor:pointer;"></i>
-    </div>
-    <div class="bubble-content" id="voiceText">Namaste! Main aapka Kisan Dost hoon. Kaise madad kar sakta hoon?</div>
-    <div class="bubble-actions">
-      <input type="text" placeholder="Sawal yahan likhein..." style="flex:1; padding:8px; border-radius:8px; border:1px solid #ccc;">
-      <button class="bubble-send" style="padding: 8px 12px;"><i class="fas fa-paper-plane"></i></button>
-    </div>
-  </div>
-
   <!-- Google Translate -->
   <script>
     function googleTranslateElementInit() {
@@ -656,6 +629,8 @@
 
 </body>
 </html>
+
+
 
 
 

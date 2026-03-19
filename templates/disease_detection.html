@@ -19,91 +19,14 @@
 <body class="dashboard-page disease-monitor-page" data-recent-analysis="{{ 'true' if disease_page.has_upload else 'false' }}">
 
   <!-- Mobile Menu Toggle Button -->
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
 
   <main class="dashboard-shell disease-monitor-shell">
     <aside class="dashboard-sidebar disease-sidebar">
-      <div class="sidebar-brand">
-          {% if user and user.profile_photo %}
-            <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-          {% else %}
-            <i class="fas fa-user dashboard-avatar"></i>
-          {% endif %}
-        <div class="sidebar-brand-copy">
-          <strong>{{ user.name }}</strong>
-          <span>{{ user.email }}</span>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav" aria-label="Disease detection navigation">
-        <a class="sidebar-link" href="/dashboard">
-          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
-        <a class="sidebar-link" href="/crop-library">
-          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
-          <span>Crop Library</span>
-        </a>
-        <a class="sidebar-link" href="/farms">
-          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
-          <span>Farms</span>
-        </a>
-        <a class="sidebar-link" href="/weather">
-          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
-          <span>Weather</span>
-        </a>
-        <a class="sidebar-link" href="/soil-health">
-          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
-          <span>Soil Health</span>
-        </a>
-        <a class="sidebar-link" href="/crop-monitoring">
-          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
-          <span>Crop Monitoring</span>
-        </a>
-        <a class="sidebar-link" href="/farm-twin">
-          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
-          <span>Farm Twin</span>
-        </a>
-        <a class="sidebar-link" href="/ai-insights">
-          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
-          <span>AI Insights</span>
-        </a>
-        <a class="sidebar-link" href="/tools">
-          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
-          <span>Tools</span>
-        </a>
-        <a class="sidebar-link is-active disease-active" href="/disease-detection">
-          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
-          <span>Disease Detection</span>
-        </a>
-        <a class="sidebar-link" href="/alerts">
-          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
-          <span>Alerts</span>
-        </a>
-        <a class="sidebar-link" href="/settings">
-          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
-          <span>Settings</span>
-        </a>
-        <a class="sidebar-link" href="/community">
-          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
-          <span>Community Hub</span>
-        </a>
-        <a class="sidebar-link" href="/market">
-          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
-          <span>Market</span>
-        </a>
-        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
-          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
-          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
-        </a>
-      </nav>
-
-      <a class="sidebar-logout" href="/logout">
-        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
-        <span>Logout</span>
-      </a>
+      {% set active_page = 'disease_detection' %}
+      {% include "_user_sidebar.html" %}
     </aside>
 
     <section class="dashboard-main disease-monitor-main">
@@ -128,26 +51,26 @@
 
         <div class="disease-hero-copy">
           <h1>Crop Disease Detection</h1>
-          <p>Diagnose crop diseases by uploading an image for AI analysis.</p>
+          <p>Upload a close leaf photo to identify likely disease patterns, compare symptoms, and get a faster treatment direction for your field.</p>
         </div>
       </header>
 
       <section class="disease-monitor-grid">
         <article class="agro-card disease-upload-card">
           <div class="disease-card-head">
-            <h2>Upload Crop Image</h2>
+            <div>
+              <h2>Scan a Leaf</h2>
+              <p class="disease-card-subtitle">Use one clear leaf photo in natural light for the most reliable diagnosis.</p>
+            </div>
           </div>
 
           <form class="disease-upload-form" method="post" enctype="multipart/form-data">
-            <div class="disease-upload-dropzone{% if disease_page.has_upload %} is-filled{% endif %}">
-              {% if disease_page.has_upload %}
-                <img class="disease-upload-preview" src="{{ disease_page.result.image_url }}" alt="Uploaded crop leaf preview">
-              {% else %}
-                <span class="disease-upload-icon">&#128247;</span>
-              {% endif %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="disease-upload-dropzone">
+              <span class="disease-upload-icon">&#128247;</span>
 
               <div class="disease-upload-copy">
-                <strong>{{ disease_page.upload_name or "Upload a clear crop leaf image" }}</strong>
+                <strong id="diseaseUploadTitle">{{ disease_page.upload_name or "Upload a clear crop leaf image" }}</strong>
                 <span>PNG, JPG, JPEG or WEBP up to 6 MB</span>
               </div>
 
@@ -163,10 +86,16 @@
 
             <button class="disease-analyze-button" type="submit">Analyze Crop</button>
 
+            <div class="disease-upload-hints" aria-label="Photo tips">
+              <span class="disease-upload-hint">Single leaf</span>
+              <span class="disease-upload-hint">Good daylight</span>
+              <span class="disease-upload-hint">Close and sharp</span>
+            </div>
+
             {% if disease_page.error_message %}
               <p class="disease-upload-message disease-upload-message-error">{{ disease_page.error_message }}</p>
             {% else %}
-              <p class="disease-upload-message">Crop: {{ disease_page.result.crop }} | {{ disease_page.result.analysis_source }}</p>
+              <p class="disease-upload-message">We compare visible spots, color stress, and disease-like leaf patterns before suggesting the next action.</p>
             {% endif %}
           </form>
         </article>
@@ -174,100 +103,93 @@
         <article class="agro-card disease-result-card" id="disease-result-card" style="display: none;">
             <div class="disease-card-head-result">
               <div class="disease-head-main">
-                <h2>AI Analysis Result</h2>
+                <h2>Disease Diagnosis</h2>
                 <span class="disease-risk-tag" id="result-risk"></span>
               </div>
               <span class="disease-confidence-chip" id="result-confidence"></span>
             </div>
 
-            <!-- New Stats Row for Premium Feel -->
-            <div class="disease-result-stats" style="display: flex; gap: 12px; margin-bottom: 20px;">
-              <div class="result-stat-item" style="flex: 1; padding: 12px; background: rgba(125, 255, 46, 0.1); border-radius: 12px; text-align: center;">
-                <i class="fas fa-check-circle" style="color: #7dff2e; margin-bottom: 4px; display: block;"></i>
-                <small style="display: block; opacity: 0.7; font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Accuracy</small>
-                <strong id="stat-accuracy" style="font-size: 1.1rem; color: #173154;">--</strong>
+            <div class="disease-result-stats">
+              <div class="result-stat-item result-stat-item-success">
+                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                <small>Match score</small>
+                <strong id="stat-accuracy">--</strong>
               </div>
-              <div class="result-stat-item" style="flex: 1; padding: 12px; background: rgba(51, 157, 219, 0.1); border-radius: 12px; text-align: center;">
-                <i class="fas fa-microscope" style="color: #339ddb; margin-bottom: 4px; display: block;"></i>
-                <small style="display: block; opacity: 0.7; font-size: 0.7rem; text-transform: uppercase; font-weight: 800;">Analysis</small>
-                <strong id="stat-type" style="font-size: 1.1rem; color: #173154;">AI</strong>
+              <div class="result-stat-item result-stat-item-info">
+                <i class="fas fa-microscope" aria-hidden="true"></i>
+                <small>Analysis source</small>
+                <strong id="stat-type">AI</strong>
               </div>
             </div>
 
           <div class="disease-result-body">
             <div class="disease-result-layout">
               <div class="disease-result-copy">
-                <span class="disease-result-kicker">Detected disease.</span>
+                <span class="disease-result-kicker">Detected issue</span>
                 <strong class="disease-result-name" id="result-disease"></strong>
 
-                <div class="disease-result-section">
-                  <h3>Symptoms:</h3>
-                  <p id="result-symptoms"></p>
+                <div class="disease-result-badges">
+                  <span class="disease-result-badge" id="result-crop-badge">{{ disease_page.result.crop }}</span>
+                  <span class="disease-result-badge" id="result-source-badge">{{ disease_page.result.analysis_source }}</span>
+                </div>
+
+                <div class="disease-result-toolbar">
+                  <a class="disease-result-action is-primary" id="resultGuideButton" href="/library/diseases">View disease guide</a>
+                  <a class="disease-result-action" id="resultStoreButton" href="/market">Open treatment input</a>
+                  <span class="disease-result-feedback" id="resultFeedback">Upload a photo to unlock guide and product recommendations.</span>
+                </div>
+
+                <div class="trust-panel-grid">
+                  <article class="trust-panel">
+                    <span class="trust-panel-kicker">Confidence</span>
+                    <strong id="result-confidence-label">Waiting for scan</strong>
+                    <p id="result-why">Scan hone ke baad yahan explainability note dikhega.</p>
+                  </article>
+                  <article class="trust-panel">
+                    <span class="trust-panel-kicker">Expert consult</span>
+                    <strong>When to verify</strong>
+                    <p id="result-consult">Risk aur confidence ke hisaab se advisory yahan dikhegi.</p>
+                  </article>
                 </div>
 
                 <div class="disease-result-section">
-                  <h3>Cause:</h3>
+                  <h3>Visible symptoms</h3>
+                  <p id="result-symptoms"></p>
+                  <ul class="disease-tips-list compact" id="resultMatchedSymptoms"></ul>
+                </div>
+
+                <div class="disease-result-section">
+                  <h3>Likely cause</h3>
                   <p id="result-cause"></p>
+                </div>
+
+                <div class="disease-result-section">
+                  <h3>Diagnosis summary</h3>
+                  <p id="result-explanation">AI explanation scan ke baad yahan dikhega.</p>
                 </div>
 
                 <div class="disease-result-grid-solutions">
                   <div class="disease-result-section">
-                    <h3>Organic Solution:</h3>
+                    <h3>Organic option</h3>
                     <p id="result-organic"></p>
                   </div>
                   <div class="disease-result-section">
-                    <h3>Chemical Solution:</h3>
+                    <h3>Chemical option</h3>
                     <p id="result-chemical"></p>
                   </div>
                 </div>
 
                 <div class="disease-result-section">
-                  <h3>Prevention Tips:</h3>
+                  <h3>Prevention plan</h3>
                   <ul class="disease-tips-list" id="result-tips">
                   </ul>
                 </div>
 
-                <div class="disease-result-section disease-store-recommendation" id="resultProductSection" hidden>
-                  <div class="disease-store-head">
-                    <div>
-                      <h3>Recommended Product</h3>
-                      <p id="resultProductReason">AI-linked product suggestion based on the detected crop issue.</p>
-                    </div>
-                    <a class="disease-store-link" id="resultProductLinkInline" href="/market">Open store</a>
-                  </div>
-
-                  <article class="disease-store-card">
-                    <a class="disease-store-media" id="resultProductLink" href="/market">
-                      <img
-                        class="disease-store-image"
-                        id="resultProductImage"
-                        src="/static/images/store-product-fallback.svg"
-                        alt="Recommended product"
-                        loading="lazy"
-                        decoding="async"
-                        data-fallback-src="/static/images/store-product-fallback.svg"
-                      >
-                    </a>
-
-                    <div class="disease-store-copy">
-                      <span class="disease-store-category" id="resultProductCategory">Store recommendation</span>
-                      <strong id="resultProductName">Recommended product will appear here</strong>
-                      <p id="resultProductDescription">Upload and analyze a crop image to see a linked store suggestion.</p>
-
-                      <div class="disease-store-meta">
-                        <span id="resultProductRating">Rating will appear here</span>
-                        <span id="resultProductPrice">Price will appear here</span>
-                      </div>
-
-                      <div class="disease-store-actions">
-                        <a class="store-secondary-button disease-store-details" id="resultProductDetailButton" href="/market">View Details</a>
-                        <button class="store-primary-button disease-store-buy" id="resultProductBuyButton" type="button" hidden>
-                          Buy Now
-                        </button>
-                      </div>
-                    </div>
-                  </article>
+                <div class="disease-result-section">
+                  <h3>Do this now</h3>
+                  <ul class="disease-tips-list" id="resultChecklist"></ul>
                 </div>
+
               </div>
 
               <div class="disease-result-visual">
@@ -279,11 +201,98 @@
                     <span>Upload an image to see results</span>
                   </div>
                 {% endif %}
+
+                <div class="disease-visual-panel">
+                  <div class="disease-visual-grid">
+                    <article class="disease-visual-item">
+                      <span>Crop</span>
+                      <strong id="result-crop-visual">{{ disease_page.result.crop }}</strong>
+                    </article>
+                    <article class="disease-visual-item">
+                      <span>Engine</span>
+                      <strong id="result-source-visual">{{ disease_page.result.analysis_source }}</strong>
+                    </article>
+                  </div>
+                  <div class="disease-visual-note">
+                    <span>Field note</span>
+                    <strong>Start with the affected patch</strong>
+                    <p id="resultActionNote">Upload a clear leaf image to generate a focused field action plan.</p>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            <div class="disease-result-section disease-store-recommendation" id="resultProductSection" hidden>
+              <div class="disease-store-head">
+                <div>
+                  <h3>Suggested product</h3>
+                  <p id="resultProductReason">A closer product match will appear here after analysis.</p>
+                </div>
+                <a class="disease-store-link" id="resultProductLinkInline" href="/market">Open catalog</a>
+              </div>
+
+              <article class="disease-store-card">
+                <a class="disease-store-media" id="resultProductLink" href="/market">
+                  <img
+                    class="disease-store-image"
+                    id="resultProductImage"
+                    src="/static/images/store-product-fallback.svg"
+                    alt="Recommended product"
+                    loading="lazy"
+                    decoding="async"
+                    data-fallback-src="/static/images/store-product-fallback.svg"
+                  >
+                </a>
+
+                <div class="disease-store-copy">
+                  <span class="disease-store-category" id="resultProductCategory">Store recommendation</span>
+                  <strong id="resultProductName">Recommended product will appear here</strong>
+                  <p id="resultProductDescription">Upload and analyze a crop image to see a linked treatment suggestion.</p>
+
+                  <div class="disease-store-meta">
+                    <span id="resultProductRating">Rating will appear here</span>
+                    <span id="resultProductPrice">Price will appear here</span>
+                    <span id="resultProductSeller">Seller will appear here</span>
+                  </div>
+
+                  <ul class="disease-product-highlights" id="resultProductHighlights"></ul>
+
+                  <div class="disease-store-actions">
+                    <a class="store-secondary-button disease-store-details" id="resultProductDetailButton" href="/market">See Details</a>
+                    <button class="store-primary-button disease-store-buy" id="resultProductBuyButton" type="button" hidden>
+                      Buy Now
+                    </button>
+                  </div>
+                </div>
+              </article>
             </div>
           </div>
         </article>
       </section>
+
+      {# <section class="agro-card shared-page-section" id="scan-history">
+        <div class="shared-section-heading">
+          <div>
+            <span class="shared-section-kicker">Recent scans</span>
+            <h2>Saved disease history</h2>
+          </div>
+          <span class="shared-section-meta">{{ history|length }} records</span>
+        </div>
+        <div class="history-scan-grid">
+          {% for record in history %}
+            <article class="history-scan-card">
+              <strong>{{ record.detected_disease }}</strong>
+              <span>{{ record.crop_type or "Crop" }} • {{ record.confidence }}% confidence</span>
+              <small>{{ record.date.strftime("%d %b %Y %I:%M %p") if record.date else "Recently" }}</small>
+            </article>
+          {% else %}
+            <article class="history-scan-card is-empty">
+              <strong>No saved scans yet</strong>
+              <span>First disease scan karte hi recent history yahan dikhegi.</span>
+            </article>
+          {% endfor %}
+        </div>
+      </section> #}
     </section>
   </main>
 
@@ -292,6 +301,7 @@
       var body = document.body;
       var form = document.querySelector(".disease-upload-form");
       var dropzone = document.querySelector(".disease-upload-dropzone");
+      var uploadTitle = document.getElementById("diseaseUploadTitle");
       var resultCard = document.getElementById("disease-result-card");
       var analyzeButton = document.querySelector(".disease-analyze-button");
       var fileInput = document.getElementById("crop-image");
@@ -301,6 +311,27 @@
       var resultProductLinkInline = document.getElementById("resultProductLinkInline");
       var resultProductDetailButton = document.getElementById("resultProductDetailButton");
       var resultProductBuyButton = document.getElementById("resultProductBuyButton");
+      var resultProductSeller = document.getElementById("resultProductSeller");
+      var resultProductHighlights = document.getElementById("resultProductHighlights");
+      var matchedSymptomsList = document.getElementById("resultMatchedSymptoms");
+      var checklistList = document.getElementById("resultChecklist");
+      var confidenceLabel = document.getElementById("result-confidence-label");
+      var whyResult = document.getElementById("result-why");
+      var consultResult = document.getElementById("result-consult");
+      var resultGuideButton = document.getElementById("resultGuideButton");
+      var resultStoreButton = document.getElementById("resultStoreButton");
+      var resultFeedback = document.getElementById("resultFeedback");
+      var resultCropBadge = document.getElementById("result-crop-badge");
+      var resultSourceBadge = document.getElementById("result-source-badge");
+      var resultCropVisual = document.getElementById("result-crop-visual");
+      var resultSourceVisual = document.getElementById("result-source-visual");
+      var resultActionNote = document.getElementById("resultActionNote");
+
+      function setResultFeedback(message, tone) {
+        if (!resultFeedback) return;
+        resultFeedback.textContent = message || "";
+        resultFeedback.className = "disease-result-feedback" + (tone ? " disease-result-feedback-" + tone : "");
+      }
 
       function hideRecommendation() {
         if (resultProductSection) {
@@ -309,6 +340,12 @@
         if (resultProductBuyButton) {
           resultProductBuyButton.hidden = true;
           resultProductBuyButton.removeAttribute("data-buy-product");
+        }
+        if (resultStoreButton) {
+          resultStoreButton.href = "/market";
+        }
+        if (resultProductHighlights) {
+          resultProductHighlights.innerHTML = "";
         }
       }
 
@@ -324,6 +361,9 @@
         document.getElementById("resultProductDescription").textContent = product.short_description || product.description || "";
         document.getElementById("resultProductRating").textContent = `Rating ${product.rating_label || product.rating || "0.0"}`;
         document.getElementById("resultProductPrice").textContent = `Rs ${product.price || 0}`;
+        if (resultProductSeller) {
+          resultProductSeller.textContent = product.seller || "AgroVision store";
+        }
 
         if (resultProductImage) {
           resultProductImage.src = product.image_url || "/static/images/store-product-fallback.svg";
@@ -341,24 +381,28 @@
           resultProductBuyButton.dataset.buySource = "disease-recommendation";
         }
 
+        if (resultStoreButton) {
+          resultStoreButton.href = product.detail_url || "/market";
+        }
+
+        if (resultProductHighlights) {
+          resultProductHighlights.innerHTML = "";
+          (product.highlights || []).slice(0, 3).forEach(function (item) {
+            var li = document.createElement("li");
+            li.textContent = item;
+            resultProductHighlights.appendChild(li);
+          });
+        }
+
         resultProductSection.hidden = false;
       }
 
       if (fileInput) {
         fileInput.addEventListener("change", function () {
           if (this.files && this.files[0]) {
-            var reader = new FileReader();
-            reader.onload = function (e) {
-              var existingPreview = dropzone.querySelector(".disease-upload-preview");
-              if (!existingPreview) {
-                existingPreview = document.createElement("img");
-                existingPreview.className = "disease-upload-preview";
-                dropzone.insertBefore(existingPreview, dropzone.firstChild);
-              }
-              existingPreview.src = e.target.result;
-              dropzone.classList.add("is-filled");
-            };
-            reader.readAsDataURL(this.files[0]);
+            if (uploadTitle) {
+              uploadTitle.textContent = this.files[0].name;
+            }
           }
         });
       }
@@ -387,7 +431,13 @@
         formData.append("crop_image", fileInput.files[0]);
 
         try {
-          var resp = await fetch("/predict-disease", { method: "POST", body: formData });
+          var csrfMatch = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+          var csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : "";
+          var resp = await fetch("/predict-disease", {
+            method: "POST",
+            headers: csrfToken ? { "X-CSRFToken": csrfToken } : {},
+            body: formData
+          });
           var result = await resp.json();
 
           if (result.success) {
@@ -397,22 +447,50 @@
             document.getElementById("result-risk").className = "disease-risk-tag risk-" + (result.risk_level || "Medium").toLowerCase();
             document.getElementById("result-symptoms").textContent = result.symptoms || "";
             document.getElementById("result-cause").textContent = result.cause || "";
+            document.getElementById("result-explanation").textContent = result.explanation_hinglish || result.why_this_result || "";
             document.getElementById("result-organic").textContent = result.organic_solution || "";
             document.getElementById("result-chemical").textContent = result.chemical_solution || "";
 
-            // Populate new stats
-            const statAccuracy = document.getElementById("stat-accuracy");
-            const statType = document.getElementById("stat-type");
+            if (confidenceLabel) confidenceLabel.textContent = result.confidence_label || "Needs field confirmation";
+            if (whyResult) whyResult.textContent = result.why_this_result || "";
+            if (consultResult) consultResult.textContent = result.consult_expert || "";
+            if (resultCropBadge) resultCropBadge.textContent = result.crop || "Crop";
+            if (resultSourceBadge) resultSourceBadge.textContent = result.analysis_source || "AI diagnosis";
+            if (resultCropVisual) resultCropVisual.textContent = result.crop || "Crop";
+            if (resultSourceVisual) resultSourceVisual.textContent = result.analysis_source || "AI diagnosis";
+            if (resultActionNote) resultActionNote.textContent = result.consult_expert || "Treat the affected patch first and review neighboring leaves.";
+            if (resultGuideButton) resultGuideButton.href = result.library_url || "/library/diseases";
+
+            var statAccuracy = document.getElementById("stat-accuracy");
+            var statType = document.getElementById("stat-type");
             if (statAccuracy) statAccuracy.textContent = (result.confidence || 0) + "%";
-            if (statType) statType.textContent = result.diagnostic_reason && result.diagnostic_reason.includes("PyTorch") ? "AI Model" : "Expert AI";
+            if (statType) statType.textContent = result.analysis_source || "AI diagnosis";
 
             var tipsList = document.getElementById("result-tips");
             tipsList.innerHTML = "";
-            (result.prevention || []).forEach(function(tip) {
+            (result.prevention || []).forEach(function (tip) {
               var li = document.createElement("li");
               li.textContent = tip;
               tipsList.appendChild(li);
             });
+
+            if (matchedSymptomsList) {
+              matchedSymptomsList.innerHTML = "";
+              (result.matched_symptoms || []).forEach(function (item) {
+                var li = document.createElement("li");
+                li.textContent = item;
+                matchedSymptomsList.appendChild(li);
+              });
+            }
+
+            if (checklistList) {
+              checklistList.innerHTML = "";
+              (result.do_now_checklist || []).forEach(function (item) {
+                var li = document.createElement("li");
+                li.textContent = item;
+                checklistList.appendChild(li);
+              });
+            }
 
             var resultImg = resultCard.querySelector(".disease-result-image");
             if (resultImg && result.image_url) {
@@ -429,6 +507,7 @@
             }
 
             showRecommendation(result.recommended_product);
+            setResultFeedback("Diagnosis ready. Symptoms, treatment plan, aur best-fit product neeche compare kar sakte ho.", "success");
 
             form.classList.remove("is-submitting");
             if (dropzone) dropzone.classList.remove("is-scanning");
@@ -440,6 +519,7 @@
           } else {
             hideRecommendation();
             alert(result.error || "An error occurred during analysis.");
+            setResultFeedback("Diagnosis generate nahi ho paya. Photo clear aur close-up rakho.", "error");
             form.classList.remove("is-submitting");
             if (dropzone) dropzone.classList.remove("is-scanning");
             if (resultCard) { resultCard.classList.remove("is-scanning"); resultCard.style.display = "none"; }
@@ -449,6 +529,7 @@
           console.error(err);
           hideRecommendation();
           alert("Network error occurred during analysis.");
+          setResultFeedback("Network issue aayi. Dobara try karo.", "error");
           form.classList.remove("is-submitting");
           if (dropzone) dropzone.classList.remove("is-scanning");
           if (resultCard) { resultCard.classList.remove("is-scanning"); resultCard.style.display = "none"; }
@@ -524,7 +605,5 @@
 
 </body>
 </html>
-
-
 
 

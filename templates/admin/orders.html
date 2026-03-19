@@ -37,7 +37,7 @@
                 {{ o.user_name or "User" }}
                 {% if o.user_email %}<div class="admin-muted">{{ o.user_email }}</div>{% endif %}
               </td>
-              <td>₹{{ "%.2f"|format(o.amount_inr or 0) }}</td>
+              <td>&#8377;{{ "%.2f"|format(o.amount_inr or 0) }}</td>
               <td>{{ (o.payment_status or "").title() }}</td>
               <td>
                 <span class="admin-badge admin-badge-{{ o.fulfillment_status }}">{{ o.fulfillment_status.title() }}</span>
@@ -47,6 +47,7 @@
               </td>
               <td class="admin-td-actions">
                 <form method="post" action="/admin/orders/{{ o.id }}/fulfillment">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <select name="fulfillment_status">
                     {% for s in statuses %}
                       <option value="{{ s }}" {% if s == o.fulfillment_status %}selected{% endif %}>{{ s.title() }}</option>

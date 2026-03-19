@@ -122,6 +122,8 @@ load_local_env_file(Path(app.root_path) / ".env")
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
+GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
+GROQ_MODEL = (os.getenv("GROQ_CHAT_MODEL") or "llama-3.1-8b-instant").strip()
 
 _secret_from_env = (
     os.getenv("FLASK_SECRET_KEY")
@@ -153,6 +155,16 @@ app.config["SESSION_COOKIE_SECURE"] = (os.getenv("FLASK_ENV") or "").strip().low
 
 db = SQLAlchemy(app)
 
+CSRF_SESSION_KEY = "_csrf_token"
+CSRF_COOKIE_NAME = "csrf_token"
+OTP_EXPIRY_MINUTES = get_env_int("OTP_EXPIRY_MINUTES", 5)
+OTP_RESEND_INTERVAL_SECONDS = get_env_int("OTP_RESEND_INTERVAL_SECONDS", 30)
+_otp_debug_fallback_env = (os.getenv("OTP_DEBUG_FALLBACK") or "").strip().lower()
+OTP_DEBUG_FALLBACK_ENABLED = (
+    _otp_debug_fallback_env in {"1", "true", "yes", "on"}
+    or (not _otp_debug_fallback_env and not app.config["SESSION_COOKIE_SECURE"])
+)
+
 UPLOADS_DIR = Path(app.root_path) / "static" / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -161,8 +173,13 @@ PRODUCTS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = str(UPLOADS_DIR)
 KISAN_DOST_KNOWLEDGE_PATH = Path(app.root_path) / "dataset" / "kisan_dost_faq.json"
+AI_CROP_DOCTOR_FAQ_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_project_faq.txt"
+AI_CROP_DOCTOR_LOCAL_QA_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_local_qa.json"
+DISEASE_SYMPTOM_RULES_PATH = Path(app.root_path) / "dataset" / "disease_symptom_rules.json"
 CROP_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "crop_library.json"
 STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "store_products.json"
+DISEASE_STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "disease_store_products.json"
+DISEASE_PRODUCT_MAPPINGS_DATA_PATH = Path(app.root_path) / "dataset" / "disease_product_mappings.json"
 EMAIL_LOGO_PATH = Path(app.root_path) / "static" / "brand" / "agrovision-email-logo.png"
 EMAIL_LOGO_FILENAME = EMAIL_LOGO_PATH.name
 EMAIL_LOGO_SUBTYPE = "png"
@@ -246,9 +263,40 @@ STORE_CATEGORY_HIGHLIGHTS = {
 }
 STORE_DISEASE_PRODUCT_RULES = [
     (("healthy",), None),
-    (("blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "bacterial"), "Copper Fungicide Spray"),
-    (("pest", "insect", "mite", "aphid", "vector", "mosaic", "curl virus"), "Neem Oil Spray"),
+    (("bacterial", "blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "rot"), "Bio Pesticide"),
+    (("pest", "insect", "mite", "aphid", "vector", "mosaic", "curl virus", "whitefly", "thrips"), "Neem Oil"),
+    (("deficiency", "chlorosis", "yellowing", "stress", "wilt"), "Soil Health Booster"),
 ]
+DISEASE_PRODUCT_RECOMMENDATION_PROFILES = {
+    "healthy": {
+        "category_boosts": {"Tools": 6, "Organic": 3, "Fertilizers": 2},
+        "keywords": {"soil test": 9, "kit": 4, "booster": 3, "compost": 2},
+    },
+    "fungus": {
+        "category_boosts": {"Pesticides": 7, "Organic": 5, "Tools": 1},
+        "keywords": {"bio pesticide": 9, "pesticide spray": 7, "spray": 5, "neem oil": 4, "organic pest spray": 5, "sprayer": 2},
+    },
+    "bacteria": {
+        "category_boosts": {"Pesticides": 7, "Organic": 5, "Tools": 1},
+        "keywords": {"bio pesticide": 9, "pesticide spray": 7, "spray": 5, "neem oil": 3, "organic pest spray": 4, "sprayer": 2},
+    },
+    "virus": {
+        "category_boosts": {"Organic": 7, "Pesticides": 6, "Tools": 1},
+        "keywords": {"neem oil": 10, "organic pest spray": 8, "bio pesticide": 6, "pesticide spray": 5, "plant cover": 2},
+    },
+    "insect": {
+        "category_boosts": {"Organic": 7, "Pesticides": 6, "Tools": 1},
+        "keywords": {"neem oil": 10, "organic pest spray": 8, "bio pesticide": 7, "pesticide spray": 6, "sprayer": 2},
+    },
+    "stress": {
+        "category_boosts": {"Organic": 6, "Fertilizers": 6, "Tools": 2},
+        "keywords": {"soil health booster": 9, "vermicompost": 7, "growth booster": 7, "npk fertilizer": 6, "compost": 4, "soil test": 4},
+    },
+    "general": {
+        "category_boosts": {"Organic": 4, "Pesticides": 4, "Tools": 1},
+        "keywords": {"bio pesticide": 5, "neem oil": 5, "organic pest spray": 5, "soil health booster": 4},
+    },
+}
 RAZORPAY_KEY_ID = (os.getenv("RAZORPAY_KEY_ID") or "rzp_test_SRyeQDEMFrRHwD").strip()
 RAZORPAY_KEY_SECRET = (os.getenv("RAZORPAY_KEY_SECRET") or "b1mY7dNC8mDuxekLF2YmiV0I").strip()
 RAZORPAY_CURRENCY = "INR"
@@ -1269,9 +1317,104 @@ def clear_otp_session_state():
         "otp_type",
         "otp_user_id",
         "otp_expiry",
+        "otp_notice",
+        "otp_debug_available",
+        "otp_sent_at",
         "pending_user",
     ):
         session.pop(key, None)
+
+
+def csrf_token():
+    token = session.get(CSRF_SESSION_KEY)
+    if not token:
+        token = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+        session[CSRF_SESSION_KEY] = token
+    return token
+
+
+app.jinja_env.globals["csrf_token"] = csrf_token
+
+
+def require_csrf():
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+
+    expected = str(session.get(CSRF_SESSION_KEY) or "")
+    provided = str(
+        request.form.get("csrf_token")
+        or request.headers.get("X-CSRFToken")
+        or request.headers.get("X-CSRF-Token")
+        or ""
+    )
+    cookie_token = str(request.cookies.get(CSRF_COOKIE_NAME) or "")
+
+    if (
+        expected
+        and provided
+        and cookie_token
+        and hmac.compare_digest(expected, provided)
+        and hmac.compare_digest(expected, cookie_token)
+    ):
+        return None
+
+    return Response("CSRF validation failed.", status=400)
+
+
+def update_otp_session_state(otp, target_email, otp_type, *, user_id=None, email_sent=True, notice=None):
+    session["otp"] = otp
+    session["otp_target"] = str(target_email or "").strip().lower()
+    session["otp_type"] = str(otp_type or "").strip().lower()
+    session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRY_MINUTES)).timestamp()
+    session["otp_sent_at"] = time.time()
+    session["otp_notice"] = str(notice or "").strip()
+    session["otp_debug_available"] = bool(not email_sent and OTP_DEBUG_FALLBACK_ENABLED)
+
+    if user_id is None:
+        session.pop("otp_user_id", None)
+    else:
+        session["otp_user_id"] = int(user_id)
+
+
+def build_otp_notice(email_sent, failure_reason=None):
+    if email_sent:
+        return f"Verification code sent successfully. The code stays valid for {OTP_EXPIRY_MINUTES} minutes."
+
+    if OTP_DEBUG_FALLBACK_ENABLED:
+        return (
+            "Email delivery failed in this environment, so a local fallback OTP is shown below for testing."
+        )
+
+    if failure_reason:
+        return "We could not send the OTP email right now. Please try again after checking the mail settings."
+
+    return "We could not send the OTP email right now. Please try again."
+
+
+def get_otp_page_context(error=None, notice=None):
+    return {
+        "target": session.get("otp_target"),
+        "error": error,
+        "notice": session.get("otp_notice") if notice is None else notice,
+        "dev_otp": session.get("otp") if session.get("otp_debug_available") else None,
+    }
+
+
+@app.after_request
+def sync_csrf_cookie(response):
+    token = session.get(CSRF_SESSION_KEY)
+    if not token:
+        token = csrf_token()
+
+    if request.cookies.get(CSRF_COOKIE_NAME) != token:
+        response.set_cookie(
+            CSRF_COOKIE_NAME,
+            token,
+            secure=app.config["SESSION_COOKIE_SECURE"],
+            httponly=False,
+            samesite=app.config["SESSION_COOKIE_SAMESITE"],
+        )
+    return response
 
 
 def save_profile_photo_upload(file_storage, prefix):
@@ -1315,7 +1458,14 @@ APP_DISPLAY_NAME = (os.getenv("APP_NAME") or "AgroVisionAI").strip() or "AgroVis
 SMTP_SERVER = (os.getenv("SMTP_SERVER") or "smtp.gmail.com").strip()
 SMTP_PORT = get_env_int("SMTP_PORT", 587)
 SMTP_EMAIL = (os.getenv("SMTP_EMAIL") or "").strip()
-SMTP_PASSWORD = (os.getenv("SMTP_PASSWORD") or "").strip()
+_smtp_password_raw = (os.getenv("SMTP_PASSWORD") or "").strip()
+SMTP_PASSWORD = (
+    _smtp_password_raw.replace(" ", "")
+    if SMTP_SERVER.lower() == "smtp.gmail.com"
+    and " " in _smtp_password_raw
+    and len(_smtp_password_raw.replace(" ", "")) == 16
+    else _smtp_password_raw
+)
 SMTP_SENDER_NAME = (os.getenv("SMTP_SENDER_NAME") or APP_DISPLAY_NAME).strip() or APP_DISPLAY_NAME
 SMTP_USE_SSL = (os.getenv("SMTP_USE_SSL") or "").strip().lower() in {"1", "true", "yes", "on"}
 SMTP_TIMEOUT_SECONDS = get_env_int("SMTP_TIMEOUT_SECONDS", 20)
@@ -1435,7 +1585,7 @@ def send_otp_email(target_email, otp):
 
     if not SMTP_EMAIL or not SMTP_PASSWORD:
         print("SMTP credentials are not configured. OTP email skipped.")
-        return False
+        return False, "SMTP credentials are not configured."
 
     logo_bytes = None
     logo_cid = None
@@ -1475,10 +1625,10 @@ def send_otp_email(target_email, otp):
                 server.ehlo()
                 server.login(SMTP_EMAIL, SMTP_PASSWORD)
                 server.send_message(msg)
-        return True
+        return True, None
     except Exception as e:
         print(f"SMTP Error: {e}")
-        return False
+        return False, str(e)
 
 
 def send_admin_order_email(order, user, product):
@@ -1593,6 +1743,386 @@ def load_kisan_dost_knowledge():
         return data if isinstance(data, list) else []
     except (OSError, ValueError, TypeError):
         return []
+
+
+def load_ai_crop_doctor_faq_reference():
+    if not AI_CROP_DOCTOR_FAQ_PATH.exists():
+        return ""
+
+    try:
+        return AI_CROP_DOCTOR_FAQ_PATH.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def load_ai_crop_doctor_faq_entries():
+    reference = load_ai_crop_doctor_faq_reference()
+    if not reference:
+        return []
+
+    entries = []
+    current_question = None
+    current_answer_lines = []
+
+    for raw_line in reference.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        if re.match(r"^\d+\.\s+.+\?$", line):
+            if current_question and current_answer_lines:
+                entries.append(
+                    {
+                        "question": current_question,
+                        "answer": " ".join(current_answer_lines).strip(),
+                    }
+                )
+            current_question = re.sub(r"^\d+\.\s*", "", line).strip()
+            current_answer_lines = []
+            continue
+
+        if current_question:
+            current_answer_lines.append(line)
+
+    if current_question and current_answer_lines:
+        entries.append(
+            {
+                "question": current_question,
+                "answer": " ".join(current_answer_lines).strip(),
+            }
+        )
+
+    return entries
+
+
+def load_ai_crop_doctor_local_qa():
+    if not AI_CROP_DOCTOR_LOCAL_QA_PATH.exists():
+        return []
+
+    try:
+        data = json.loads(AI_CROP_DOCTOR_LOCAL_QA_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except (OSError, ValueError, TypeError):
+        return []
+
+
+def get_ai_crop_doctor_local_answer(entry, language="Hinglish"):
+    if not isinstance(entry, dict):
+        return None
+
+    language_map = {
+        "english": ["answer_en", "english_answer", "answer"],
+        "hindi": ["answer_hi", "hindi_answer", "answer"],
+        "odia": ["answer_od", "odia_answer", "answer"],
+        "hinglish": ["answer", "answer_hi", "answer_en"],
+    }
+    keys = language_map.get(str(language or "").strip().lower(), ["answer"])
+    for key in keys:
+        value = str(entry.get(key) or "").strip()
+        if value:
+            return value
+    return None
+
+
+AI_CROP_DOCTOR_LOCAL_QA_STOPWORDS = {
+    "a", "an", "the", "is", "am", "are", "was", "were", "be", "to", "of", "and", "or",
+    "me", "my", "mere", "meri", "mera", "mujhe", "hai", "ho", "hota", "raha", "rahe",
+    "rahi", "kya", "ka", "ki", "ke", "ko", "se", "par", "per", "aur", "best", "kaunsa",
+    "kaunse", "kitna", "kitni", "kitne", "dena", "use", "karu", "kare", "karna", "kab",
+    "kaise", "kar", "do", "diya", "gaya", "hoon", "hu", "mein", "main", "please", "help",
+    "what", "when", "where", "which", "who", "why", "how", "in", "on", "for",
+}
+
+AI_CROP_DOCTOR_LOCAL_QA_TOKEN_ALIASES = {
+    "patta": "leaf",
+    "patte": "leaf",
+    "patti": "leaf",
+    "leaves": "leaf",
+    "daag": "spots",
+    "dhabba": "spots",
+    "dhabbe": "spots",
+    "spot": "spots",
+    "bhura": "brown",
+    "bhure": "brown",
+    "bhoora": "brown",
+    "bhoore": "brown",
+    "peela": "yellow",
+    "peele": "yellow",
+    "pila": "yellow",
+    "pile": "yellow",
+    "safed": "white",
+    "kaala": "black",
+    "kaali": "black",
+    "kaale": "black",
+    "jad": "root",
+    "jaden": "root",
+    "jadon": "root",
+    "roots": "root",
+    "keeda": "pest",
+    "keede": "pest",
+    "insects": "pest",
+    "bug": "pest",
+    "bugs": "pest",
+    "paani": "water",
+    "sinchai": "irrigation",
+    "khad": "fertilizer",
+    "dawai": "spray",
+    "murjha": "wilt",
+    "murjhaya": "wilt",
+    "murjhane": "wilt",
+    "wilted": "wilt",
+    "wilting": "wilt",
+    "sookh": "dry",
+    "sukh": "dry",
+    "sukha": "dry",
+    "sukhi": "dry",
+    "sukhe": "dry",
+    "drying": "dry",
+    "powdery": "powder",
+}
+
+AI_CROP_DOCTOR_SYMPTOM_CUES = {
+    "yellow", "brown", "white", "black", "leaf", "root", "spots", "powder", "curl",
+    "holes", "wilt", "dry", "pest", "fungal", "fungus", "rot", "infection", "burn",
+}
+
+AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS = {
+    "agriculture", "farming", "farm", "crop", "plant", "technology", "system",
+}
+
+
+def normalize_ai_crop_doctor_match_text(text):
+    tokens = []
+    for raw_token in re.findall(r"[a-z0-9]+", str(text or "").lower()):
+        token = AI_CROP_DOCTOR_LOCAL_QA_TOKEN_ALIASES.get(raw_token, raw_token)
+        if token.endswith("s") and len(token) > 4 and token not in {"ph", "tips"}:
+            token = token[:-1]
+        tokens.append(token)
+    return " ".join(tokens).strip()
+
+
+def extract_ai_crop_doctor_match_tokens(text):
+    normalized_text = normalize_ai_crop_doctor_match_text(text)
+    return {
+        token
+        for token in normalized_text.split()
+        if token and token not in AI_CROP_DOCTOR_LOCAL_QA_STOPWORDS
+    }
+
+
+def format_ai_crop_doctor_symptom_rule_answer(rule, language="Hinglish"):
+    if not isinstance(rule, dict):
+        return None
+
+    issue = str(rule.get("issue") or "").strip()
+    cause = str(rule.get("cause") or "").strip()
+    solution = str(rule.get("solution") or "").strip()
+    prevention = str(rule.get("prevention") or "").strip()
+    if not issue:
+        return None
+
+    if str(language or "").strip().lower() == "english":
+        parts = [f"It looks like {issue}."]
+        if cause:
+            parts.append(f"Common cause: {cause}.")
+        if solution:
+            parts.append(f"Do this now: {solution}.")
+        if prevention:
+            parts.append(f"Prevention: {prevention}.")
+        return " ".join(parts).strip()
+
+    parts = [f"{issue} jaisa symptom lag raha hai."]
+    if cause:
+        parts.append(f"Isska common cause {cause} ho sakta hai.")
+    if solution:
+        parts.append(f"Abhi {solution}.")
+    if prevention:
+        parts.append(f"Bachav ke liye {prevention}.")
+    return " ".join(parts).strip()
+
+
+def lookup_ai_crop_doctor_project_faq(query_text):
+    query_lower = str(query_text or "").strip().lower()
+    query_tokens = set(re.findall(r"[a-z0-9]+", query_lower))
+    if not query_tokens:
+        return None
+
+    best_entry = None
+    best_score = 0
+    for entry in load_ai_crop_doctor_faq_entries():
+        question = str(entry.get("question") or "").strip()
+        answer = str(entry.get("answer") or "").strip()
+        haystack = f"{question} {answer}".lower()
+        entry_tokens = set(re.findall(r"[a-z0-9]+", haystack))
+        overlap = len(query_tokens & entry_tokens)
+        score = overlap
+        if question.lower() in query_lower:
+            score += 6
+        elif overlap and any(token in question.lower() for token in query_tokens):
+            score += 2
+        if score > best_score:
+            best_score = score
+            best_entry = entry
+
+    if best_entry and best_score >= 3:
+        return str(best_entry.get("answer") or "").strip() or None
+    return None
+
+
+def lookup_ai_crop_doctor_local_qa(query_text):
+    query_text = str(query_text or "").strip()
+    query_lower = query_text.lower()
+    normalized_query = normalize_ai_crop_doctor_match_text(query_text)
+    query_tokens = extract_ai_crop_doctor_match_tokens(query_text)
+    if not query_tokens:
+        return None
+
+    language = detect_ai_chat_language(query_text)
+    best_entry = None
+    best_score = 0
+    best_strong_overlap = 0
+    best_phrase_match = False
+    for entry in load_ai_crop_doctor_local_qa():
+        question = str(entry.get("question") or entry.get("q") or "").strip()
+        answer = get_ai_crop_doctor_local_answer(entry, language=language)
+        if not question or not answer:
+            continue
+
+        question_lower = question.lower()
+        normalized_question = normalize_ai_crop_doctor_match_text(question)
+        question_tokens = extract_ai_crop_doctor_match_tokens(question)
+        overlap = len(query_tokens & question_tokens)
+        score = 0
+        phrase_match = False
+        if normalized_query == normalized_question:
+            score += 12
+            phrase_match = True
+        elif normalized_question and (normalized_question in normalized_query or normalized_query in normalized_question):
+            score += 6
+            phrase_match = True
+
+        keywords = entry.get("keywords", [])
+        keyword_tokens = set()
+        if isinstance(keywords, list):
+            for keyword in keywords:
+                keyword_text = str(keyword or "").strip()
+                keyword_lower = keyword_text.lower()
+                normalized_keyword = normalize_ai_crop_doctor_match_text(keyword_text)
+                if not keyword_lower:
+                    continue
+                if keyword_lower in query_lower or (normalized_keyword and normalized_keyword in normalized_query):
+                    score += 5
+                    phrase_match = True
+                current_keyword_tokens = extract_ai_crop_doctor_match_tokens(keyword_text)
+                keyword_tokens.update(current_keyword_tokens)
+                if current_keyword_tokens:
+                    score += min(4, len(query_tokens & current_keyword_tokens) * 2)
+
+        category = str(entry.get("category") or "").strip().lower()
+        if category and category in query_lower:
+            score += 2
+
+        signature_tokens = set(question_tokens) | keyword_tokens
+        strong_query_tokens = query_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
+        strong_signature_tokens = signature_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
+        strong_overlap = len(strong_query_tokens & strong_signature_tokens)
+        if not phrase_match and strong_overlap == 0:
+            continue
+        score += overlap
+        if strong_overlap:
+            score += strong_overlap * 3
+            score += round((strong_overlap / max(len(strong_query_tokens), 1)) * 4, 2)
+
+        if score > best_score:
+            best_score = score
+            best_entry = entry
+            best_strong_overlap = strong_overlap
+            best_phrase_match = phrase_match
+
+    if best_entry and best_score >= 7 and (best_phrase_match or best_strong_overlap >= 2):
+        return get_ai_crop_doctor_local_answer(best_entry, language=language)
+
+    if query_tokens & AI_CROP_DOCTOR_SYMPTOM_CUES:
+        symptom_rule = match_disease_symptom_rule(normalized_query, query_text)
+        formatted_answer = format_ai_crop_doctor_symptom_rule_answer(symptom_rule, language=language)
+        if formatted_answer:
+            return formatted_answer
+
+    return None
+
+
+def load_disease_symptom_rules():
+    if not DISEASE_SYMPTOM_RULES_PATH.exists():
+        return {}
+
+    try:
+        data = json.loads(DISEASE_SYMPTOM_RULES_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def find_store_product_by_asset_hint(product_hint):
+    hint = Path(str(product_hint or "").strip()).stem.lower()
+    if not hint:
+        return None
+
+    alias_map = {
+        "npk": "NPK Fertilizer",
+        "fungicide": "Bio Pesticide",
+        "neem_oil": "Neem Oil",
+        "neem-oil": "Neem Oil",
+        "pesticide": "Pesticide Spray",
+        "irrigation": "Drip Pipes",
+        "fertilizer": "NPK Fertilizer",
+        "soil_booster": "Soil Health Booster",
+        "soil-booster": "Soil Health Booster",
+    }
+    mapped_name = alias_map.get(hint)
+    if mapped_name:
+        product = find_store_product_by_name(mapped_name)
+        if product is not None:
+            return product
+
+    for product in get_all_store_products():
+        haystack = " ".join(
+            [
+                str(getattr(product, "name", "") or ""),
+                str(getattr(product, "description", "") or ""),
+                " ".join(getattr(product, "tags", []) or []),
+            ]
+        ).lower()
+        if hint.replace("_", " ") in haystack or hint.replace("-", " ") in haystack:
+            return product
+    return None
+
+
+def match_disease_symptom_rule(*values):
+    diagnostic_text = " ".join(str(value or "") for value in values).strip().lower()
+    if not diagnostic_text:
+        return None
+
+    best_key = None
+    best_rule = None
+    best_score = 0
+    for raw_key, raw_rule in load_disease_symptom_rules().items():
+        key = str(raw_key or "").strip().lower()
+        if not key or not isinstance(raw_rule, dict):
+            continue
+        score = 0
+        if key in diagnostic_text:
+            score += 5
+        key_tokens = set(re.findall(r"[a-z0-9]+", key))
+        text_tokens = set(re.findall(r"[a-z0-9]+", diagnostic_text))
+        score += len(key_tokens & text_tokens)
+        if score > best_score:
+            best_score = score
+            best_key = key
+            best_rule = raw_rule
+
+    if best_rule is None or best_score < 2:
+        return None
+    return {"key": best_key, **best_rule}
 
 
 def slugify_crop_name(name):
@@ -1793,6 +2323,451 @@ def build_crop_library_context():
     }
 
 
+def infer_library_disease_type(entry):
+    text = " ".join(
+        [
+            str(entry.get("name") or ""),
+            str(entry.get("cause") or ""),
+            " ".join(str(signal) for signal in entry.get("signals", set())),
+        ]
+    ).lower()
+    if any(keyword in text for keyword in ("aphid", "armyworm", "borer", "hispa", "thrips", "whitefly", "fly", "insect", "pest", "mite")):
+        return "insect"
+    if any(keyword in text for keyword in ("bacterial", "bacteria")):
+        return "bacteria"
+    if any(keyword in text for keyword in ("virus", "viral", "mosaic", "curl")):
+        return "virus"
+    return "fungus"
+
+
+def build_library_symptoms(entry):
+    signals = {str(signal).strip().lower() for signal in entry.get("signals", set())}
+    symptom_map = {
+        "brown": "Brown lesions or rusty patches appear on leaves.",
+        "yellow": "Yellowing, mottling, or chlorotic streaks spread across foliage.",
+        "white": "White powdery or pale fungal growth appears on the leaf surface.",
+        "dark": "Dark, water-soaked, or blackened spots expand quickly.",
+        "humid": "Symptoms worsen after humid weather, dew, or extended leaf wetness.",
+        "stress": "Plants lose vigor, canopy freshness, and uniform leaf color.",
+        "heat": "Leaf burn or stress becomes more visible during hot afternoons.",
+    }
+    symptoms = [text for key, text in symptom_map.items() if key in signals]
+    if symptoms:
+        return symptoms[:4]
+    cause = str(entry.get("cause") or "").strip()
+    return [cause] if cause else ["Visible symptoms vary with crop stage and field conditions."]
+
+
+def resolve_library_disease_image(slug, disease_name):
+    disease_slug = slugify_crop_name(disease_name)
+    image_dir = Path(app.root_path) / "static" / "library" / "diseases"
+    candidates = [
+        slug,
+        disease_slug,
+        slug.replace("generic-", ""),
+    ]
+    for candidate in candidates:
+        for suffix in (".jpg", ".jpeg", ".png", ".webp"):
+            file_path = image_dir / f"{candidate}{suffix}"
+            if file_path.exists():
+                return f"/static/library/diseases/{candidate}{suffix}"
+    return build_disease_sample_data_uri(disease_name)
+
+
+def derive_library_signals_from_text(text):
+    text_value = str(text or "").lower()
+    signals = set()
+    keyword_map = {
+        "brown": {"blight", "rust", "spot", "lesion", "necrosis"},
+        "yellow": {"yellow", "chlorosis"},
+        "white": {"powder", "white", "mildew", "mold"},
+        "dark": {"dark", "black", "late blight", "water-soaked"},
+        "humid": {"humid", "wet", "dew", "rain", "leaf wetness"},
+        "stress": {"stress", "weak", "stunted", "damage"},
+        "heat": {"heat", "hot"},
+    }
+    for signal, keywords in keyword_map.items():
+        if any(keyword in text_value for keyword in keywords):
+            signals.add(signal)
+    return signals
+
+
+def parse_model_label_entry(raw_label):
+    raw_value = str(raw_label or "").strip()
+    if not raw_value:
+        return None
+    lowered = raw_value.lower()
+    if lowered == "plantvillage" or "healthy" in lowered:
+        return None
+
+    normalized = raw_value.replace("___", "|").replace("__", "|")
+    parts = [segment.strip() for segment in normalized.split("|") if segment.strip()]
+    if len(parts) < 2:
+        return None
+
+    crop_label = re.sub(r"\s+", " ", parts[0].replace("_", " ")).strip().title()
+    disease_label = re.sub(r"\s+", " ", " ".join(parts[1:]).replace("_", " ")).strip().title()
+    if not crop_label or not disease_label:
+        return None
+
+    try:
+        from disease_knowledge import DISEASE_KNOWLEDGE  # type: ignore
+    except Exception:
+        DISEASE_KNOWLEDGE = {}
+
+    info = DISEASE_KNOWLEDGE.get(raw_value, DISEASE_KNOWLEDGE.get("DEFAULT", {}))
+    cause = str(info.get("cause") or f"{disease_label} affects {crop_label} under favorable field conditions.").strip()
+    solution = str(info.get("solution") or info.get("recommendation") or "Inspect the crop and apply the recommended treatment quickly.").strip()
+    prevention = unique_crop_list(
+        [
+            str(info.get("recommendation") or "").strip(),
+            "Scout the crop twice a week and isolate affected foliage early.",
+            "Keep field sanitation, airflow, and irrigation balance under control.",
+        ]
+    )
+    signals = derive_library_signals_from_text(" ".join([raw_value, cause, solution]))
+
+    crop_key = normalize_crop_key(crop_label)
+    slug = slugify_crop_name(f"{crop_key}-{disease_label}")
+    return {
+        "slug": slug,
+        "name": disease_label,
+        "type": infer_library_disease_type({"name": disease_label, "cause": cause, "signals": signals}),
+        "crop_key": crop_key,
+        "crops": [crop_label],
+        "cause": cause,
+        "solution": solution,
+        "prevention": prevention,
+        "symptoms": build_library_symptoms({"signals": signals, "cause": cause}),
+        "signals": sorted(str(signal) for signal in signals),
+        "image": resolve_library_disease_image(slug, disease_label),
+    }
+
+
+def get_model_label_disease_items():
+    label_paths = [CROP_DISEASE_LABELS_PATH]
+    alt_path = Path(app.root_path) / "models" / "crop_disease_labels.json"
+    if alt_path not in label_paths:
+        label_paths.append(alt_path)
+
+    raw_labels = []
+    seen_labels = set()
+    for label_path in label_paths:
+        if not label_path.exists():
+            continue
+        try:
+            payload = json.loads(label_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            continue
+
+        iterable = payload.values() if isinstance(payload, dict) else payload if isinstance(payload, list) else []
+        for raw_label in iterable:
+            label_text = str(raw_label or "").strip()
+            if not label_text or label_text in seen_labels:
+                continue
+            seen_labels.add(label_text)
+            raw_labels.append(label_text)
+
+    items = []
+    for raw_label in raw_labels:
+        parsed = parse_model_label_entry(raw_label)
+        if parsed is None:
+            continue
+        parsed["type_key"] = parsed["type"]
+        parsed["type"] = parsed["type"].title()
+        parsed["search_text"] = " ".join(
+            [
+                parsed["name"],
+                " ".join(parsed["crops"]),
+                parsed["type"],
+                parsed["cause"],
+                parsed["solution"],
+                " ".join(parsed["prevention"]),
+                " ".join(parsed["symptoms"]),
+            ]
+        ).lower()
+        items.append(parsed)
+    return items
+
+
+def get_library_disease_items():
+    items = []
+    seen_slugs = set()
+    for crop_key, entries in CROP_DISEASE_LIBRARY.items():
+        crop_label = "General" if crop_key == "generic" else crop_key.title()
+        for entry in entries:
+            disease_name = str(entry.get("name") or "").strip() or "Unknown Disease"
+            slug = slugify_crop_name(f"{crop_key}-{disease_name}")
+            if slug in seen_slugs:
+                continue
+            seen_slugs.add(slug)
+            disease_type = infer_library_disease_type(entry)
+            prevention = [str(item).strip() for item in entry.get("prevention_tips", []) if str(item).strip()]
+            items.append(
+                {
+                    "slug": slug,
+                    "name": disease_name,
+                    "type": disease_type.title(),
+                    "type_key": disease_type,
+                    "crop_key": crop_key,
+                    "crops": [crop_label],
+                    "cause": str(entry.get("cause") or "").strip(),
+                    "solution": str(entry.get("solution") or "").strip(),
+                    "prevention": prevention,
+                    "symptoms": build_library_symptoms(entry),
+                    "signals": sorted(str(signal) for signal in entry.get("signals", set())),
+                    "image": resolve_library_disease_image(slug, disease_name),
+                    "search_text": " ".join(
+                        [
+                            disease_name,
+                            crop_label,
+                            disease_type,
+                            str(entry.get("cause") or ""),
+                            str(entry.get("solution") or ""),
+                            " ".join(prevention),
+                        ]
+                    ).lower(),
+                }
+            )
+    for item in get_model_label_disease_items():
+        if item["slug"] in seen_slugs:
+            continue
+        seen_slugs.add(item["slug"])
+        items.append(item)
+    items.sort(key=lambda item: (item["crops"][0], item["name"]))
+    return items
+
+
+def get_library_disease_item(slug):
+    normalized_slug = slugify_crop_name(slug)
+    return next((item for item in get_library_disease_items() if item["slug"] == normalized_slug), None)
+
+
+def get_library_crop_options():
+    crop_labels = sorted({item["crops"][0] for item in get_library_disease_items() if item["crops"]})
+    return ["All"] + crop_labels
+
+
+def build_library_stage_sections(items):
+    grouped = {}
+    for item in items:
+        grouped.setdefault(item["type"], []).append(item)
+    sections = []
+    for label in ("Fungus", "Bacteria", "Virus", "Insect"):
+        section_items = grouped.get(label, [])
+        if section_items:
+            sections.append({"label": label, "items": section_items[:8]})
+    if not sections:
+        sections.append({"label": "Popular Guides", "items": items[:8]})
+    return sections
+
+
+def build_library_home_context():
+    disease_items = get_library_disease_items()
+    crop_library_page = build_crop_library_context()
+    tips = build_library_tips_data("All")
+    type_counts = {}
+    for item in disease_items:
+        type_counts[item["type"]] = type_counts.get(item["type"], 0) + 1
+    return {
+        "crop_count": crop_library_page["count"],
+        "disease_count": len(disease_items),
+        "tip_task_count": len(tips.get("tasks", [])),
+        "tip_stage_count": len(tips.get("stages", [])),
+        "covered_crop_count": len({item["crops"][0] for item in disease_items if item["crops"]}),
+        "fungus_count": type_counts.get("Fungus", 0),
+        "bacteria_count": type_counts.get("Bacteria", 0),
+        "virus_count": type_counts.get("Virus", 0),
+        "insect_count": type_counts.get("Insect", 0),
+    }
+
+
+def build_library_tips_data(active_crop):
+    crop_name = active_crop if active_crop and active_crop != "All" else "your crop"
+    crop_text = str(crop_name)
+    return {
+        "tasks": [
+            {
+                "icon": "fa-droplet",
+                "label": "Irrigation planning",
+                "summary": f"Keep irrigation balanced for {crop_text} based on soil moisture and weather.",
+                "detail": f"Water early in the day, avoid long leaf wetness at night, and increase scouting after irrigation cycles in {crop_text} fields.",
+            },
+            {
+                "icon": "fa-flask",
+                "label": "Nutrition management",
+                "summary": "Split fertilizer doses and avoid stress from over-application.",
+                "detail": f"Use balanced nitrogen, phosphorus, and potassium so {crop_text} plants stay vigorous and less prone to disease pressure.",
+            },
+            {
+                "icon": "fa-bug",
+                "label": "Pest scouting",
+                "summary": "Scout twice a week and act on hotspots before spread accelerates.",
+                "detail": f"Check lower leaves, canopy edges, and humid zones in {crop_text} plots for early symptoms, eggs, or insect feeding damage.",
+            },
+            {
+                "icon": "fa-scissors",
+                "label": "Field sanitation",
+                "summary": "Remove infected residue and improve airflow around plants.",
+                "detail": "Discard badly infected leaves, keep beds clean, and avoid moving infected plant material between plots.",
+            },
+        ],
+        "stages": [
+            {
+                "icon": "fa-seedling",
+                "label": "Early growth",
+                "items": [
+                    "Use healthy seed or planting material.",
+                    "Check emergence and replace weak gaps quickly.",
+                    "Protect seedlings from water stress and soil splash.",
+                ],
+            },
+            {
+                "icon": "fa-leaf",
+                "label": "Vegetative stage",
+                "items": [
+                    "Monitor canopy color and leaf spots every few days.",
+                    "Maintain airflow and avoid waterlogging.",
+                    "Correct nutrient imbalance before symptoms spread.",
+                ],
+            },
+            {
+                "icon": "fa-wheat-awn",
+                "label": "Flowering to harvest",
+                "items": [
+                    "Avoid heavy stress during flowering and grain fill.",
+                    "Act fast on disease outbreaks to protect yield.",
+                    "Keep harvest tools and storage areas clean.",
+                ],
+            },
+        ],
+    }
+
+
+def build_library_alert_items(active_crop):
+    items = get_library_disease_items()
+    if active_crop and active_crop != "All":
+        items = [item for item in items if active_crop in item["crops"]]
+    alerts = []
+    for item in items[:8]:
+        signals = set(item.get("signals", []))
+        severity = "low"
+        if {"humid", "dark", "stress"} & signals:
+            severity = "high"
+        elif {"brown", "yellow", "white"} & signals:
+            severity = "medium"
+        alerts.append(
+            {
+                **item,
+                "crop": item["crops"][0] if item["crops"] else "General",
+                "severity": severity,
+            }
+        )
+    return alerts
+
+
+def build_library_disease_detail_payload(user, disease):
+    related_items = [
+        item
+        for item in get_library_disease_items()
+        if item["slug"] != disease["slug"] and (item["crop_key"] == disease["crop_key"] or item["type_key"] == disease["type_key"])
+    ][:3]
+    recommendation = resolve_store_recommendation(disease_name=disease["name"], cause=disease["cause"], chemical_solution=disease["solution"])
+    recommended_product = serialize_store_product(recommendation) if recommendation is not None else None
+    last_record = (
+        DiseaseHistory.query.filter_by(user_id=user.id).order_by(DiseaseHistory.date.desc()).first()
+        if user is not None
+        else None
+    )
+    last_diagnosis = None
+    if last_record is not None:
+        record_name = str(last_record.detected_disease or "").strip()
+        if not record_name or slugify_crop_name(record_name) == slugify_crop_name(disease["name"]):
+            risk_level = "High" if int(last_record.confidence or 0) >= 85 else "Medium" if int(last_record.confidence or 0) >= 65 else "Low"
+            last_diagnosis = {
+                "confidence": int(last_record.confidence or 0),
+                "risk_level": risk_level,
+                "note": f"Latest saved scan for {record_name or disease['name']} on {format_relative_time(last_record.date)}.",
+                "image_url": None,
+            }
+    detail_context = {
+        "stage_affected": "Leaf and canopy stage monitoring",
+        "urgency": "Immediate action recommended" if disease["type_key"] in {"bacteria", "virus"} else "Early action recommended",
+        "crop_affected": ", ".join(disease["crops"]) if disease["crops"] else "Multiple crops",
+        "do_now_checklist": unique_crop_list(
+            [
+                "Inspect nearby plants for matching symptoms.",
+                "Isolate the worst affected leaves or plants where possible.",
+                disease["solution"] or "Apply the recommended control measure as per label guidance.",
+                "Repeat scouting in the next 48 to 72 hours.",
+            ]
+        )[:4],
+        "product_reason": f"Suggested because it aligns with the treatment needs for {disease['name']}." if recommended_product else "",
+        "similar_diseases": related_items,
+    }
+    return {
+        "disease": disease,
+        "detail_context": detail_context,
+        "recommended_product": recommended_product,
+        "last_diagnosis": last_diagnosis,
+    }
+
+
+def build_admin_audit_context():
+    disease_items = get_library_disease_items()
+    mappings = DiseaseProductMapping.query.all()
+    products = StoreProduct.query.all()
+
+    mapped_keys = {mapping.disease_key for mapping in mappings if getattr(mapping, "disease_key", "")}
+    weak_tag_product_count = 0
+    for product in products:
+        tags = safe_json_loads(getattr(product, "tags_json", ""), [])
+        clean_tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+        if len(clean_tags) < 2:
+            weak_tag_product_count += 1
+
+    missing_mappings = []
+    missing_content = []
+    recommendation_review = []
+
+    for item in disease_items:
+        disease_key = normalize_disease_key(item["name"])
+        if disease_key not in mapped_keys:
+            missing_mappings.append({"name": item["name"], "type": item["type"]})
+
+        gaps = []
+        if not item.get("symptoms"):
+            gaps.append("symptoms")
+        if not str(item.get("cause") or "").strip():
+            gaps.append("cause")
+        if not str(item.get("solution") or "").strip():
+            gaps.append("solution")
+        if not item.get("prevention"):
+            gaps.append("prevention")
+        if gaps:
+            missing_content.append({"name": item["name"], "gaps": gaps})
+
+        mapped_product = get_admin_mapped_product_for_disease(item["name"])
+        recommendation_review.append(
+            {
+                "disease": item["name"],
+                "crop": item["crops"][0] if item.get("crops") else "General",
+                "product_name": getattr(mapped_product, "name", "") or "Auto recommendation",
+                "status": "Mapped" if mapped_product is not None else "Auto",
+            }
+        )
+
+    return {
+        "mapping_count": len(mappings),
+        "unmapped_count": len(missing_mappings),
+        "missing_content_count": len(missing_content),
+        "weak_tag_product_count": weak_tag_product_count,
+        "missing_mappings": missing_mappings[:12],
+        "missing_content": missing_content[:12],
+        "recommendation_review": recommendation_review[:10],
+    }
+
+
 def safe_json_loads(raw_value, default):
     if raw_value in (None, ""):
         return default
@@ -1852,11 +2827,25 @@ def get_store_category_meta(category):
 
 
 def load_store_seed_dataset():
-    if not STORE_PRODUCTS_DATA_PATH.exists():
+    seed_rows = []
+    for path in (STORE_PRODUCTS_DATA_PATH, DISEASE_STORE_PRODUCTS_DATA_PATH):
+        if not path.exists():
+            continue
+        try:
+            raw_data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            continue
+        if isinstance(raw_data, list):
+            seed_rows.extend(raw_data)
+    return seed_rows
+
+
+def load_disease_product_mapping_seed_dataset():
+    if not DISEASE_PRODUCT_MAPPINGS_DATA_PATH.exists():
         return []
 
     try:
-        raw_data = json.loads(STORE_PRODUCTS_DATA_PATH.read_text(encoding="utf-8"))
+        raw_data = json.loads(DISEASE_PRODUCT_MAPPINGS_DATA_PATH.read_text(encoding="utf-8"))
         return raw_data if isinstance(raw_data, list) else []
     except (OSError, ValueError, TypeError):
         return []
@@ -1931,6 +2920,44 @@ def seed_store_products():
         product.tags_json = json.dumps(tags, ensure_ascii=False)
         product.is_active = bool(raw_product.get("is_active", True))
         db.session.add(product)
+        seeded_count += 1
+
+    if seeded_count:
+        db.session.commit()
+    return seeded_count
+
+
+def seed_disease_product_mappings():
+    seed_data = load_disease_product_mapping_seed_dataset()
+    if not seed_data:
+        return 0
+
+    seeded_count = 0
+    for item in seed_data:
+        if not isinstance(item, dict):
+            continue
+
+        disease_label = str(item.get("disease") or "").strip()
+        product_name = str(item.get("product") or "").strip()
+        if not disease_label or not product_name:
+            continue
+
+        product = find_store_product_by_name(product_name)
+        if product is None:
+            continue
+
+        disease_key = normalize_disease_key(disease_label)
+        mapping = DiseaseProductMapping.query.filter_by(disease_key=disease_key).first()
+        if mapping is None:
+            mapping = DiseaseProductMapping(
+                disease_key=disease_key,
+                disease_label=disease_label,
+                product_id=product.id,
+            )
+            db.session.add(mapping)
+        else:
+            mapping.disease_label = disease_label
+            mapping.product_id = product.id
         seeded_count += 1
 
     if seeded_count:
@@ -2213,7 +3240,251 @@ def get_admin_mapped_product_for_disease(disease_name):
     return mapping.product
 
 
-def resolve_store_recommendation(disease_name="", cause="", organic_solution="", chemical_solution="", best_product_name=""):
+def infer_disease_type_from_text(*values):
+    diagnostic_text = " ".join(str(value or "") for value in values).lower()
+    if not diagnostic_text.strip():
+        return "general"
+    if "healthy" in diagnostic_text or "no disease" in diagnostic_text:
+        return "healthy"
+    if any(keyword in diagnostic_text for keyword in ("virus", "viral", "mosaic", "curl")):
+        return "virus"
+    if any(keyword in diagnostic_text for keyword in ("bacterial", "bacteria")):
+        return "bacteria"
+    if any(keyword in diagnostic_text for keyword in ("pest", "insect", "aphid", "whitefly", "thrips", "mite", "borer", "worm", "vector")):
+        return "insect"
+    if any(keyword in diagnostic_text for keyword in ("deficiency", "chlorosis", "yellowing", "stress", "wilt", "nutrient")):
+        return "stress"
+    if any(keyword in diagnostic_text for keyword in ("blight", "mold", "mildew", "rust", "fungal", "fungus", "rot", "spot", "lesion")):
+        return "fungus"
+    return "general"
+
+
+def get_library_disease_item_by_name(disease_name="", crop_name=""):
+    normalized_name = normalize_disease_key(disease_name)
+    normalized_crop = normalize_crop_key(crop_name) if str(crop_name or "").strip() else ""
+    if not normalized_name:
+        return None
+
+    items = get_library_disease_items()
+    for item in items:
+        if normalize_disease_key(item["name"]) == normalized_name and (
+            not normalized_crop or item["crop_key"] in {normalized_crop, "generic"}
+        ):
+            return item
+
+    for item in items:
+        if normalize_disease_key(item["name"]) == normalized_name:
+            return item
+
+    name_tokens = set(re.findall(r"[a-z0-9]+", normalized_name))
+    if not name_tokens:
+        return None
+
+    scored_matches = []
+    for item in items:
+        item_name_tokens = set(re.findall(r"[a-z0-9]+", normalize_disease_key(item["name"])))
+        item_crop_tokens = set(re.findall(r"[a-z0-9]+", " ".join(item.get("crops", [])).lower()))
+        overlap = len(name_tokens & item_name_tokens)
+        if not overlap:
+            continue
+        score = overlap * 3
+        if normalized_crop and item["crop_key"] == normalized_crop:
+            score += 2
+        if normalized_crop and normalized_crop in item_crop_tokens:
+            score += 1
+        scored_matches.append((score, len(item.get("symptoms", [])), len(item.get("prevention", [])), item))
+
+    scored_matches.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
+    return scored_matches[0][3] if scored_matches else None
+
+
+def extract_guidance_points(*values, limit=4):
+    points = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        normalized = re.sub(r"\s+", " ", text.replace("+", ". ").replace(";", ". ").replace("|", ". "))
+        chunks = [chunk.strip(" -") for chunk in re.split(r"\.\s+|,\s+", normalized) if chunk.strip(" -")]
+        if not chunks:
+            chunks = [normalized]
+        points.extend(chunks)
+    return unique_crop_list(points)[:limit]
+
+
+def build_confidence_label(confidence):
+    score = int(confidence or 0)
+    if score >= 90:
+        return "High confidence visual match"
+    if score >= 80:
+        return "Strong pattern match"
+    if score >= 70:
+        return "Moderate match, verify nearby leaves"
+    return "Low confidence, confirm in the field"
+
+
+def build_consult_expert_note(confidence, risk_level):
+    score = int(confidence or 0)
+    normalized_risk = str(risk_level or "").strip().lower()
+    if normalized_risk == "high" or score < 70:
+        return "Field verification recommended today before full-block spraying."
+    if normalized_risk == "medium" or score < 85:
+        return "Compare 3-5 nearby leaves and monitor spread over the next 24 hours."
+    return "Start treatment in the affected patch and recheck the canopy in 24-48 hours."
+
+
+def build_do_now_checklist(payload, library_item=None):
+    actions = ["Inspect nearby plants for the same pattern before treating the full area."]
+    organic_solution = str(payload.get("organic_solution") or "").strip()
+    chemical_solution = str(payload.get("chemical_solution") or "").strip()
+
+    if organic_solution:
+        actions.append(f"Organic option: {organic_solution}")
+    if chemical_solution:
+        actions.append(f"Chemical option: {chemical_solution}")
+    if library_item is not None:
+        actions.extend(library_item.get("prevention", [])[:1])
+
+    risk_level = str(payload.get("risk_level") or "").strip().lower()
+    if risk_level == "high":
+        actions.append("Rescout this patch within the next 24 hours.")
+    else:
+        actions.append("Review this patch again within 48 hours.")
+    return unique_crop_list(actions)[:4]
+
+
+def score_store_product_for_diagnosis(product, disease_type, diagnostic_text, crop_name=""):
+    serialized = serialize_store_product(product)
+    search_text = serialized["search_text"]
+    profile = DISEASE_PRODUCT_RECOMMENDATION_PROFILES.get(disease_type, DISEASE_PRODUCT_RECOMMENDATION_PROFILES["general"])
+    score = float(product.rating or 0)
+    score += profile["category_boosts"].get(product.category, 0)
+
+    for keyword, weight in profile["keywords"].items():
+        if keyword in search_text:
+            score += weight
+
+    crop_tokens = set(re.findall(r"[a-z0-9]+", str(crop_name or "").lower()))
+    product_tokens = set(re.findall(r"[a-z0-9]+", search_text))
+    if crop_tokens:
+        score += len(crop_tokens & product_tokens) * 1.5
+
+    if diagnostic_text:
+        diagnostic_tokens = set(re.findall(r"[a-z0-9]+", diagnostic_text))
+        score += len(diagnostic_tokens & product_tokens) * 0.25
+
+    return score
+
+
+def build_store_recommendation_reason(payload, serialized_product, disease_type):
+    disease_name = str(payload.get("disease") or "the detected issue").strip()
+    crop_name = str(payload.get("crop") or "your crop").strip()
+    approach_map = {
+        "healthy": "preventive crop care and closer monitoring",
+        "fungus": "foliar protection and spread control",
+        "bacteria": "surface protection and sanitation support",
+        "virus": "vector management and crop stress reduction",
+        "insect": "pest knockdown and repeat scouting",
+        "stress": "crop recovery and root-zone support",
+        "general": "broad crop-care support",
+    }
+    approach = approach_map.get(disease_type, approach_map["general"])
+    return f"{serialized_product['name']} is the closest in-catalog match for {crop_name} because this diagnosis suggests {approach} for {disease_name}."
+
+
+def enrich_disease_response_payload(payload):
+    enriched = dict(payload)
+    confidence = clamp(int(enriched.get("confidence") or 0), 0, 99)
+    if confidence == 0:
+        confidence = 65
+    risk_level = str(enriched.get("risk_level") or "").strip().title()
+    if risk_level not in {"Low", "Medium", "High"}:
+        risk_level = "Low" if confidence >= 88 else "Medium" if confidence >= 72 else "High"
+
+    library_item = get_library_disease_item_by_name(
+        disease_name=enriched.get("disease"),
+        crop_name=enriched.get("crop"),
+    )
+    matched_symptoms = list(library_item.get("symptoms", [])) if library_item is not None else extract_guidance_points(enriched.get("symptoms"))
+    prevention = enriched.get("prevention")
+    if not isinstance(prevention, list):
+        prevention = extract_guidance_points(prevention)
+    prevention = unique_crop_list(
+        [
+            *(prevention or []),
+            *(library_item.get("prevention", []) if library_item is not None else []),
+        ]
+    )[:4]
+
+    if not prevention:
+        prevention = unique_crop_list(
+            extract_guidance_points(enriched.get("organic_solution"), enriched.get("chemical_solution"), enriched.get("cause"), limit=4)
+        )
+
+    symptom_summary = str(enriched.get("symptoms") or "").strip()
+    if not symptom_summary:
+        symptom_summary = "; ".join(matched_symptoms) if matched_symptoms else str(enriched.get("cause") or "").strip()
+
+    symptom_rule = match_disease_symptom_rule(
+        enriched.get("disease"),
+        enriched.get("symptoms"),
+        enriched.get("cause"),
+        enriched.get("organic_solution"),
+        enriched.get("chemical_solution"),
+    )
+    if symptom_rule:
+        rule_issue = str(symptom_rule.get("issue") or "").strip()
+        rule_cause = str(symptom_rule.get("cause") or "").strip()
+        rule_solution = str(symptom_rule.get("solution") or "").strip()
+        rule_prevention = str(symptom_rule.get("prevention") or "").strip()
+        if rule_issue and rule_issue.lower() not in symptom_summary.lower():
+            symptom_summary = f"{symptom_summary}; {rule_issue}" if symptom_summary else rule_issue
+        if rule_cause and str(enriched.get("cause") or "").strip().lower() in {"", "no disease", "requires expert field inspection"}:
+            enriched["cause"] = rule_cause
+        if rule_solution and not str(enriched.get("chemical_solution") or "").strip():
+            enriched["chemical_solution"] = rule_solution
+        if rule_solution and not str(enriched.get("organic_solution") or "").strip():
+            enriched["organic_solution"] = rule_solution
+        if rule_prevention:
+            prevention = unique_crop_list([*(prevention or []), rule_prevention])[:4]
+        if not matched_symptoms and symptom_rule.get("key"):
+            matched_symptoms = [str(symptom_rule.get("key"))]
+        if str(enriched.get("best_product") or "").strip().lower() in {"", "n/a", "na", "none"}:
+            product_hints = symptom_rule.get("products")
+            if isinstance(product_hints, list):
+                for hint in product_hints:
+                    hinted_product = find_store_product_by_asset_hint(hint)
+                    if hinted_product is not None:
+                        enriched["best_product"] = str(getattr(hinted_product, "name", "") or "").strip()
+                        break
+
+    enriched["confidence"] = confidence
+    enriched["risk_level"] = risk_level
+    enriched["analysis_source"] = str(enriched.get("analysis_source") or "AI diagnosis").strip()
+    enriched["confidence_label"] = build_confidence_label(confidence)
+    enriched["why_this_result"] = str(enriched.get("diagnostic_reason") or enriched.get("explanation_hinglish") or "Leaf pattern matched known disease signals.").strip()
+    enriched["consult_expert"] = build_consult_expert_note(confidence, risk_level)
+    enriched["matched_symptoms"] = matched_symptoms[:4]
+    enriched["prevention"] = prevention
+    enriched["symptoms"] = symptom_summary
+    enriched["do_now_checklist"] = build_do_now_checklist(enriched, library_item=library_item)
+    if library_item is not None:
+        enriched["library_url"] = f"/library/disease/{library_item['slug']}"
+    return enriched
+
+
+def resolve_store_recommendation(disease_name="", cause="", organic_solution="", chemical_solution="", best_product_name="", crop_name=""):
+    diagnostic_summary = " ".join(
+        [
+            str(disease_name or ""),
+            str(cause or ""),
+            str(organic_solution or ""),
+            str(chemical_solution or ""),
+        ]
+    ).lower()
+    if any(term in diagnostic_summary for term in ("healthy", "no disease", "routine care", "continue monitoring")):
+        return None
+
     admin_mapped = get_admin_mapped_product_for_disease(disease_name)
     if admin_mapped is not None:
         return admin_mapped
@@ -2223,14 +3494,8 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
         if direct_product:
             return direct_product
 
-    diagnostic_text = " ".join(
-        [
-            str(disease_name or ""),
-            str(cause or ""),
-            str(organic_solution or ""),
-            str(chemical_solution or ""),
-        ]
-    ).lower()
+    diagnostic_text = diagnostic_summary
+    disease_type = infer_disease_type_from_text(disease_name, cause, organic_solution, chemical_solution)
 
     for keywords, mapped_name in STORE_DISEASE_PRODUCT_RULES:
         if any(keyword in diagnostic_text for keyword in keywords):
@@ -2240,20 +3505,30 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
             if mapped_product:
                 return mapped_product
 
-    if "fungicide" in diagnostic_text or "copper" in diagnostic_text:
-        return find_store_product_by_name("Copper Fungicide Spray")
-    if "pest" in diagnostic_text or "neem" in diagnostic_text or "vector" in diagnostic_text:
-        return find_store_product_by_name("Neem Oil Spray")
-    return None
+    scored_matches = []
+    for product in get_all_store_products():
+        score = score_store_product_for_diagnosis(product, disease_type, diagnostic_text, crop_name=crop_name)
+        scored_matches.append((score, float(product.rating or 0), product))
+
+    scored_matches.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    return scored_matches[0][2] if scored_matches and scored_matches[0][0] > 0 else None
 
 
 def attach_store_recommendation(payload, best_product_name=""):
+    payload = enrich_disease_response_payload(payload)
+    disease_type = infer_disease_type_from_text(
+        payload.get("disease"),
+        payload.get("cause"),
+        payload.get("organic_solution"),
+        payload.get("chemical_solution"),
+    )
     recommended_product = resolve_store_recommendation(
         disease_name=payload.get("disease"),
         cause=payload.get("cause"),
         organic_solution=payload.get("organic_solution"),
         chemical_solution=payload.get("chemical_solution"),
         best_product_name=best_product_name,
+        crop_name=payload.get("crop"),
     )
 
     if recommended_product is None:
@@ -2263,9 +3538,7 @@ def attach_store_recommendation(payload, best_product_name=""):
         return payload
 
     serialized_product = serialize_store_product(recommended_product)
-    serialized_product["reason"] = (
-        f"Recommended for {payload.get('disease', 'the detected issue')} based on the AI diagnosis and treatment context."
-    )
+    serialized_product["reason"] = build_store_recommendation_reason(payload, serialized_product, disease_type)
     payload["recommended_product"] = serialized_product
     payload["best_product"] = serialized_product["name"]
     payload["product_link"] = serialized_product["detail_url"]
@@ -2384,10 +3657,149 @@ def normalize_kisan_dost_crop_name(crop_name):
     return aliases.get(crop_key, crop_name or "crop")
 
 
-def build_kisan_dost_reply(user, query):
+def sanitize_ai_chat_history(raw_history):
+    history = []
+    if not isinstance(raw_history, list):
+        return history
+
+    for item in raw_history[-8:]:
+        if not isinstance(item, dict):
+            continue
+        role = "assistant" if str(item.get("role") or "").strip().lower() == "assistant" else "user"
+        content = re.sub(r"\s+", " ", str(item.get("content") or "").strip())
+        if not content:
+            continue
+        history.append({"role": role, "content": content[:500]})
+    return history
+
+
+def build_ai_chat_context_query(query_text, history):
+    clean_query = re.sub(r"\s+", " ", str(query_text or "").strip())
+    if not clean_query:
+        return ""
+
+    user_messages = [str(item.get("content") or "").strip() for item in history if item.get("role") == "user"]
+    if user_messages and user_messages[-1].lower() == clean_query.lower():
+        user_messages = user_messages[:-1]
+
+    if not user_messages:
+        return clean_query
+
+    query_tokens = re.findall(r"[a-z0-9]+", clean_query.lower())
+    followup_terms = {
+        "ye", "yeh", "is", "isko", "iska", "iske", "iss", "isme",
+        "wo", "woh", "us", "usko", "uska", "uske", "usme",
+        "kya", "kaise", "kab", "kitna", "kyu", "kyon", "kyun",
+        "karu", "kru", "karna", "ab", "abhi", "fir", "phir",
+        "detail", "details", "phir", "next", "then",
+    }
+    should_merge_context = len(query_tokens) <= 6 or any(token in followup_terms for token in query_tokens)
+    if not should_merge_context:
+        return clean_query
+
+    context_parts = user_messages[-2:] + [clean_query]
+    return " ".join(part for part in context_parts if part)
+
+
+def format_ai_chat_history_for_prompt(history):
+    lines = []
+    for item in history[-6:]:
+        role = "Farmer" if item.get("role") == "user" else "Assistant"
+        content = str(item.get("content") or "").strip()
+        if content:
+            lines.append(f"{role}: {content}")
+    return "\n".join(lines)
+
+
+def detect_ai_chat_language(query_text):
+    text = str(query_text or "").strip()
+    if any("\u0b00" <= char <= "\u0b7f" for char in text):
+        return "Odia"
+    if any("\u0900" <= char <= "\u097f" for char in text):
+        return "Hindi"
+    if re.search(r"\b(kya|kaise|kyun|kyu|mera|mere|meri|patta|fasal|barish|khad|dawai|spray)\b", text.lower()):
+        return "Hinglish"
+    return "English"
+
+
+def ask_groq_ai_crop_doctor(user, query, history):
+    if not GROQ_API_KEY:
+        return None
+
+    conversation_history = list(history or [])
+    if (
+        conversation_history
+        and conversation_history[-1].get("role") == "user"
+        and str(conversation_history[-1].get("content") or "").strip().lower() == str(query or "").strip().lower()
+    ):
+        conversation_history = conversation_history[:-1]
+
+    recent_conversation = format_ai_chat_history_for_prompt(conversation_history)
+    faq_reference = load_ai_crop_doctor_faq_reference()
+    answer_language = detect_ai_chat_language(query)
+
+    system_prompt = (
+        "You are 'AI Crop Doctor', a practical agriculture assistant for farmers. "
+        "Use the provided FAQ reference first when it is relevant, and otherwise answer using solid agriculture best practices. "
+        f"Reply in {answer_language}. "
+        "If the user writes in Hinglish, answer in simple Hinglish. "
+        "Keep answers short, clear, and useful for a farmer. "
+        "For follow-up questions, use the recent conversation context before answering."
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+    if faq_reference:
+        messages.append(
+            {
+                "role": "system",
+                "content": (
+                    "Project FAQ reference. Use it when relevant to the user question:\n"
+                    f"{faq_reference[:40000]}"
+                ),
+            }
+        )
+    if recent_conversation:
+        messages.append({"role": "system", "content": f"Recent conversation:\n{recent_conversation}"})
+    messages.append(
+        {
+            "role": "user",
+            "content": (
+                f"Farmer context: location {user.location or 'India'}, crop {user.crop_type or 'General'}.\n"
+                f"Question: {query}"
+            ),
+        }
+    )
+
+    response_data = fetch_json(
+        "https://api.groq.com/openai/v1/chat/completions",
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json_body={
+            "model": GROQ_MODEL,
+            "messages": messages,
+            "temperature": 0.3,
+        },
+    )
+    if not isinstance(response_data, dict):
+        return None
+
+    choices = response_data.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return None
+
+    message = choices[0].get("message") if isinstance(choices[0], dict) else None
+    content = str(message.get("content") or "").strip() if isinstance(message, dict) else ""
+    return content or None
+
+
+def build_kisan_dost_reply(user, query, history=None):
     crop_name = normalize_kisan_dost_crop_name(user.crop_type or "crop")
     location_name = user.location or "aapke area"
-    query_text = (query or "").strip()
+    history = sanitize_ai_chat_history(history)
+    query_text = build_ai_chat_context_query(query, history)
     query_lower = query_text.lower()
     _, farms = ensure_user_farm_setup(user)
     task_summary = build_task_summary(user, limit=2)
@@ -2438,6 +3850,11 @@ def build_kisan_dost_reply(user, query):
     crop_health = build_crop_health(user, assistant_weather, soil)
     mandi_rates = build_mock_mandi_rates(location_name)
     knowledge_answer = lookup_kisan_dost_knowledge(query_text, crop_name)
+    local_qa_answer = lookup_ai_crop_doctor_local_qa(query_text)
+    project_faq_answer = lookup_ai_crop_doctor_project_faq(query_text)
+
+    if local_qa_answer:
+        return local_qa_answer
 
     if any(word in query_lower for word in ["mandi", "market", "price", "rate", "bhav"]):
         lead_rate = mandi_rates[0]
@@ -2501,7 +3918,28 @@ def build_kisan_dost_reply(user, query):
         return (
             f"Agar {crop_name} ke patton par spots ya discoloration dikh raha hai to Disease Detection module me image upload karo. "
             f"Early inspection se spread control karna easy hota hai. "
-            f"Field me infected leaves ko alag rakhna mat bhoolna."
+                f"Field me infected leaves ko alag rakhna mat bhoolna."
+            )
+
+    if any(word in query_lower for word in ["spray", "dawai", "medicine", "pesticide", "fungicide", "insecticide", "dose"]):
+        if knowledge_answer:
+            return (
+                f"{knowledge_answer} "
+                f"Spray label dose aur waiting period ko follow karo, aur तेज barish ke din spray avoid karo."
+            )
+        return (
+            f"Agar aap {crop_name} ke liye spray pooch rahe ho to pehle issue confirm karo, phir hi fungicide ya pesticide choose karo. "
+            f"Subah ya shaam spray karo aur hawa ya barish ka chance ho to postpone kar do. "
+            f"Dose label ke hisaab se hi rakhna best rahega."
+        )
+
+    if any(word in query_lower for word in ["keeda", "pest", "insect", "sucking", "worm", "caterpillar"]):
+        if knowledge_answer:
+            return knowledge_answer
+        return (
+            f"{crop_name} me pest pressure ho to affected leaves aur shoot ko closely inspect karo. "
+            f"Sticky traps ya early spray planning se spread control karna easy hota hai. "
+            f"Agar chaho to symptom ya pest ka naam batao, main aur exact step bata dunga."
         )
 
     if weather_query:
@@ -2530,6 +3968,9 @@ def build_kisan_dost_reply(user, query):
 
     if knowledge_answer:
         return knowledge_answer
+
+    if project_faq_answer:
+        return project_faq_answer
 
     return (
         f"{crop_name} ke liye abhi best focus moisture, soil balance, aur timely monitoring par rakho. "
@@ -2843,6 +4284,77 @@ def build_recent_activity(user, limit=8):
         item["time_ago"] = format_relative_time(item["timestamp"])
 
     return activity_items[:limit]
+
+
+def build_dashboard_personalization(user, primary_farm, recommendations, task_summary):
+    crop_name = (getattr(user, "crop_type", "") or "").strip() or "your crop"
+    farm_name = getattr(primary_farm, "name", "") or "your farm"
+    open_task_count = int(task_summary.get("open_count") or 0)
+
+    if open_task_count > 0:
+        detail = f"{open_task_count} farm task{'s' if open_task_count != 1 else ''} need attention for {farm_name}."
+        action = {"label": "Open Planner", "href": "/farms#task-planner", "detail": "Review pending work"}
+    elif recommendations:
+        detail = f"Fresh AI guidance is ready for {crop_name} planning and crop care."
+        action = {"label": "View AI Tips", "href": "#step2-ai-tip", "detail": "Read recommendations"}
+    else:
+        detail = f"Your dashboard is tuned for {crop_name} monitoring in {farm_name}."
+        action = {"label": "Detect Disease", "href": "/disease-detection", "detail": "Run a new scan"}
+
+    return {
+        "headline": f"Farm plan ready for {crop_name}",
+        "detail": detail,
+        "primary_action": action,
+    }
+
+
+def build_dashboard_onboarding(user, farms, task_summary):
+    has_crop = bool((getattr(user, "crop_type", "") or "").strip())
+    has_location = bool((getattr(user, "location", "") or "").strip())
+    has_farm = len(farms) > 0
+    has_tasks = bool(task_summary.get("all"))
+
+    steps = [
+        {
+            "title": "Complete profile",
+            "detail": "Crop and location profile is ready." if has_crop and has_location else "Add crop and location to personalize insights.",
+            "done": has_crop and has_location,
+            "href": "/profile",
+            "cta": "Update Profile",
+        },
+        {
+            "title": "Set up farm",
+            "detail": "Primary farm is connected." if has_farm else "Create your first farm workspace.",
+            "done": has_farm,
+            "href": "/farms",
+            "cta": "Add Farm",
+        },
+        {
+            "title": "Plan first task",
+            "detail": "Task planner already has reminders." if has_tasks else "Create irrigation, spray, or harvest reminders.",
+            "done": has_tasks,
+            "href": "/farms#task-planner",
+            "cta": "Add Task",
+        },
+        {
+            "title": "Run AI scan",
+            "detail": "Open disease detection to scan crop photos and get suggestions.",
+            "done": False,
+            "href": "/disease-detection",
+            "cta": "Start Scan",
+        },
+    ]
+
+    completed_count = sum(1 for step in steps if step["done"])
+    total_count = len(steps)
+    progress_pct = int(round((completed_count / total_count) * 100)) if total_count else 0
+
+    return {
+        "steps": steps,
+        "completed_count": completed_count,
+        "total_count": total_count,
+        "progress_pct": progress_pct,
+    }
 
 
 def remember_notice(session_key, text, tone="success"):
@@ -4698,6 +6210,8 @@ def build_dashboard_context(user):
             "secondary_count": max(len(farms) - 1, 0),
         },
         "task_summary": task_summary,
+        "personalization": build_dashboard_personalization(user, primary_farm, recommendations, task_summary),
+        "onboarding": build_dashboard_onboarding(user, farms, task_summary),
     }
 
 
@@ -4755,7 +6269,11 @@ def signup_alias_page():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = (request.form.get("email") or "").strip()
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return render_template("login.html", error="Security check failed. Please refresh and try again.")
+
+        email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
 
         # Shortcut: allow admin credentials on the normal user login form.
@@ -4764,25 +6282,16 @@ def login():
             session["admin_email"] = ADMIN_EMAIL
             return redirect("/admin")
 
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter(User.email.ilike(email)).first()
         password_ok, upgraded = check_user_password(user, password)
 
         if user and password_ok:
             if upgraded:
                 db.session.commit()
-            otp = generate_otp()
-            session["otp"] = otp
-            session["otp_target"] = email
-            session["otp_type"] = "login"
-            session["otp_user_id"] = user.id
-            session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
-            
-            # Send Real Email
-            email_sent = send_otp_email(email, otp)
-            if not email_sent:
-                print(f"DEBUG: Email delivery failed. Login OTP for {email} is {otp} (Simulation)")
-            
-            return redirect("/verify-otp")
+            clear_otp_session_state()
+            session["user_id"] = user.id
+            session["user"] = user.name
+            return redirect("/dashboard")
         else:
             return render_template("login.html", error="Invalid email or password.")
 
@@ -4792,8 +6301,12 @@ def login():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return render_template("register.html", error="Security check failed. Please refresh and try again.")
+
         name = (request.form.get("name") or "").strip()
-        email = (request.form.get("email") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
         location = (request.form.get("location") or "").strip()
         crop = (request.form.get("crop") or "").strip()
@@ -4809,7 +6322,7 @@ def register():
         if len(password) < 8:
             return render_template("register.html", error="Password must be at least 8 characters long.")
 
-        existing_user = User.query.filter_by(email=email).first()
+        existing_user = User.query.filter(User.email.ilike(email)).first()
         if existing_user:
             return render_template("register.html", error="An account already exists with this email address.")
 
@@ -4826,7 +6339,7 @@ def register():
         session["pending_user"] = {
             "name": name,
             "email": email,
-            "password": password,
+            "password_hash": hash_password(password),
             "location": location,
             "crop": crop,
             "phone": phone,
@@ -4835,16 +6348,14 @@ def register():
         }
         
         otp = generate_otp()
-        session["otp"] = otp
-        session["otp_target"] = email
-        session["otp_type"] = "register"
-        session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
-        
-        # Send Real Email
-        email_sent = send_otp_email(email, otp)
-        if not email_sent:
-            print(f"DEBUG: Email delivery failed. Registration OTP for {email} is {otp} (Simulation)")
-        
+        email_sent, failure_reason = send_otp_email(email, otp)
+        update_otp_session_state(
+            otp,
+            email,
+            "register",
+            email_sent=email_sent,
+            notice=build_otp_notice(email_sent, failure_reason),
+        )
         return redirect("/verify-otp")
 
     return render_template("register.html")
@@ -4852,25 +6363,32 @@ def register():
 
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
-    if "otp" not in session:
+    if (
+        "otp" not in session
+        or session.get("otp_type") != "register"
+        or "pending_user" not in session
+    ):
+        clear_otp_session_state()
         return redirect("/login")
         
     error = None
     if request.method == "POST":
-        user_otp = request.form.get("otp", "")
+        csrf_resp = require_csrf()
+        if csrf_resp is not None:
+            return render_template("verify_otp.html", **get_otp_page_context(error="Security check failed. Please refresh and try again."))
+
+        user_otp = re.sub(r"\D", "", request.form.get("otp", ""))
         
         # Check expiry
         if datetime.now(timezone.utc).timestamp() > session.get("otp_expiry", 0):
             error = "OTP has expired. Please try again."
         elif user_otp == session["otp"]:
-            otp_type = session["otp_type"]
-            
-            if otp_type == "register" and "pending_user" in session:
+            if "pending_user" in session:
                 data = session["pending_user"]
                 new_user = User( # type: ignore
                     name=data["name"],
                     email=data["email"],
-                    password=hash_password(data["password"]),
+                    password=data.get("password_hash") or hash_password(data.get("password", "")),
                     location=data["location"],
                     crop_type=data["crop"],
                     phone=data["phone"],
@@ -4918,19 +6436,48 @@ def verify_otp():
                 session["user_id"] = new_user.id
                 session["user"] = new_user.name
                 return redirect("/dashboard")
-                
-            elif otp_type == "login" and "otp_user_id" in session:
-                user_id = session["otp_user_id"]
-                user = User.query.get(user_id)
-                if user:
-                    session["user_id"] = user.id
-                    session["user"] = user.name
-                    clear_otp_session_state()
-                    return redirect("/dashboard")
         else:
             error = "Invalid OTP. Please check and try again."
             
-    return render_template("verify_otp.html", target=session.get("otp_target"), error=error)
+    return render_template("verify_otp.html", **get_otp_page_context(error=error))
+
+
+@app.route("/resend-otp", methods=["POST"])
+def resend_otp():
+    if (
+        "otp_target" not in session
+        or session.get("otp_type") != "register"
+        or "pending_user" not in session
+    ):
+        clear_otp_session_state()
+        return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return render_template("verify_otp.html", **get_otp_page_context(error="Security check failed. Please refresh and try again."))
+
+    last_sent_at = float(session.get("otp_sent_at") or 0)
+    seconds_since_last_send = max(0, int(time.time() - last_sent_at))
+    if last_sent_at and seconds_since_last_send < OTP_RESEND_INTERVAL_SECONDS:
+        wait_seconds = OTP_RESEND_INTERVAL_SECONDS - seconds_since_last_send
+        return render_template(
+            "verify_otp.html",
+            **get_otp_page_context(error=f"Please wait {wait_seconds} seconds before requesting a new OTP."),
+        )
+
+    otp = generate_otp()
+    target_email = session.get("otp_target")
+    otp_type = session.get("otp_type")
+
+    email_sent, failure_reason = send_otp_email(target_email, otp)
+    update_otp_session_state(
+        otp,
+        target_email,
+        otp_type,
+        email_sent=email_sent,
+        notice=build_otp_notice(email_sent, failure_reason),
+    )
+    return render_template("verify_otp.html", **get_otp_page_context())
 
 
 @app.route("/api/mandi-rates")
@@ -5171,6 +6718,123 @@ def crop_library():
     return render_template("crop_library.html", user=user, crop_library=crop_library_page)
 
 
+@app.route("/library")
+def library_home():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    return render_template("library_home.html", user=user, **build_library_home_context())
+
+
+@app.route("/library/crops")
+def library_crops():
+    return redirect("/crop-library")
+
+
+@app.route("/library/diseases")
+def library_diseases():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    active_crop = (request.args.get("crop") or "All").strip() or "All"
+    query = (request.args.get("q") or "").strip()
+    active_type = (request.args.get("type") or "all").strip().lower() or "all"
+    all_items = get_library_disease_items()
+    crops = get_library_crop_options()
+    if active_crop not in crops:
+        active_crop = "All"
+
+    items = all_items
+    if active_crop != "All":
+        items = [item for item in items if active_crop in item["crops"]]
+    if active_type in {"insect", "fungus", "virus", "bacteria"}:
+        items = [item for item in items if item["type_key"] == active_type]
+    if query:
+        query_lower = query.lower()
+        items = [item for item in items if query_lower in item["search_text"]]
+
+    no_results = not items and bool(query or active_crop != "All" or active_type != "all")
+    suggested_items = all_items[:6]
+    if no_results:
+        items = suggested_items
+
+    return render_template(
+        "library_diseases.html",
+        user=user,
+        crops=crops,
+        active_crop=active_crop,
+        active_type=active_type,
+        query=query,
+        no_results=no_results,
+        items=items,
+        suggested_items=suggested_items,
+        stage_sections=build_library_stage_sections(items),
+        fallback_image=build_disease_sample_data_uri("leaf disease"),
+    )
+
+
+@app.route("/library/disease/<disease_slug>")
+def library_disease_detail(disease_slug):
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    disease = get_library_disease_item(disease_slug)
+    if disease is None:
+        abort(404)
+
+    payload = build_library_disease_detail_payload(user, disease)
+    return render_template(
+        "library_disease_detail.html",
+        user=user,
+        fallback_image=build_disease_sample_data_uri(disease["name"]),
+        **payload,
+    )
+
+
+@app.route("/library/tips")
+def library_tips():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crops = get_library_crop_options()
+    active_crop = (request.args.get("crop") or "All").strip() or "All"
+    if active_crop not in crops:
+        active_crop = "All"
+
+    return render_template(
+        "library_tips.html",
+        user=user,
+        crops=crops,
+        active_crop=active_crop,
+        tips=build_library_tips_data(active_crop),
+    )
+
+
+@app.route("/library/alerts")
+def library_alerts():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    crops = get_library_crop_options()
+    active_crop = (request.args.get("crop") or "All").strip() or "All"
+    if active_crop not in crops:
+        active_crop = "All"
+
+    return render_template(
+        "library_alerts.html",
+        user=user,
+        crops=crops,
+        active_crop=active_crop,
+        alerts=build_library_alert_items(active_crop),
+        fallback_image=build_disease_sample_data_uri("field alert"),
+    )
+
+
 @app.route("/crop/<crop_slug>")
 def crop_detail(crop_slug):
     user = get_current_user()
@@ -5186,7 +6850,6 @@ def crop_detail(crop_slug):
 
 
 @app.route("/farm-twin")
-@require_plan("premium")
 def farm_twin():
     user = get_current_user()
     if not user:
@@ -5442,6 +7105,7 @@ def admin_dashboard():
     total_orders = len(paid_orders)
     pending_orders = sum(1 for order in paid_orders if get_fulfillment_status(order) == "pending")
     revenue = sum(int(order.amount or 0) for order in paid_orders) / 100.0
+    audit = build_admin_audit_context()
 
     return render_template(
         "admin/dashboard.html",
@@ -5449,6 +7113,7 @@ def admin_dashboard():
         total_orders=total_orders,
         pending_orders=pending_orders,
         revenue=revenue,
+        audit=audit,
     )
 
 
@@ -5761,7 +7426,7 @@ def predict_disease():
             "disease": disease_info["disease"],
             "confidence": confidence_pct,
             "cause": disease_info["cause"],
-            "symptoms": disease_info.get("recommendation", disease_info["cause"]),
+            "symptoms": disease_info.get("symptoms", ""),
             "organic_solution": disease_info.get("recommendation", ""),
             "chemical_solution": disease_info["solution"],
             "prevention": [disease_info.get("recommendation", "")],
@@ -5771,7 +7436,8 @@ def predict_disease():
             "best_product": disease_info.get("best_product", ""),
             "product_link": disease_info.get("product_link", ""),
             "image_url": preview_url,
-            "crop": crop_display
+            "crop": crop_display,
+            "analysis_source": "Vision model",
         }
         return jsonify(attach_store_recommendation(response_payload, disease_info.get("best_product", "")))
     
@@ -5877,7 +7543,8 @@ def predict_disease():
         "diagnostic_reason": diagnosis.get("diagnostic_reason", "Visual cues identified."),
         "risk_level": diagnosis.get("risk_level"),
         "image_url": preview_url,
-        "crop": diagnosis.get("crop", user.crop_type or "Crop")
+        "crop": diagnosis.get("crop", user.crop_type or "Crop"),
+        "analysis_source": "Expert AI" if success else "Visual fallback",
     }
     return jsonify(attach_store_recommendation(response_payload))
 
@@ -6154,29 +7821,42 @@ def ai_chat():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
-    
-    query = request.json.get("query")
+
+    payload = request.get_json(silent=True) or {}
+    query = str(payload.get("query") or "").strip()
     if not query:
         return jsonify({"success": False, "error": "No query provided"}), 400
 
-    fallback_reply = build_kisan_dost_reply(user, query)
+    history = sanitize_ai_chat_history(payload.get("history"))
+    fallback_reply = build_kisan_dost_reply(user, query, history=history)
+    groq_reply = ask_groq_ai_crop_doctor(user, query, history)
+    if groq_reply:
+        return jsonify({"success": True, "response": groq_reply, "provider": "groq"})
+
     use_gemini_chat = os.getenv("USE_GEMINI_CHAT", "").strip().lower() in {"1", "true", "yes"}
 
     if use_gemini_chat and GEMINI_API_KEY:
         try:
             model = genai.GenerativeModel("gemini-1.5-flash")
+            recent_conversation = format_ai_chat_history_for_prompt(history)
             persona = f"""
             You are 'Kisan Dost', a friendly AI Agriculture Expert assistant.
-            The farmer is asking you questions via voice.
-            Keep your answers concise (max 3 sentences), helpful, and in Hinglish (Hindi + English).
+            The farmer is asking you questions via voice or text.
+            Understand follow-up questions using the recent conversation.
+            Keep your answers concise (max 4 sentences), practical, helpful, and in simple Hinglish (Hindi + English).
+            If the user asks a vague follow-up, infer the topic from the recent conversation before replying.
             Farmer context: Location: {user.location or 'India'}, Crop: {user.crop_type or 'General'}.
             """
-            response = model.generate_content(f"{persona}\nFarmer Query: {query}")
-            return jsonify({"success": True, "response": response.text.strip()})
+            prompt_parts = [persona.strip()]
+            if recent_conversation:
+                prompt_parts.append(f"Recent conversation:\n{recent_conversation}")
+            prompt_parts.append(f"Farmer Query: {query}")
+            response = model.generate_content("\n\n".join(prompt_parts))
+            return jsonify({"success": True, "response": response.text.strip(), "provider": "gemini"})
         except Exception as e:
             print(f"Chat API Error: {e}")
 
-    return jsonify({"success": True, "response": fallback_reply})
+    return jsonify({"success": True, "response": fallback_reply, "provider": "fallback"})
 
 
 @app.route("/ai-insights")
@@ -6760,6 +8440,9 @@ with app.app_context():
     seeded_products = seed_store_products()
     if seeded_products:
         print(f"[STORE] Seeded or refreshed {seeded_products} store products.")
+    seeded_mappings = seed_disease_product_mappings()
+    if seeded_mappings:
+        print(f"[STORE] Seeded or refreshed {seeded_mappings} disease-product mappings.")
 
 
 if __name__ == "__main__":

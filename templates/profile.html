@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <script>
@@ -21,95 +21,18 @@
   <main class="dashboard-shell">
 
   <!-- Mobile Menu Toggle Button -->
-  <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Sidebar">
-    <i class="fas fa-bars"></i>
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
 
 
-    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar Ã¢â€â‚¬Ã¢â€â‚¬ -->
+    <!-- Sidebar -->
     <aside class="dashboard-sidebar">
-      <div class="sidebar-brand">
-        {% if user and user.profile_photo %}
-          <img class="dashboard-avatar-img dashboard-avatar" style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-        {% else %}
-          <i class="fas fa-user dashboard-avatar"></i>
-        {% endif %}
-        <div class="sidebar-brand-copy">
-          <strong>{{ user.name }}</strong>
-          <span>Smart Farm AI</span>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav" aria-label="Dashboard navigation">
-        <a class="sidebar-link" href="/dashboard">
-          <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
-        <a class="sidebar-link" href="/crop-library">
-          <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
-          <span>Crop Library</span>
-        </a>
-        <a class="sidebar-link" href="/farms">
-          <i class="fas fa-tractor sidebar-icon sidebar-icon-farms"></i>
-          <span>Farms</span>
-        </a>
-        <a class="sidebar-link" href="/weather">
-          <i class="fas fa-cloud-sun sidebar-icon sidebar-icon-weather"></i>
-          <span>Weather</span>
-        </a>
-        <a class="sidebar-link" href="/soil-health">
-          <i class="fas fa-seedling sidebar-icon sidebar-icon-soil"></i>
-          <span>Soil Health</span>
-        </a>
-        <a class="sidebar-link" href="/crop-monitoring">
-          <i class="fas fa-leaf sidebar-icon sidebar-icon-crop"></i>
-          <span>Crop Monitoring</span>
-        </a>
-        <a class="sidebar-link" href="/farm-twin">
-          <i class="fas fa-map-location-dot sidebar-icon sidebar-icon-farm-twin"></i>
-          <span>Farm Twin</span>
-        </a>
-        <a class="sidebar-link" href="/ai-insights">
-          <i class="fas fa-brain sidebar-icon sidebar-icon-ai"></i>
-          <span>AI Insights</span>
-        </a>
-        <a class="sidebar-link" href="/tools">
-          <i class="fas fa-calculator sidebar-icon sidebar-icon-tools"></i>
-          <span>Tools</span>
-        </a>
-        <a class="sidebar-link" href="/disease-detection">
-          <i class="fas fa-microscope sidebar-icon sidebar-icon-disease"></i>
-          <span>Disease Detection</span>
-        </a>
-        <a class="sidebar-link" href="/alerts">
-          <i class="fas fa-triangle-exclamation sidebar-icon sidebar-icon-alerts"></i>
-          <span>Alerts</span>
-        </a>
-        <a class="sidebar-link is-active settings-active" href="/settings">
-          <i class="fas fa-gear sidebar-icon sidebar-icon-settings"></i>
-          <span>Settings</span>
-        </a>
-        <a class="sidebar-link" href="/community">
-          <i class="fas fa-users sidebar-icon sidebar-icon-community"></i>
-          <span>Community Hub</span>
-        </a>
-        <a class="sidebar-link" href="/market">
-          <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
-          <span>Market</span>
-        </a>
-        <a class="sidebar-link" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
-          <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
-          <span style="color: #7dff2e; font-weight: 700;">Refer & Earn</span>
-        </a>
-      </nav>
-
-      <a class="sidebar-logout" href="/logout">
-        <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
-        <span>Logout</span>
-      </a>
+      {% set active_page = 'settings' %}
+      {% include "_user_sidebar.html" %}
     </aside>
 
-    <!-- Ã¢â€â‚¬Ã¢â€â‚¬ Main Content Ã¢â€â‚¬Ã¢â€â‚¬ -->
+    <!-- Main Content -->
     <section class="dashboard-main">
 
       <!-- Hero Banner -->
@@ -193,6 +116,7 @@
 
           <!-- USER INFO FORM -->
           <form class="profile-card" method="POST" action="/profile" enctype="multipart/form-data" id="profileForm" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="form_type" value="user_info">
             <input type="file" id="photoInput" name="profile_photo" accept="image/*" style="display:none;" onchange="previewPhoto(this)">
 
@@ -278,6 +202,7 @@
 
           <!-- FARM INFO FORM -->
           <form class="profile-card" method="POST" action="/profile" id="farmForm" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="form_type" value="farm_info">
 
             <div class="profile-card-header">
@@ -363,7 +288,7 @@
   </main>
 
   <script>
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Photo preview Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Photo preview */
     function previewPhoto(input) {
       const file = input.files[0];
       if (!file) return;
@@ -378,7 +303,7 @@
       reader.readAsDataURL(file);
     }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Password toggle Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Password toggle */
     function togglePasswordFields() {
       const pwFields = document.getElementById('pwFields');
       const displayWrap = document.getElementById('pwDisplayWrap');
@@ -403,7 +328,7 @@
       }
     }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Eye toggle Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Eye toggle */
     function toggleEye(fieldId, btn) {
       const field = document.getElementById(fieldId);
       const icon = btn.querySelector('i');
@@ -417,7 +342,7 @@
       }
     }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Form submit animation Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Form submit animation */
     document.querySelectorAll('.profile-save-btn').forEach(btn => {
       btn.closest('form').addEventListener('submit', function() {
         btn.disabled = true;
@@ -426,7 +351,7 @@
       });
     });
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Auto-dismiss flash after 5s Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* Auto-dismiss flash after 5s */
     ['profileFlash', 'profileFlashErr'].forEach(id => {
       const el = document.getElementById(id);
       if (el) setTimeout(() => el.remove(), 5000);
@@ -468,7 +393,7 @@
   </script>
 
 
-  <!-- Mobile Sidebar JS -->
+  <!-- Sidebar -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const mobileToggle = document.getElementById('mobileMenuToggle');

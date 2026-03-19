@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/static/verify-otp.js" defer></script>
     <style>
         :root {
             --primary: #4f8b27;
@@ -172,16 +173,30 @@
             margin-top: 24px;
             font-size: 14px;
             color: rgba(255, 255, 255, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        .resend-box a {
+        .resend-box a,
+        .resend-link {
             color: var(--primary-light);
             text-decoration: none;
             font-weight: 600;
             transition: color 0.3s;
         }
 
-        .resend-box a:hover {
+        .resend-link {
+            background: transparent;
+            border: 0;
+            padding: 0;
+            cursor: pointer;
+            font: inherit;
+        }
+
+        .resend-box a:hover,
+        .resend-link:hover {
             text-decoration: underline;
         }
 
@@ -197,6 +212,38 @@
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        .notice-toast {
+            background: rgba(59, 130, 246, 0.14);
+            border-left: 4px solid #3b82f6;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            color: #bfdbfe;
+            font-size: 14px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dev-otp {
+            margin: -10px 0 24px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--glass-border);
+            color: rgba(255, 255, 255, 0.86);
+            font-size: 14px;
+        }
+
+        .dev-otp code {
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
         }
 
         /* Loading Animation */
@@ -240,7 +287,21 @@
         </div>
         {% endif %}
 
+        {% if notice %}
+        <div class="notice-toast">
+            <i class="fa-solid fa-circle-info"></i>
+            {{ notice }}
+        </div>
+        {% endif %}
+
+        {% if dev_otp %}
+        <div class="dev-otp">
+            Dev code: <code>{{ dev_otp }}</code>
+        </div>
+        {% endif %}
+
         <form action="/verify-otp" method="POST" id="otp-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="otp" id="final-otp">
             <div class="otp-inputs">
                 <input type="text" maxlength="1" class="otp-input" required>
@@ -258,61 +319,12 @@
             </button>
         </form>
 
-        <div class="resend-box">
-            Didn't receive the code? <a href="#" onclick="resendOTP()">Resend OTP</a>
-        </div>
+        <form class="resend-box" action="/resend-otp" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <span>Didn't receive the code?</span>
+            <button type="submit" class="resend-link">Resend OTP</button>
+        </form>
     </div>
 
-    <script>
-        const inputs = document.querySelectorAll('.otp-input');
-        const form = document.getElementById('otp-form');
-        const finalInput = document.getElementById('final-otp');
-        const btn = document.getElementById('verify-btn');
-
-        inputs.forEach((input, index) => {
-            input.addEventListener('keyup', (e) => {
-                if (e.key >= 0 && e.key <= 9) {
-                    if (index < inputs.length - 1) {
-                        inputs[index + 1].focus();
-                    }
-                } else if (e.key === 'Backspace') {
-                    if (index > 0) {
-                        inputs[index - 1].focus();
-                    }
-                }
-                
-                updateFinalOTP();
-            });
-
-            // Handle paste
-            input.addEventListener('paste', (e) => {
-                const data = e.clipboardData.getData('text');
-                if (data.length === 6 && /^\d+$/.test(data)) {
-                    data.split('').forEach((char, i) => {
-                        inputs[i].value = char;
-                    });
-                    updateFinalOTP();
-                }
-            });
-        });
-
-        function updateFinalOTP() {
-            let otp = '';
-            inputs.forEach(input => otp += input.value);
-            finalInput.value = otp;
-        }
-
-        form.addEventListener('submit', (e) => {
-            btn.classList.add('loading');
-        });
-
-        function resendOTP() {
-            alert('OTP simulation: A new code has been generated. Check your console/terminal logs!');
-            window.location.reload();
-        }
-
-        // Focus first input on load
-        window.addEventListener('load', () => inputs[0].focus());
-    </script>
 </body>
 </html>

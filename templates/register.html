@@ -71,6 +71,7 @@
       {% endif %}
 
       <form class="auth-form-modern auth-form-modern--register" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="auth-grid auth-grid--two">
           <label class="auth-field-group" for="reg-name">
             <span>Full name</span>
