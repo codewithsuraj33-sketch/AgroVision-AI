@@ -27,7 +27,7 @@
       {% include "_user_sidebar.html" %}
     </aside>
 
-    <section class="dashboard-main store-detail-main" data-store-detail-page data-product-id="{{ product.id }}">
+    <section class="dashboard-main store-detail-main" data-store-detail-page data-product-id="{{ product.id or '' }}">
       <nav class="store-detail-breadcrumb" aria-label="Breadcrumb">
         <a href="/dashboard">Dashboard</a>
         <span>/</span>
@@ -72,9 +72,15 @@
           </div>
 
           <div class="store-detail-actions">
-            <button class="store-primary-button" type="button" data-buy-product="{{ product.id }}" data-buy-source="store-detail">
-              Buy Now
-            </button>
+            {% if product.id %}
+              <button class="store-primary-button" type="button" data-buy-product="{{ product.id }}" data-buy-source="store-detail">
+                Buy Now
+              </button>
+            {% else %}
+              <a class="store-primary-button" href="/market?q={{ product.name }}">
+                Explore in store
+              </a>
+            {% endif %}
             <a class="store-secondary-button" href="/market">Back to store</a>
           </div>
 

@@ -97,7 +97,6 @@
               <span class="dot-menu">&#8226;&#8226;&#8226;</span>
             </div>
 
-            <span class="soil-nutrient-status">{{ card.label }}</span>
             <div class="soil-nutrient-value">
               <strong>{{ card.value }}</strong>
               <span>{{ card.unit }}</span>
@@ -110,8 +109,7 @@
         {% endfor %}
 
         <article class="agro-card soil-health-panel">
-          <div class="soil-card-head">
-            <h2>Soil Health</h2>
+          <div class="soil-card-head soil-health-head">
             <span class="soil-health-score">{{ soil_page.health_panel.score }}%</span>
           </div>
 
@@ -120,17 +118,6 @@
             <span class="soil-sprout"></span>
             <span class="soil-bag soil-bag-p">P</span>
           </div>
-
-          <div class="soil-health-recommendations">
-            {% for item in soil_page.health_panel.recommendations %}
-              <div class="soil-health-recommendation">
-                <span class="soil-health-bullet"></span>
-                <span>{{ item }}</span>
-              </div>
-            {% endfor %}
-          </div>
-
-          <a class="soil-health-button" href="/dashboard">{{ soil_page.health_panel.button_label }}</a>
         </article>
 
         <article class="agro-card soil-history-card">

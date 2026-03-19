@@ -1,0 +1,251 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rent a Tractor - AgroVision AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    .tractor-page-main{min-height:100vh;padding:20px;background:linear-gradient(180deg,#04101b,#0b1729)}
+    .tractor-grid{max-width:1320px;margin:0 auto;display:grid;grid-template-columns:minmax(360px,450px) minmax(320px,1fr);gap:22px}
+    .tractor-phone{position:relative;min-height:calc(100vh - 40px);border-radius:32px;overflow:hidden;background:#0b1322;border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 80px rgba(0,0,0,.4)}
+    .tractor-map{position:absolute;inset:0;z-index:1}.tractor-overlay{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(180deg,rgba(4,9,18,.92) 0%,rgba(4,9,18,.2) 18%,rgba(4,9,18,.08) 44%,rgba(4,9,18,.32) 70%,rgba(4,9,18,.86) 100%)}
+    .tractor-topbar,.tractor-floating,.tractor-location-card,.tractor-sheet{position:absolute;left:16px;right:16px;z-index:5}
+    .tractor-topbar{top:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 0}.tractor-top-actions,.tractor-top-left{display:flex;align-items:center;gap:12px}
+    .tractor-btn,.tractor-avatar{border:0;cursor:pointer;background:rgba(255,255,255,.08);color:#eef7ff;backdrop-filter:blur(12px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+    .tractor-btn{height:42px;padding:0 14px;border-radius:14px;font:800 .95rem "Manrope",sans-serif}.tractor-btn.icon{width:42px;padding:0}.tractor-brand{font-size:1.25rem;font-weight:800;color:#22d67b}
+    .tractor-avatar{width:44px;height:44px;border-radius:50%;font-weight:900;color:#06213d;background:linear-gradient(135deg,#24de71,#51d1ff)}
+    .tractor-floating{top:86px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.tractor-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(6,18,37,.64);color:#eef7ff;font-size:.82rem;font-weight:800}
+    .tractor-location-card,.tractor-sheet{bottom:18px;border-radius:28px;background:rgba(13,23,45,.96);color:#f6fbff;border:1px solid rgba(255,255,255,.06);box-shadow:0 22px 50px rgba(0,0,0,.38);backdrop-filter:blur(14px)}
+    .tractor-location-card{padding:22px;transition:.28s ease}.tractor-location-card.hidden{opacity:0;transform:translateY(24px);pointer-events:none}.tractor-location-card h1{margin:0 0 18px;font-size:1.18rem}
+    .tractor-search{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:16px 18px;border-radius:18px;background:rgba(141,164,198,.12)}
+    .tractor-search input,.tractor-field input,.tractor-field select,.tractor-field textarea{border:0;outline:0;background:transparent;color:#f6fbff;font:inherit;width:100%}.tractor-dot{width:10px;height:10px;border-radius:50%;background:#fff}
+    .tractor-loc-actions{display:grid;grid-template-columns:1fr auto;gap:12px;margin-top:14px}.tractor-secondary,.tractor-primary{border:0;border-radius:16px;cursor:pointer;font:800 .95rem "Manrope",sans-serif}
+    .tractor-secondary{padding:14px 16px;background:linear-gradient(135deg,rgba(18,40,92,.94),rgba(16,63,154,.88));color:#9dc7ff}.tractor-primary{width:64px;background:#fff;color:#07142a;font-size:1.2rem}
+    .tractor-sheet{padding:16px 18px 20px;transform:translateY(110%);opacity:0;pointer-events:none;transition:.3s ease}.tractor-sheet.visible{transform:translateY(0);opacity:1;pointer-events:auto}.tractor-sheet.large{max-height:calc(100% - 120px);overflow:auto}
+    .tractor-handle{width:52px;height:5px;border-radius:999px;background:rgba(255,255,255,.12);margin:4px auto 18px}.tractor-sheet-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.tractor-sheet-head h2,.tractor-sheet-head h3{margin:0;font-size:1.12rem}.tractor-sheet-head p{margin:4px 0 0;color:rgba(210,224,243,.62);font-weight:700}
+    .tractor-head-btn{border:0;background:transparent;color:#fff;font-size:1.15rem;cursor:pointer;width:36px;height:36px;border-radius:12px}.tractor-service-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .tractor-service-card{border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:18px 14px;background:rgba(110,133,170,.12);color:#fff;text-align:center;cursor:pointer}.tractor-service-icon{width:60px;height:60px;margin:0 auto 14px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;background:rgba(80,103,136,.28);color:#22d67b;font-size:1.4rem}
+    .tractor-service-card strong,.tractor-machine-card strong,.tractor-book-machine strong,.tractor-card h2,.tractor-stat strong{display:block}.tractor-service-card span,.tractor-mini{display:block;margin-top:8px;color:rgba(210,224,243,.58);font-size:.8rem;line-height:1.5}
+    .tractor-filters{display:grid;gap:12px;margin-bottom:14px}.tractor-pills{display:flex;gap:10px;overflow:auto;padding-bottom:4px}.tractor-pill{border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:10px 14px;background:rgba(255,255,255,.06);color:#eef7ff;cursor:pointer;font:800 .85rem "Manrope",sans-serif;white-space:nowrap}.tractor-pill.active{background:linear-gradient(135deg,#1fd86f,#1db4ff);color:#051321;border-color:transparent}
+    .tractor-filter-row,.tractor-book-grid,.tractor-pay-grid,.tractor-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tractor-field{display:grid;gap:6px}.tractor-field label{color:rgba(210,224,243,.68);font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+    .tractor-field select,.tractor-field input,.tractor-field textarea{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}.tractor-ai{margin-bottom:14px;padding:16px;border-radius:20px;background:linear-gradient(135deg,rgba(31,216,111,.16),rgba(29,180,255,.12));border:1px solid rgba(31,216,111,.18)}.tractor-ai p,.tractor-card p{margin:6px 0 0;line-height:1.6;color:rgba(238,246,255,.84)}
+    .tractor-machines{display:grid;gap:14px}.tractor-machine-card{padding:16px;border-radius:22px;background:rgba(110,133,170,.08);border:1px solid rgba(255,255,255,.06);display:grid;gap:14px}.tractor-machine-top{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}.tractor-machine-icon{width:66px;height:66px;border-radius:20px;display:inline-flex;align-items:center;justify-content:center;background:rgba(80,103,136,.28);font-size:1.45rem}.tractor-machine-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.tractor-machine-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;color:rgba(223,235,251,.72);font-size:.84rem;font-weight:700}.tractor-eta{color:#25df6c;font-weight:900}
+    .tractor-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(237,246,255,.7);font-size:.76rem;font-weight:800}.tractor-badge.green{background:rgba(31,216,111,.16);color:#8df7b9}.tractor-badge.gold{background:rgba(255,196,0,.14);color:#ffd76d}.tractor-price{text-align:right;font-size:1.14rem;font-weight:900}.tractor-price span{display:block;margin-top:4px;color:rgba(210,224,243,.56);font-size:.82rem;font-weight:700}
+    .tractor-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.tractor-book-btn{border:0;border-radius:14px;padding:12px 16px;background:linear-gradient(135deg,#1fd86f,#1db4ff);color:#071321;cursor:pointer;font:800 .9rem "Manrope",sans-serif}.tractor-book-btn:disabled{opacity:.55;cursor:not-allowed}
+    .tractor-empty,.tractor-history-item,.tractor-list-item,.tractor-book-machine,.tractor-stat,.tractor-card{padding:16px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.05)}.tractor-empty{text-align:center;color:rgba(227,239,252,.74);line-height:1.6}.tractor-history,.tractor-list{display:grid;gap:10px}.tractor-history-item span,.tractor-list-item span,.tractor-book-machine span,.tractor-stat span{display:block;margin-top:6px;color:rgba(215,229,247,.68);font-size:.84rem;line-height:1.5}
+    .tractor-book-form{display:grid;gap:14px}.tractor-pay-option{border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.05);color:#fff;padding:14px;text-align:left;cursor:pointer}.tractor-pay-option.active{border-color:rgba(31,216,111,.34);background:rgba(31,216,111,.12)}.tractor-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px;border-radius:20px;background:linear-gradient(135deg,rgba(31,216,111,.16),rgba(29,180,255,.12))}.tractor-submit{width:100%;padding:15px 16px;border:0;border-radius:16px;background:linear-gradient(135deg,#1fd86f,#1db4ff);color:#071321;cursor:pointer;font:800 .95rem "Manrope",sans-serif}.tractor-message{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.06);line-height:1.6}
+    .tractor-side{display:grid;gap:18px}.tractor-card{color:#fff}.tractor-card h2{margin:0 0 12px;font-size:1.16rem}.tractor-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.tractor-marker{position:relative;width:22px;height:22px;border-radius:50% 50% 50% 0;background:#4ea8ff;transform:rotate(-45deg);border:2px solid rgba(255,255,255,.92)}.tractor-marker:after{content:"";position:absolute;top:5px;left:5px;width:8px;height:8px;border-radius:50%;background:#fff}.tractor-marker.active:before{content:"";position:absolute;inset:-12px;border-radius:999px;border:3px solid rgba(46,70,255,.88);transform:rotate(45deg)}
+    .leaflet-control-attribution{background:rgba(5,12,24,.62)!important;color:rgba(255,255,255,.6)!important;border-radius:10px 0 0 0;padding:4px 8px!important}.leaflet-control-attribution a{color:rgba(139,213,255,.88)!important}
+    @media (max-width:1180px){.tractor-grid{grid-template-columns:1fr}.tractor-phone{min-height:88vh}}@media (max-width:720px){.tractor-page-main{padding:0}.tractor-phone{min-height:100vh;border-radius:0;border:0}.tractor-side{padding:18px}.tractor-filter-row,.tractor-book-grid,.tractor-pay-grid,.tractor-stats{grid-template-columns:1fr}}
+  </style>
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      {% set active_page = tractor_page.active_page %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+    <section class="dashboard-main tractor-page-main">
+      <div class="tractor-grid">
+        <div class="tractor-phone">
+          <div id="tractorMap" class="tractor-map"></div>
+          <div class="tractor-overlay"></div>
+          <header class="tractor-topbar">
+            <div class="tractor-top-left">
+              <button id="mobileMenuToggle" class="tractor-btn icon" type="button" aria-label="Open menu" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
+              <div class="tractor-brand">GramAI</div>
+            </div>
+            <div class="tractor-top-actions">
+              <button id="tractorLanguageToggle" class="tractor-btn" type="button"><i class="fa-regular fa-flag"></i><span id="tractorLanguageLabel">EN</span></button>
+              <button id="tractorThemeToggle" class="tractor-btn icon" type="button"><i class="fa-regular fa-sun"></i></button>
+              <button id="tractorNotificationBtn" class="tractor-btn icon" type="button"><i class="fa-regular fa-bell"></i></button>
+              <button class="tractor-avatar" type="button">{{ tractor_page.avatar_label }}</button>
+            </div>
+          </header>
+          <div class="tractor-floating">
+            <span class="tractor-chip"><i class="fa-solid fa-location-dot"></i><span id="floatingLocationLabel">{{ tractor_page.location_label }}</span></span>
+            <span class="tractor-chip"><i class="fa-solid fa-tractor"></i>{{ tractor_page.booking_stats.marketplace_machines }} machines live</span>
+          </div>
+          <section class="tractor-location-card" id="tractorLocationCard">
+            <h1>Farm location for service?</h1>
+            <div class="tractor-search">
+              <span class="tractor-dot"></span>
+              <input id="serviceLocationInput" type="text" value="{{ tractor_page.location_label }}">
+              <button type="button"><i class="fa-solid fa-location-dot"></i></button>
+            </div>
+            <div class="tractor-loc-actions">
+              <button id="useCurrentLocationBtn" class="tractor-secondary" type="button"><i class="fa-regular fa-paper-plane"></i> Use Current Location</button>
+              <button id="openServiceSheetBtn" class="tractor-primary" type="button"><i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+          </section>
+          <section class="tractor-sheet" id="serviceSheet">
+            <div class="tractor-handle"></div>
+            <div class="tractor-sheet-head">
+              <div><h2>Select Service Type</h2></div>
+              <button id="closeServiceSheetBtn" class="tractor-head-btn" type="button"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="tractor-service-grid">
+              {% for service in tractor_page.service_types %}
+              <button class="tractor-service-card" type="button" data-service-id="{{ service.id }}">
+                <span class="tractor-service-icon"><i class="fas {{ service.icon }}"></i></span>
+                <strong>{{ service.title }}</strong>
+                <span>{{ service.subtitle }}</span>
+              </button>
+              {% endfor %}
+            </div>
+          </section>
+          <section class="tractor-sheet large" id="machineSheet">
+            <div class="tractor-handle"></div>
+            <div class="tractor-sheet-head">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button id="machineSheetBackBtn" class="tractor-head-btn" type="button"><i class="fa-solid fa-arrow-left"></i></button>
+                <div><h2 id="machineSheetTitle">Choose Machinery</h2><p>Filter nearby machines and book a slot</p></div>
+              </div>
+            </div>
+            <div class="tractor-filters">
+              <div class="tractor-pills" id="categoryFilterList">
+                {% for category in tractor_page.categories %}
+                <button class="tractor-pill{% if category.id == tractor_page.selected_category %} active{% endif %}" type="button" data-category="{{ category.id }}">{{ category.label }}</button>
+                {% endfor %}
+              </div>
+              <div class="tractor-filter-row">
+                <div class="tractor-field">
+                  <label for="machineSortSelect">Sort</label>
+                  <select id="machineSortSelect">
+                    {% for option in tractor_page.sort_options %}
+                    <option value="{{ option.id }}"{% if option.id == tractor_page.selected_sort %} selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="tractor-field">
+                  <label for="serviceDateInput">Service Date</label>
+                  <input id="serviceDateInput" type="date" value="{{ tractor_page.selected_date }}">
+                </div>
+              </div>
+            </div>
+            <div class="tractor-ai">
+              <strong id="aiRecommendationTitle">{{ tractor_page.ai_recommendation.title }}</strong>
+              <p id="aiRecommendationDetail">{{ tractor_page.ai_recommendation.detail }}</p>
+            </div>
+            <div id="machineList" class="tractor-machines"></div>
+            <div id="machineHistoryList" class="tractor-history">
+              {% for booking in tractor_page.booking_history %}
+              <article class="tractor-history-item"><strong>{{ booking.machine_name }}</strong><span>{{ booking.booking_date }} • {{ booking.slot_label }} • {{ booking.booking_status }}</span></article>
+              {% endfor %}
+            </div>
+          </section>
+          <section class="tractor-sheet large" id="bookingSheet">
+            <div class="tractor-handle"></div>
+            <div class="tractor-sheet-head">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button id="bookingSheetBackBtn" class="tractor-head-btn" type="button"><i class="fa-solid fa-arrow-left"></i></button>
+                <div><h3>Book Time Slot</h3><p>Confirm service request</p></div>
+              </div>
+            </div>
+            <form id="bookingForm" class="tractor-book-form">
+              <div class="tractor-book-machine"><strong id="bookingMachineName">Select a machine</strong><span id="bookingMachineMeta">Nearby machine details will appear here.</span></div>
+              <div class="tractor-book-grid">
+                <div class="tractor-field"><label for="bookingDateInput">Booking Date</label><input id="bookingDateInput" type="date" value="{{ tractor_page.selected_date }}"></div>
+                <div class="tractor-field"><label for="bookingSlotSelect">Time Slot</label><select id="bookingSlotSelect"></select></div>
+              </div>
+              <div class="tractor-book-grid">
+                <div class="tractor-field"><label for="bookingDurationSelect">Duration</label><select id="bookingDurationSelect"><option value="1">1 hour</option><option value="2">2 hours</option><option value="3">3 hours</option><option value="4">4 hours</option><option value="6">6 hours</option></select></div>
+                <div class="tractor-field"><label for="bookingLocationInput">Farm Location</label><input id="bookingLocationInput" type="text" value="{{ tractor_page.location_label }}"></div>
+              </div>
+              <div class="tractor-field"><label for="bookingNotesInput">Notes</label><textarea id="bookingNotesInput" rows="3" placeholder="Mention crop stage, acreage, or operator note"></textarea></div>
+              <div class="tractor-field">
+                <label>Payment Mode</label>
+                <div class="tractor-pay-grid">
+                  <button class="tractor-pay-option active" type="button" data-payment-mode="pay_later"><strong>Pay Later</strong><span>Book now, confirm on service</span></button>
+                  <button class="tractor-pay-option" type="button" data-payment-mode="online"><strong>Online</strong><span>{% if tractor_page.payment_enabled %}Create Razorpay order{% else %}Gateway-ready mode{% endif %}</span></button>
+                </div>
+              </div>
+              <div class="tractor-summary"><div><strong id="bookingTotalAmount">Rs 0</strong><span id="bookingSummaryNote">Choose machine and duration</span></div><span id="bookingAvailabilityBadge" class="tractor-badge green">Available</span></div>
+              <button id="bookingSubmitBtn" class="tractor-submit" type="submit">Confirm Booking</button>
+              <div id="bookingMessage" class="tractor-message" hidden></div>
+            </form>
+          </section>
+        </div>
+        <aside class="tractor-side">
+          <section class="tractor-card"><h2>Agri Service Marketplace</h2><p>Uber-style tractor and farm service booking. Compare nearby machines by category, distance, price, rating, and availability before reserving a working slot.</p></section>
+          <section class="tractor-card"><h2>Marketplace Stats</h2><div class="tractor-stats"><div class="tractor-stat"><strong>{{ tractor_page.booking_stats.marketplace_machines }}</strong><span>Machines</span></div><div class="tractor-stat"><strong>{{ tractor_page.booking_stats.categories }}</strong><span>Categories</span></div><div class="tractor-stat"><strong id="sideActiveBookings">{{ tractor_page.booking_stats.active_bookings }}</strong><span>Bookings</span></div></div></section>
+          <section class="tractor-card"><h2>AI Recommendation</h2><p id="sideAiRecommendation">{{ tractor_page.ai_recommendation.detail }}</p></section>
+          <section class="tractor-card"><h2>Recent Bookings</h2><div id="desktopBookingHistory" class="tractor-list">{% if tractor_page.booking_history %}{% for booking in tractor_page.booking_history %}<article class="tractor-list-item"><strong>{{ booking.machine_name }}</strong><span>{{ booking.booking_date }} • {{ booking.slot_label }} • {{ booking.payment_mode }}</span></article>{% endfor %}{% else %}<article class="tractor-list-item"><strong>No bookings yet</strong><span>Choose a machine and reserve your first farm service slot.</span></article>{% endif %}</div></section>
+        </aside>
+      </div>
+    </section>
+  </main>
+  <script id="tractorPageData" type="application/json">{{ tractor_page|tojson }}</script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    (function () {
+      var rootData = JSON.parse(document.getElementById("tractorPageData").textContent || "{}");
+      var state = { category: rootData.selected_category || "all", sort: rootData.selected_sort || "nearest", service_date: rootData.selected_date, lat: rootData.map_center ? rootData.map_center.lat : null, lng: rootData.map_center ? rootData.map_center.lng : null };
+      var payload = { machines: rootData.machines || [], markers: rootData.markers || [], ai_recommendation: rootData.ai_recommendation || {} };
+      var selectedMachine = null;
+      var paymentMode = "pay_later";
+      var locationCard = document.getElementById("tractorLocationCard");
+      var serviceSheet = document.getElementById("serviceSheet");
+      var machineSheet = document.getElementById("machineSheet");
+      var bookingSheet = document.getElementById("bookingSheet");
+      var machineList = document.getElementById("machineList");
+      var machineHistoryList = document.getElementById("machineHistoryList");
+      var desktopBookingHistory = document.getElementById("desktopBookingHistory");
+      var bookingMessage = document.getElementById("bookingMessage");
+      var machineSortSelect = document.getElementById("machineSortSelect");
+      var serviceDateInput = document.getElementById("serviceDateInput");
+      var bookingDateInput = document.getElementById("bookingDateInput");
+      var bookingSlotSelect = document.getElementById("bookingSlotSelect");
+      var bookingDurationSelect = document.getElementById("bookingDurationSelect");
+      var bookingLocationInput = document.getElementById("bookingLocationInput");
+      var bookingNotesInput = document.getElementById("bookingNotesInput");
+      var bookingMachineName = document.getElementById("bookingMachineName");
+      var bookingMachineMeta = document.getElementById("bookingMachineMeta");
+      var bookingTotalAmount = document.getElementById("bookingTotalAmount");
+      var bookingSummaryNote = document.getElementById("bookingSummaryNote");
+      var bookingAvailabilityBadge = document.getElementById("bookingAvailabilityBadge");
+      var sideActiveBookings = document.getElementById("sideActiveBookings");
+      var map = L.map("tractorMap", { zoomControl: false }).setView([rootData.map_center.lat, rootData.map_center.lng], rootData.map_center.zoom || 14);
+      var mapMarkers = [];
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, attribution: "Esri" }).addTo(map);
+      function showSheet(sheet) { [serviceSheet, machineSheet, bookingSheet].forEach(function (item) { item.classList.toggle("visible", item === sheet); }); locationCard.classList.toggle("hidden", !!sheet); }
+      function updateMap(markers, center) { while (mapMarkers.length) map.removeLayer(mapMarkers.pop()); (markers || []).forEach(function (marker, index) { var icon = L.divIcon({ className: "", html: '<div class="tractor-marker' + (index === 0 ? ' active' : '') + '"></div>', iconSize: [28, 28], iconAnchor: [14, 28] }); mapMarkers.push(L.marker([marker.lat, marker.lng], { icon: icon }).addTo(map).bindPopup(marker.title || "Machine")); }); if (center) map.setView([center.lat, center.lng], center.zoom || 14); }
+      function updateCategoryPills() { document.querySelectorAll("[data-category]").forEach(function (button) { button.classList.toggle("active", button.getAttribute("data-category") === state.category); }); }
+      function updateAi() { document.getElementById("aiRecommendationTitle").textContent = payload.ai_recommendation.title || "AI recommendation"; document.getElementById("aiRecommendationDetail").textContent = payload.ai_recommendation.detail || ""; document.getElementById("sideAiRecommendation").textContent = payload.ai_recommendation.detail || ""; }
+      function refreshBookingSummary() { if (!selectedMachine) { bookingMachineName.textContent = "Select a machine"; bookingMachineMeta.textContent = "Nearby machine details will appear here."; bookingTotalAmount.textContent = "Rs 0"; bookingSummaryNote.textContent = "Choose machine and duration"; bookingAvailabilityBadge.textContent = "Available"; return; } var duration = parseInt(bookingDurationSelect.value || "1", 10) || 1; bookingMachineName.textContent = selectedMachine.name; bookingMachineMeta.textContent = selectedMachine.category_meta.title + " • " + selectedMachine.distance_label + " • " + selectedMachine.rating + " rating"; bookingTotalAmount.textContent = "Rs " + (selectedMachine.price_per_hour * duration); bookingSummaryNote.textContent = duration + " hour booking • " + selectedMachine.hp + " • " + selectedMachine.availability_label; bookingAvailabilityBadge.textContent = selectedMachine.is_available ? "Available" : "Busy"; }
+      function renderSlots() { bookingSlotSelect.innerHTML = ""; if (!selectedMachine) return; var options = (selectedMachine.slot_options || []).filter(function (slot) { return slot.date === bookingDateInput.value; }); if (!options.length) { var empty = document.createElement("option"); empty.value = ""; empty.textContent = "No slots available"; bookingSlotSelect.appendChild(empty); return; } options.forEach(function (slot) { var option = document.createElement("option"); option.value = slot.label; option.textContent = slot.display; bookingSlotSelect.appendChild(option); }); }
+      function appendBookingHistory(item) { var mobile = document.createElement("article"); mobile.className = "tractor-history-item"; mobile.innerHTML = "<strong>" + item.machine_name + "</strong><span>" + item.booking_date + " • " + item.slot_label + " • " + item.booking_status + "</span>"; machineHistoryList.prepend(mobile); if (desktopBookingHistory.textContent.indexOf("No bookings yet") >= 0) desktopBookingHistory.innerHTML = ""; var desktop = document.createElement("article"); desktop.className = "tractor-list-item"; desktop.innerHTML = "<strong>" + item.machine_name + "</strong><span>" + item.booking_date + " • " + item.slot_label + " • " + item.payment_mode + "</span>"; desktopBookingHistory.prepend(desktop); sideActiveBookings.textContent = String((parseInt(sideActiveBookings.textContent || "0", 10) || 0) + 1); }
+      function openBooking(machineId) { selectedMachine = (payload.machines || []).find(function (item) { return item.id === machineId; }) || null; renderSlots(); refreshBookingSummary(); bookingMessage.hidden = true; showSheet(bookingSheet); }
+      function renderMachines() { machineList.innerHTML = ""; document.getElementById("machineSheetTitle").textContent = ((rootData.categories || []).find(function (item) { return item.id === state.category; }) || {}).label || "Choose Machinery"; if (!(payload.machines || []).length) { machineList.innerHTML = '<div class="tractor-empty">No machine available for this filter. Try another category, date, or sort option.</div>'; return; } payload.machines.forEach(function (machine) { var card = document.createElement("article"); card.className = "tractor-machine-card"; card.innerHTML = '<div class="tractor-machine-top"><div class="tractor-machine-icon"><i class="fas ' + machine.category_meta.icon + '"></i></div><div><div class="tractor-machine-title"><strong>' + machine.name + '</strong><span class="tractor-badge">' + machine.hp + '</span><span class="tractor-badge gold"><i class="fa-solid fa-star"></i>&nbsp;' + machine.rating + ' (' + machine.rating_count + ')</span></div><div class="tractor-machine-meta"><span class="tractor-eta">' + machine.distance_label + '</span><span>' + machine.distance_km + ' km</span><span>' + machine.availability_label + '</span></div></div><div class="tractor-price">Rs ' + machine.price_per_hour + '<span>/hour</span></div></div><div class="tractor-actions"><div class="tractor-machine-title">' + (machine.features || []).map(function (feature) { return '<span class="tractor-badge">' + feature + '</span>'; }).join("") + '</div><button class="tractor-book-btn" data-book-machine="' + machine.id + '"' + (machine.is_available ? '' : ' disabled') + '>Book slot</button></div>'; machineList.appendChild(card); }); machineList.querySelectorAll("[data-book-machine]").forEach(function (button) { button.addEventListener("click", function () { openBooking(button.getAttribute("data-book-machine")); }); }); }
+      function loadMarketplace() { var query = new URLSearchParams({ category: state.category, sort: state.sort, service_date: state.service_date }); if (typeof state.lat === "number" && typeof state.lng === "number") { query.set("lat", String(state.lat)); query.set("lng", String(state.lng)); } return fetch("/api/tractor-marketplace?" + query.toString()).then(function (response) { return response.json(); }).then(function (data) { if (!data.success) throw new Error(data.error || "Marketplace unavailable"); payload = data; renderMachines(); updateAi(); updateCategoryPills(); updateMap(data.markers, data.map_center); selectedMachine = null; refreshBookingSummary(); }).catch(function (error) { bookingMessage.hidden = false; bookingMessage.textContent = error.message || "Marketplace unavailable"; }); }
+      updateMap(rootData.markers || [], rootData.map_center); renderMachines(); updateAi(); refreshBookingSummary();
+      document.getElementById("openServiceSheetBtn").addEventListener("click", function () { showSheet(serviceSheet); });
+      document.getElementById("closeServiceSheetBtn").addEventListener("click", function () { showSheet(null); });
+      document.getElementById("machineSheetBackBtn").addEventListener("click", function () { showSheet(serviceSheet); });
+      document.getElementById("bookingSheetBackBtn").addEventListener("click", function () { showSheet(machineSheet); });
+      document.querySelectorAll("[data-service-id]").forEach(function (button) { button.addEventListener("click", function () { state.category = button.getAttribute("data-service-id") || "all"; loadMarketplace().then(function () { showSheet(machineSheet); }); }); });
+      document.querySelectorAll("[data-category]").forEach(function (button) { button.addEventListener("click", function () { state.category = button.getAttribute("data-category") || "all"; loadMarketplace(); }); });
+      machineSortSelect.addEventListener("change", function () { state.sort = machineSortSelect.value || "nearest"; loadMarketplace(); });
+      serviceDateInput.addEventListener("change", function () { state.service_date = serviceDateInput.value; bookingDateInput.value = serviceDateInput.value; loadMarketplace(); });
+      bookingDateInput.addEventListener("change", renderSlots);
+      bookingDurationSelect.addEventListener("change", refreshBookingSummary);
+      document.querySelectorAll("[data-payment-mode]").forEach(function (button) { button.addEventListener("click", function () { paymentMode = button.getAttribute("data-payment-mode") || "pay_later"; document.querySelectorAll("[data-payment-mode]").forEach(function (item) { item.classList.toggle("active", item === button); }); }); });
+      document.getElementById("tractorThemeToggle").addEventListener("click", function () { var root = document.documentElement; var isDark = root.getAttribute("data-theme") === "dark"; if (isDark) { root.removeAttribute("data-theme"); localStorage.removeItem("theme"); } else { root.setAttribute("data-theme", "dark"); localStorage.setItem("theme", "dark"); } });
+      document.getElementById("tractorLanguageToggle").addEventListener("click", function () { var label = document.getElementById("tractorLanguageLabel"); label.textContent = label.textContent === "EN" ? "HI" : "EN"; });
+      document.getElementById("tractorNotificationBtn").addEventListener("click", function () { window.location.href = "/notifications"; });
+      document.getElementById("useCurrentLocationBtn").addEventListener("click", function () { if (!navigator.geolocation) { document.getElementById("serviceLocationInput").value = "Current location unavailable"; return; } navigator.geolocation.getCurrentPosition(function (position) { state.lat = position.coords.latitude; state.lng = position.coords.longitude; document.getElementById("serviceLocationInput").value = "Current location"; bookingLocationInput.value = "Current location"; document.getElementById("floatingLocationLabel").textContent = "Current location"; loadMarketplace(); }, function () { document.getElementById("serviceLocationInput").value = "Location permission denied"; }, { enableHighAccuracy: true, timeout: 8000 }); });
+      document.getElementById("bookingForm").addEventListener("submit", function (event) { event.preventDefault(); if (!selectedMachine) { bookingMessage.hidden = false; bookingMessage.textContent = "Select a machine first."; return; } fetch("/api/tractor-bookings", { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify({ machine_id: selectedMachine.id, service_date: bookingDateInput.value, slot_label: bookingSlotSelect.value, duration_hours: bookingDurationSelect.value, farm_location: bookingLocationInput.value, farm_lat: state.lat, farm_lng: state.lng, payment_mode: paymentMode, notes: bookingNotesInput.value }) }).then(function (response) { return response.json(); }).then(function (data) { bookingMessage.hidden = false; if (!data.success) { bookingMessage.textContent = data.error || "Booking failed."; return; } bookingMessage.textContent = data.message + (data.payment_note ? " " + data.payment_note : ""); appendBookingHistory(data.booking); loadMarketplace(); }).catch(function () { bookingMessage.hidden = false; bookingMessage.textContent = "Booking request failed. Please try again."; }); });
+    }());
+  </script>
+</body>
+</html>
+

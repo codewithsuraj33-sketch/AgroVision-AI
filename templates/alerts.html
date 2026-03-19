@@ -55,10 +55,37 @@
           <span>Your Farm, {{ user.location or "Bhubaneswar" }}</span>
           <i class="fas fa-chevron-down"></i>
         </div>
-        <button class="alerts-mark-read-btn" onclick="this.innerHTML='<i class=\'fas fa-check-double\'></i> Done!'">
-          <i class="fas fa-check-double"></i> Mark all Read
-        </button>
+        <form method="POST" action="/alerts/mark-all-read">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="alerts-mark-read-btn" type="submit">
+            <i class="fas fa-check-double"></i> Mark all Read{% if alerts_page.unread_count %} ({{ alerts_page.unread_count }}){% endif %}
+          </button>
+        </form>
       </div>
+
+      <div class="alerts-delivery-status">
+        <div class="alerts-delivery-card">
+          <span class="alerts-delivery-label">In-app alerts</span>
+          <strong class="alerts-delivery-value alerts-delivery-on">Active</strong>
+        </div>
+        <div class="alerts-delivery-card">
+          <span class="alerts-delivery-label">Email</span>
+          <strong class="alerts-delivery-value {% if alerts_page.delivery_status.email_ready %}alerts-delivery-on{% else %}alerts-delivery-off{% endif %}">
+            {% if alerts_page.delivery_status.email_ready %}Active{% else %}Off{% endif %}
+          </strong>
+        </div>
+        <div class="alerts-delivery-card">
+          <span class="alerts-delivery-label">{{ alerts_page.delivery_status.mobile_label }}</span>
+          <strong class="alerts-delivery-value {% if alerts_page.delivery_status.mobile_ready %}alerts-delivery-on{% else %}alerts-delivery-off{% endif %}">
+            {% if alerts_page.delivery_status.mobile_ready %}Active{% else %}Off{% endif %}
+          </strong>
+        </div>
+      </div>
+      {% if not alerts_page.delivery_status.mobile_ready %}
+      <p class="alerts-delivery-note">
+        Mobile alert is off. Enable `SMS / WhatsApp delivery` in Settings and add valid Twilio keys in `.env`.
+      </p>
+      {% endif %}
 
       <!-- Alert Cards Grid -->
       <div class="alerts-cards-grid">
@@ -78,8 +105,18 @@
           <h3>{{ alert.title }}</h3>
           <p>{{ alert.detail }}</p>
           <div class="alerts-card-footer">
-            <button class="alerts-view-btn alerts-view-btn-{{ alert.severity }}">View Details</button>
+            <a class="alerts-view-btn alerts-view-btn-{{ alert.severity }}" href="{{ alert.open_url }}">View Details</a>
             <span class="alerts-card-time">{{ alert.time_ago }}</span>
+          </div>
+        </div>
+        {% else %}
+        <div class="agro-card alerts-card alerts-card-insight">
+          <div class="alerts-card-icon"><i class="fas fa-circle-check"></i></div>
+          <h3>No active alerts</h3>
+          <p>Your farm is stable right now. New weather, soil, task, or disease alerts will appear here automatically.</p>
+          <div class="alerts-card-footer">
+            <a class="alerts-view-btn alerts-view-btn-insight" href="/dashboard">Open Dashboard</a>
+            <span class="alerts-card-time">Just now</span>
           </div>
         </div>
         {% endfor %}
@@ -148,17 +185,19 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script id="alertsHistoryData" type="application/json">{{ alerts_page.history_chart|tojson }}</script>
   <script>
     // Recent History Line Chart
     const ctx = document.getElementById('alertsHistoryChart');
     if (ctx) {
+      const historyPayload = JSON.parse(document.getElementById('alertsHistoryData').textContent || '{}');
       new Chart(ctx, {
         type: 'line',
         data: {
-          labels: ['Apr', 'May', 'June', 'July'],
+          labels: Array.isArray(historyPayload.labels) ? historyPayload.labels : [],
           datasets: [{
             label: 'Alert Frequency',
-            data: [3, 5, 2, 4],
+            data: Array.isArray(historyPayload.values) ? historyPayload.values : [],
             borderColor: '#5b9a3c',
             backgroundColor: 'rgba(91,154,60,0.12)',
             fill: true,

@@ -705,16 +705,25 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       var mapEl = document.getElementById('primaryFarmMap');
-      if (!mapEl) return;
-      var lat = parseFloat("{{ farms_page.weather.lat|default(20.296) }}");
-      var lng = parseFloat("{{ farms_page.weather.lon|default(85.824) }}");
-      var map = L.map('primaryFarmMap').setView([lat, lng], 12);
+      if (!mapEl || !window.L) return;
+      var lat = Number({{ farms_page.primary_map.lat|tojson }});
+      var lng = Number({{ farms_page.primary_map.lng|tojson }});
+      var zoom = Number({{ farms_page.primary_map.zoom|tojson }}) || 12;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        lat = 20.5937;
+        lng = 78.9629;
+        zoom = 5;
+      }
+      var map = L.map('primaryFarmMap', { zoomControl: true }).setView([lat, lng], zoom);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
         maxZoom: 19
       }).addTo(map);
-      L.marker([lat, lng]).addTo(map).bindPopup('{{ farms_page.primary_farm.name if farms_page.primary_farm else "Primary Farm" }}');
+      L.marker([lat, lng]).addTo(map).bindPopup('{{ farms_page.primary_farm.name if farms_page.primary_farm else "Primary Farm" }}').openPopup();
       setTimeout(function() { map.invalidateSize(); }, 300);
+      window.addEventListener('resize', function() {
+        map.invalidateSize();
+      });
     });
   </script>
 
@@ -767,10 +776,6 @@
       }
     });
   </script>
-<<<<<<< HEAD
-=======
-  </main>
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
   <!-- Google Translate -->
   <script>

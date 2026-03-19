@@ -26,5 +26,7 @@ def test_dash():
         dashboard=DummyDashboard()
     )
 
+test_dash.__test__ = False
+
 if __name__ == '__main__':
     app.run(port=5007)

@@ -1,8 +1,8 @@
 <div class="sidebar-brand">
   {% if user and user.profile_photo %}
     <img
-      class="dashboard-avatar-img dashboard-avatar"
-      style="width:42px;height:42px;border-radius:50%;object-fit:cover;margin-right:12px;"
+      class="dashboard-avatar-img"
+      style="width:42px;height:42px;min-width:42px;min-height:42px;border-radius:50%;object-fit:cover;aspect-ratio:1 / 1;margin-right:12px;"
       src="/static/uploads/{{ user.profile_photo }}"
       alt="Avatar"
     >
@@ -76,11 +76,11 @@
     <i class="fas fa-store sidebar-icon" style="color: var(--brand-primary);"></i>
     <span>Market</span>
   </a>
-  <a class="sidebar-link{% if active_page == 'subscriptions' %} is-active{% endif %}" href="/subscriptions" style="border: 1px dashed rgba(45, 216, 255, 0.3); margin-top: 5px; background: rgba(45, 216, 255, 0.06);">
+  <a class="sidebar-link{% if active_page == 'subscriptions' %} is-active{% endif %}" href="/subscriptions" style="border: 1px dashed rgba(45, 216, 255, 0.3); background: rgba(45, 216, 255, 0.06);">
     <i class="fas fa-crown sidebar-icon" style="color: #2dd8ff;"></i>
     <span style="color: #2dd8ff; font-weight: 800;">Subscriptions</span>
   </a>
-  <a class="sidebar-link{% if active_page == 'refer' %} is-active{% endif %}" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); margin-top: 5px; background: rgba(125, 255, 46, 0.05);">
+  <a class="sidebar-link{% if active_page == 'refer' %} is-active{% endif %}" href="/refer-and-earn" style="border: 1px dashed rgba(125, 255, 46, 0.3); background: rgba(125, 255, 46, 0.05);">
     <i class="fas fa-gift sidebar-icon" style="color: #7dff2e;"></i>
     <span style="color: #7dff2e; font-weight: 700;">Refer &amp; Earn</span>
   </a>
@@ -90,8 +90,5 @@
   <i class="fas fa-right-from-bracket sidebar-icon sidebar-icon-logout"></i>
   <span>Logout</span>
 </a>
-<<<<<<< HEAD
 
 <script src="/static/mobile-sidebar.js"></script>
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057

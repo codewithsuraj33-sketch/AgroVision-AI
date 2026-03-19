@@ -1,19 +1,24 @@
-import json
 from pathlib import Path
 
 
-DATA_PATH = Path("dataset") / "store_products.json"
+DATA_PATHS = (
+    Path("dataset") / "store_products.json",
+    Path("dataset") / "disease_store_products.json",
+)
 
 
 def main() -> None:
-    if not DATA_PATH.exists():
-        raise FileNotFoundError(f"Missing: {DATA_PATH}")
-
-    data = json.loads(DATA_PATH.read_text(encoding="utf-8"))
-    if not isinstance(data, list):
-        raise ValueError("store_products.json must be a list")
-
     from app import app, db, StoreProduct
+
+    data = []
+    for data_path in DATA_PATHS:
+        if not data_path.exists():
+            raise FileNotFoundError(f"Missing: {data_path}")
+
+        raw_rows = app.json.loads(data_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_rows, list):
+            raise ValueError(f"{data_path.name} must be a list")
+        data.extend(raw_rows)
 
     updated = 0
     with app.app_context():
@@ -43,4 +48,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -65,9 +65,64 @@
       color: rgba(11, 37, 64, 0.7);
     }
     .tip-card.is-open .tip-head > i{ transform: rotate(90deg); }
+    .tip-snapshot-card{
+      grid-column: span 4;
+      border-radius: 18px;
+      border: 1px solid rgba(180, 206, 232, 0.58);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(241, 248, 244, 0.92));
+      padding: 14px;
+      box-shadow: 0 14px 26px rgba(18, 49, 84, 0.08);
+      display: grid;
+      gap: 8px;
+      min-height: 120px;
+    }
+    .tip-snapshot-label{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--lib-ink);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .tip-snapshot-label i{
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(31, 163, 109, 0.12);
+      color: #146447;
+    }
+    .tip-snapshot-value{
+      color: var(--lib-muted);
+      font-weight: 700;
+      line-height: 1.55;
+    }
+    .tip-guide-card{
+      grid-column: span 6;
+      border-radius: 18px;
+      border: 1px solid rgba(180, 206, 232, 0.58);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 16px;
+      box-shadow: 0 14px 26px rgba(18, 49, 84, 0.08);
+    }
+    .tip-guide-card h3{
+      margin: 0 0 10px;
+      color: var(--lib-ink);
+      letter-spacing: -0.02em;
+    }
+    .tip-guide-list{
+      margin: 0;
+      padding-left: 18px;
+      color: var(--lib-muted);
+      font-weight: 650;
+      line-height: 1.65;
+    }
 
     @media (max-width: 720px){
       .tip-card{ grid-column: span 12; }
+      .tip-snapshot-card{ grid-column: span 12; }
+      .tip-guide-card{ grid-column: span 12; }
     }
   </style>
 </head>
@@ -131,6 +186,45 @@
           {% endfor %}
         </div>
       </div>
+
+      {% if tips.get("profile_cards") %}
+        <div class="library-section-head" style="margin-top:18px;">
+          <h2>{% if active_crop != "All" %}{{ active_crop }} snapshot{% else %}Cultivation snapshot{% endif %}</h2>
+          <span class="library-subtitle">Quick planning details for the selected crop</span>
+        </div>
+
+        <div class="library-grid" style="margin-top:0;">
+          {% for card in tips.get("profile_cards", []) %}
+            <article class="tip-snapshot-card">
+              <div class="tip-snapshot-label">
+                <i class="fas {{ card.icon }}"></i>
+                <span>{{ card.label }}</span>
+              </div>
+              <div class="tip-snapshot-value">{{ card.value }}</div>
+            </article>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if tips.get("crop_guides") %}
+        <div class="library-section-head" style="margin-top:18px;">
+          <h2>More field guidance</h2>
+          <span class="library-subtitle">Extra practical information for planning and daily operations</span>
+        </div>
+
+        <div class="library-grid" style="margin-top:0;">
+          {% for guide in tips.get("crop_guides", []) %}
+            <article class="tip-guide-card">
+              <h3>{{ guide.title }}</h3>
+              <ul class="tip-guide-list">
+                {% for item in guide["items"] %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </article>
+          {% endfor %}
+        </div>
+      {% endif %}
 
       <div data-library-panel="stage" hidden>
         <div class="library-section-head">

@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-<<<<<<< HEAD
 import json
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 import uuid
 
 from flask import abort, redirect, render_template, request, session
@@ -35,7 +32,6 @@ def register_admin_routes(app, deps: dict) -> None:
     save_product_image_upload = deps["save_product_image_upload"]
     default_store_seller = deps["default_store_seller"]
 
-<<<<<<< HEAD
     def _fallback_admin_audit_context():
         try:
             mappings = DiseaseProductMapping.query.all()
@@ -86,8 +82,6 @@ def register_admin_routes(app, deps: dict) -> None:
 
     build_admin_audit_context = deps.get("build_admin_audit_context", _fallback_admin_audit_context)
 
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     @app.route("/admin/login", methods=["GET", "POST"])
     def admin_login():
         if is_admin_authenticated():
@@ -143,10 +137,7 @@ def register_admin_routes(app, deps: dict) -> None:
         total_orders = len(paid_orders)
         pending_orders = sum(1 for order in paid_orders if get_fulfillment_status(order) == "pending")
         revenue = sum(int(order.amount or 0) for order in paid_orders) / 100.0
-<<<<<<< HEAD
         audit = build_admin_audit_context()
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
         return render_template(
             "admin/dashboard.html",
@@ -154,10 +145,7 @@ def register_admin_routes(app, deps: dict) -> None:
             total_orders=total_orders,
             pending_orders=pending_orders,
             revenue=revenue,
-<<<<<<< HEAD
             audit=audit,
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         )
 
     @app.route("/admin/products", methods=["GET", "POST"])
@@ -175,10 +163,7 @@ def register_admin_routes(app, deps: dict) -> None:
                 category = (request.form.get("category") or "Organic").strip() or "Organic"
                 image_url = (request.form.get("image_url") or "").strip()
                 description = (request.form.get("description") or "").strip()
-<<<<<<< HEAD
                 tags = [tag.strip() for tag in (request.form.get("tags") or "").split(",") if tag.strip()]
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                 is_active = request.form.get("is_active") == "on"
                 image_file = request.files.get("image_file")
 
@@ -217,10 +202,7 @@ def register_admin_routes(app, deps: dict) -> None:
                         rating=4.2,
                         image_url=image_url,
                         description=description,
-<<<<<<< HEAD
                         tags_json=json.dumps(tags, ensure_ascii=False),
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                         seller=default_store_seller(category),
                         unit="Pack",
                         stock=max(0, stock),
@@ -237,10 +219,7 @@ def register_admin_routes(app, deps: dict) -> None:
             categories=[c for c in STORE_CATEGORY_ORDER if c != "All"],
             error=error,
             success=success,
-<<<<<<< HEAD
             new_product_tags=(request.form.get("tags") or "").strip() if request.method == "POST" else "",
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         )
 
     @app.route("/admin/products/<int:product_id>/edit", methods=["GET", "POST"])
@@ -263,20 +242,14 @@ def register_admin_routes(app, deps: dict) -> None:
                     categories=[c for c in STORE_CATEGORY_ORDER if c != "All"],
                     error=error,
                     success=None,
-<<<<<<< HEAD
                     product_tags_text=(request.form.get("tags") or "").strip(),
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                 )
 
             name = (request.form.get("name") or "").strip()
             category = (request.form.get("category") or product.category or "Organic").strip() or "Organic"
             image_url = (request.form.get("image_url") or "").strip()
             description = (request.form.get("description") or "").strip()
-<<<<<<< HEAD
             tags = [tag.strip() for tag in (request.form.get("tags") or "").split(",") if tag.strip()]
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
             is_active = request.form.get("is_active") == "on"
             image_file = request.files.get("image_file")
 
@@ -307,10 +280,7 @@ def register_admin_routes(app, deps: dict) -> None:
                 if image_url:
                     product.image_url = image_url
                 product.description = description
-<<<<<<< HEAD
                 product.tags_json = json.dumps(tags, ensure_ascii=False)
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                 product.stock = max(0, stock)
                 product.is_active = bool(is_active)
                 product.slug = product.slug or slugify_crop_name(name)
@@ -325,10 +295,7 @@ def register_admin_routes(app, deps: dict) -> None:
             categories=[c for c in STORE_CATEGORY_ORDER if c != "All"],
             error=error,
             success=success,
-<<<<<<< HEAD
             product_tags_text=(request.form.get("tags") or "").strip() if request.method == "POST" else ", ".join(json.loads(product.tags_json or "[]")) if getattr(product, "tags_json", None) else "",
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         )
 
     @app.route("/admin/products/<int:product_id>/delete", methods=["POST"])
@@ -469,7 +436,3 @@ def register_admin_routes(app, deps: dict) -> None:
         db.session.delete(mapping)
         db.session.commit()
         return redirect("/admin/mappings")
-<<<<<<< HEAD
-=======
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057

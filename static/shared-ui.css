@@ -301,7 +301,6 @@ body {
     width: min(280px, calc(100vw - 28px));
   }
 }
-<<<<<<< HEAD
 
 .sr-only {
   position: absolute;
@@ -420,6 +419,12 @@ body {
   text-decoration: none;
   font-weight: 900;
   box-shadow: 0 14px 28px rgba(23, 121, 197, 0.2);
+}
+
+.dashboard-page .shared-primary-action-button,
+.dashboard-page .quick-action-btn-primary,
+.dashboard-page .quick-action-btn {
+  color: #000000 !important;
 }
 
 .onboarding-card {
@@ -860,5 +865,4 @@ body {
     width: min(304px, calc(100vw - 18px));
   }
 }
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
+

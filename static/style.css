@@ -1373,11 +1373,7 @@ body.dashboard-page {
 }
 
 .disease-store-recommendation {
-<<<<<<< HEAD
   margin-top: 24px;
-=======
-  margin-top: 12px;
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 }
 
 .disease-store-head {
@@ -1403,11 +1399,7 @@ body.dashboard-page {
 
 .disease-store-card {
   display: grid;
-<<<<<<< HEAD
   grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
-=======
-  grid-template-columns: 200px minmax(0, 1fr);
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
   gap: 24px;
   padding: 24px;
   border-radius: 28px;
@@ -1433,11 +1425,7 @@ body.dashboard-page {
 
 .disease-store-media {
   display: block;
-<<<<<<< HEAD
   min-height: 190px;
-=======
-  min-height: 180px;
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
   border-radius: 18px;
   overflow: hidden;
   background:
@@ -5088,16 +5076,6 @@ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   padding: 16px;
 }
 
-.soil-nutrient-status {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  margin-top: 18px;
-  color: #607695;
-  font-size: 0.96rem;
-  font-weight: 700;
-}
-
 .soil-nutrient-value {
   display: flex;
   align-items: flex-end;
@@ -5123,7 +5101,7 @@ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   display: flex;
   align-items: center;
   min-height: 42px;
-  margin: 18px -16px -16px;
+  margin: auto -16px -16px;
   padding: 0 16px;
   border-radius: 0 0 16px 16px;
   color: #f3f8ff;
@@ -5149,14 +5127,19 @@ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   font-weight: 800;
 }
 
+.soil-health-head {
+  justify-content: flex-end;
+}
+
 .soil-health-visual {
   position: relative;
+  flex: 1;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   gap: 16px;
-  min-height: 148px;
-  margin-top: 14px;
+  min-height: 220px;
+  margin-top: 10px;
   padding: 18px 16px 16px;
   border-radius: 14px;
   overflow: hidden;
@@ -8841,6 +8824,9 @@ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
 .alerts-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 22px;
   border: 0;
   border-radius: 8px;
@@ -8848,6 +8834,7 @@ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   font-weight: 700;
   cursor: pointer;
   color: white;
+  text-decoration: none;
   transition: all 0.2s;
   box-shadow: 0 4px 14px rgba(0,0,0,0.12);
 }
@@ -8870,6 +8857,61 @@ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 
 .alerts-view-btn:hover {
   transform: translateY(-1px);
+}
+
+.alerts-delivery-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0 34px 12px;
+}
+
+.alerts-delivery-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 18px 40px rgba(31, 56, 88, 0.08);
+}
+
+.alerts-delivery-label {
+  color: #6b7d95;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.alerts-delivery-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.alerts-delivery-on {
+  color: #1b8a52;
+}
+
+.alerts-delivery-off {
+  color: #c46b3f;
+}
+
+.alerts-delivery-note {
+  margin: 0;
+  padding: 0 34px 22px;
+  color: #5e708a;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .alerts-delivery-status {
+    grid-template-columns: 1fr;
+    padding: 0 18px 10px;
+  }
+
+  .alerts-delivery-note {
+    padding: 0 18px 18px;
+  }
 }
 
 .alerts-card-time {
@@ -12524,6 +12566,7 @@ body.dashboard-page {
   margin-top: 10px;
   overflow: visible;
   padding-top: 2px;
+  padding-bottom: 18px;
 }
 
 .dashboard-sidebar .sidebar-nav > a[href="/dashboard"] { order: 1; }
@@ -12537,12 +12580,14 @@ body.dashboard-page {
 .dashboard-sidebar .sidebar-nav > a[href="/ai-insights"] { order: 9; margin-top: 0; }
 .dashboard-sidebar .sidebar-nav > a[href="/tools"] { order: 10; margin-top: 0; }
 .dashboard-sidebar .sidebar-nav > a[href="/disease-detection"] { order: 11; }
-.dashboard-sidebar .sidebar-nav > a[href="/alerts"] { order: 12; }
-.dashboard-sidebar .sidebar-nav > a[href="/settings"] { order: 13; }
-.dashboard-sidebar .sidebar-nav > a[href="/community"] { order: 14; }
-.dashboard-sidebar .sidebar-nav > a[href="/market"] { order: 15; }
-.dashboard-sidebar .sidebar-nav > a[href="/subscriptions"] { order: 16; }
-.dashboard-sidebar .sidebar-nav > a[href="/refer-and-earn"] { order: 17; }
+.dashboard-sidebar .sidebar-nav > a[href="/community"] { order: 12; margin-top: 0 !important; }
+.dashboard-sidebar .sidebar-nav > a[href="/market"] { order: 13; }
+.dashboard-sidebar .sidebar-nav > a[href="/subscriptions"] { order: 14; }
+.dashboard-sidebar .sidebar-nav > a[href="/refer-and-earn"] { order: 15; }
+.dashboard-sidebar .sidebar-nav > a[href="/alerts"] { order: 16; margin-top: 22px !important; }
+.dashboard-sidebar .sidebar-nav > a[href="/settings"] { order: 17; margin-top: 0 !important; }
+.dashboard-sidebar .sidebar-nav > a[href="/subscriptions"] { margin-top: 0 !important; }
+.dashboard-sidebar .sidebar-nav > a[href="/refer-and-earn"] { margin-top: 0 !important; }
 
 .dashboard-sidebar .sidebar-nav > a[href="/weather"]::after,
 .dashboard-sidebar .sidebar-nav > a[href="/ai-insights"]::after,
@@ -13177,6 +13222,76 @@ body.dashboard-page {
     padding-left: 10px !important;
     padding-right: 10px !important;
   }
+}
+
+/* Keep soil health cards visually uniform across the module. */
+.soil-monitor-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+  grid-template-areas: none !important;
+  grid-auto-rows: 340px;
+  align-items: stretch;
+}
+
+.soil-monitor-grid > .soil-toolbar-card,
+.soil-monitor-grid > .soil-gauge-card,
+.soil-monitor-grid > .soil-nutrient-card,
+.soil-monitor-grid > .soil-health-panel,
+.soil-monitor-grid > .soil-history-card,
+.soil-monitor-grid > .soil-map-card,
+.soil-monitor-grid > .soil-summary-card {
+  grid-area: auto !important;
+  grid-column: auto !important;
+  display: flex;
+  flex-direction: column;
+  min-height: 340px;
+  height: 100%;
+}
+
+.soil-toolbar-card {
+  align-items: stretch;
+}
+
+.soil-toolbar-group,
+.soil-history-grid,
+.soil-map-preview,
+.soil-map-legend,
+.soil-summary-list,
+.soil-health-recommendations {
+  min-height: 0;
+}
+
+.soil-toolbar-group,
+.soil-history-grid,
+.soil-map-preview,
+.soil-summary-list {
+  flex: 1;
+}
+
+.soil-toolbar-group,
+.soil-health-recommendations,
+.soil-summary-list {
+  align-content: start;
+}
+
+.soil-toolbar-button,
+.soil-health-button {
+  margin-top: auto;
+}
+
+.soil-history-grid,
+.soil-map-legend,
+.soil-summary-list {
+  overflow: auto;
+}
+
+.soil-map-preview {
+  display: flex;
+}
+
+.soil-map-preview img {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
 }
 
 .sidebar-icon-library {

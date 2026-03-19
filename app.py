@@ -1,13 +1,17 @@
-﻿import json
+# pyre-ignore-all-errors
+import json
 import os
 import random
 import re
 import smtplib
+import threading
 import time
 import uuid
 import hmac
+from math import asin, cos, radians, sin, sqrt
 from functools import wraps
 from base64 import b64encode
+from difflib import SequenceMatcher
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 from io import BytesIO
@@ -38,10 +42,6 @@ app = Flask(__name__)
 
 SHARED_UI_CSS_TAG = '<link rel="stylesheet" href="/static/shared-ui.css">'
 SHARED_UI_JS_TAG = '<script src="/static/shared-ui.js"></script>'
-<<<<<<< HEAD
-=======
-MOBILE_SIDEBAR_JS_TAG = '<script src="/static/mobile-sidebar.js"></script>'
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.template_filter("static_version")
@@ -75,7 +75,6 @@ def inject_shared_ui_assets(response):
     except (RuntimeError, UnicodeDecodeError):
         return response
 
-<<<<<<< HEAD
     if not html or "/static/shared-ui.js" in html:
         return response
 
@@ -90,55 +89,6 @@ def inject_shared_ui_assets(response):
         html = f"{html}\n{SHARED_UI_JS_TAG}"
 
     response.set_data(html)
-=======
-    if not html:
-        return response
-
-    changed = False
-
-    if "/static/shared-ui.js" not in html:
-        if "</head>" in html:
-            html = html.replace("</head>", f"  {SHARED_UI_CSS_TAG}\n</head>", 1)
-        else:
-            html = f"{SHARED_UI_CSS_TAG}\n{html}"
-
-        if "</body>" in html:
-            html = html.replace("</body>", f"  {SHARED_UI_JS_TAG}\n</body>", 1)
-        else:
-            html = f"{html}\n{SHARED_UI_JS_TAG}"
-        changed = True
-
-    # Inject mobile sidebar behavior on pages that include the hamburger button.
-    if 'id="mobileMenuToggle"' in html and "/static/mobile-sidebar.js" not in html:
-        if "</body>" in html:
-            html = html.replace("</body>", f"  {MOBILE_SIDEBAR_JS_TAG}\n</body>", 1)
-        else:
-            html = f"{html}\n{MOBILE_SIDEBAR_JS_TAG}"
-        changed = True
-
-    if changed:
-        response.set_data(html)
-    return response
-
-
-@app.after_request
-def set_csrf_cookie(response):
-    """Expose a CSRF token to JavaScript via cookie (double-submit pattern)."""
-    try:
-        token = get_csrf_token()
-    except Exception:
-        return response
-
-    # Not HttpOnly on purpose: JS fetch() reads it and sends back in X-CSRFToken.
-    response.set_cookie(
-        "csrf_token",
-        token,
-        samesite="Lax",
-        secure=bool(app.config.get("SESSION_COOKIE_SECURE")),
-        httponly=False,
-        max_age=60 * 60 * 24 * 30,
-    )
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     return response
 
 
@@ -178,6 +128,7 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
 GROQ_MODEL = (os.getenv("GROQ_CHAT_MODEL") or "llama-3.1-8b-instant").strip()
+GROQ_VISION_MODEL = (os.getenv("GROQ_VISION_MODEL") or "llama-3.2-11b-vision-preview").strip()
 
 _secret_from_env = (
     os.getenv("FLASK_SECRET_KEY")
@@ -227,20 +178,16 @@ PRODUCTS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = str(UPLOADS_DIR)
 KISAN_DOST_KNOWLEDGE_PATH = Path(app.root_path) / "dataset" / "kisan_dost_faq.json"
-<<<<<<< HEAD
 AI_CROP_DOCTOR_FAQ_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_project_faq.txt"
 AI_CROP_DOCTOR_LOCAL_QA_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_local_qa.json"
+AI_CROP_DOCTOR_CHAT_KNOWLEDGE_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_chat_knowledge.json"
 DISEASE_SYMPTOM_RULES_PATH = Path(app.root_path) / "dataset" / "disease_symptom_rules.json"
 CROP_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "crop_library.json"
+CULTIVATION_TIPS_DATA_PATH = Path(app.root_path) / "dataset" / "cultivation_tips.json"
 STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "store_products.json"
 DISEASE_STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "disease_store_products.json"
 DISEASE_PRODUCT_MAPPINGS_DATA_PATH = Path(app.root_path) / "dataset" / "disease_product_mappings.json"
-=======
-CROP_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "crop_library.json"
-STORE_PRODUCTS_DATA_PATH = Path(app.root_path) / "dataset" / "store_products.json"
-DISEASE_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "disease_data.json"
-CULTIVATION_TIPS_DATA_PATH = Path(app.root_path) / "dataset" / "cultivation_tips.json"
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
+DISEASE_DATASET_PATH = Path(app.root_path) / "dataset" / "disease_data.json"
 EMAIL_LOGO_PATH = Path(app.root_path) / "static" / "brand" / "agrovision-email-logo.png"
 EMAIL_LOGO_FILENAME = EMAIL_LOGO_PATH.name
 EMAIL_LOGO_SUBTYPE = "png"
@@ -253,24 +200,34 @@ CROP_DISEASE_LABELS_PATH = Path(
 ALLOWED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 DISEASE_MODEL_CACHE = {"attempted": False, "model": None, "labels": None}
 CROP_LIBRARY_CACHE = None
-<<<<<<< HEAD
-CROP_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "images" / "crops"
-CROP_LIBRARY_DEFAULT_IMAGE = "/static/images/default_crop.png"
-=======
-DISEASE_LIBRARY_CACHE = {"mtime": 0.0, "items": []}
-CULTIVATION_TIPS_CACHE = {"mtime": 0.0, "payload": {}}
-CROP_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "images" / "crops"
-CROP_LIBRARY_DEFAULT_IMAGE = "/static/images/default_crop.png"
-DISEASE_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "library" / "diseases"
-DISEASE_LIBRARY_DEFAULT_IMAGES = {
-    "insect": "/static/library/diseases/aphids.jpg",
-    "pest": "/static/library/diseases/aphids.jpg",
-    "fungus": "/static/library/diseases/leaf-blight.jpg",
-    "bacteria": "/static/library/diseases/bacterial-spot.jpg",
-    "virus": "/static/library/diseases/mosaic-disease.jpg",
-    "disease": "/static/library/diseases/leaf-blight.jpg",
+CULTIVATION_TIPS_CACHE = None
+DISEASE_DATA_CACHE = None
+PRODUCT_IMAGE_INDEX_CACHE = None
+DISEASE_REFERENCE_SIGNATURE_CACHE = None
+KAGGLE_REFERENCE_SIGNATURE_CACHE = None
+AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE = None
+AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE = None
+LOCATION_GEOCODE_CACHE = {}
+KAGGLE_REFERENCE_DATASET_DIRS = [
+    Path(app.root_path) / "dataset" / "PlantVillage" / "PlantVillage",
+    Path(app.root_path) / "dataset" / "kaggle_leaf_fallback",
+]
+DISABLED_DASHBOARD_MODULES = {
+    "rent_tractor",
+    "land_lease",
+    "rural_services",
+    "govt_schemes",
+    "money_manager",
+    "ai_crop_scan",
+    "farming_solutions",
+    "agri_market",
+    "govt_buddy_ai",
+    "my_wallet",
+    "notifications",
+    "upgrade_hub",
 }
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
+CROP_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "images" / "crops"
+CROP_LIBRARY_DEFAULT_IMAGE = "/static/images/default_crop.png"
 STORE_PRODUCT_FALLBACK_IMAGE = "/static/images/store-product-fallback.svg"
 CROP_LIBRARY_REMOTE_IMAGE_FALLBACKS = {
     "barley": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Barley_%28Hordeum_vulgare%29_-_United_States_National_Arboretum_-_24_May_2009.jpg/1280px-Barley_%28Hordeum_vulgare%29_-_United_States_National_Arboretum_-_24_May_2009.jpg",
@@ -307,24 +264,10 @@ STORE_CATEGORY_META = {
     },
 }
 
-<<<<<<< HEAD
-=======
-MAX_PROFILE_PHOTO_BYTES = get_env_int("MAX_PROFILE_PHOTO_BYTES", 5 * 1024 * 1024)
-MAX_PRODUCT_IMAGE_BYTES = get_env_int("MAX_PRODUCT_IMAGE_BYTES", 10 * 1024 * 1024)
-MAX_DISEASE_IMAGE_BYTES = get_env_int("MAX_DISEASE_IMAGE_BYTES", 10 * 1024 * 1024)
-
-# Very small in-memory rate limiter (demo-friendly). Resets on server restart.
-RATE_LIMIT_BUCKET = {}
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 # Admin Panel (defaults requested by user; override via environment for safety)
 ADMIN_EMAIL = (os.getenv("ADMIN_EMAIL") or "admin123@gmail.com").strip().lower()
 ADMIN_PASSWORD = (os.getenv("ADMIN_PASSWORD") or "123").strip()
 ADMIN_NOTIFY_EMAIL = (os.getenv("ADMIN_NOTIFY_EMAIL") or ADMIN_EMAIL).strip().lower()
-<<<<<<< HEAD
-=======
-RAZORPAY_WEBHOOK_SECRET = (os.getenv("RAZORPAY_WEBHOOK_SECRET") or "").strip()
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 STORE_CATEGORY_HIGHLIGHTS = {
     "Pesticides": [
         "Targets disease and pest hotspots quickly.",
@@ -352,7 +295,6 @@ STORE_CATEGORY_HIGHLIGHTS = {
         "Pair with mulch, compost, and scouting for best results.",
     ],
 }
-<<<<<<< HEAD
 STORE_DISEASE_PRODUCT_RULES = [
     (("healthy",), None),
     (("bacterial", "blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "rot"), "Bio Pesticide"),
@@ -388,121 +330,6 @@ DISEASE_PRODUCT_RECOMMENDATION_PROFILES = {
         "category_boosts": {"Organic": 4, "Pesticides": 4, "Tools": 1},
         "keywords": {"bio pesticide": 5, "neem oil": 5, "organic pest spray": 5, "soil health booster": 4},
     },
-=======
-
-
-STATIC_PRODUCTS_DIR = Path(app.root_path) / "static" / "products"
-ALLOWED_LOCAL_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
-_STORE_PRODUCT_IMAGE_INDEX = None
-
-
-def _tokenize_filename(value):
-    return set(re.findall(r"[a-z0-9]+", str(value or "").lower()))
-
-
-def _build_store_product_image_index():
-    """Cache a lightweight index of local product images for fuzzy matching."""
-    global _STORE_PRODUCT_IMAGE_INDEX
-    if _STORE_PRODUCT_IMAGE_INDEX is not None:
-        return _STORE_PRODUCT_IMAGE_INDEX
-
-    index = []
-    try:
-        for path in STATIC_PRODUCTS_DIR.iterdir():
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in ALLOWED_LOCAL_IMAGE_SUFFIXES:
-                continue
-            tokens = _tokenize_filename(path.stem)
-            index.append(
-                {
-                    "name": path.name,
-                    "tokens": tokens,
-                    "url": f"/static/products/{path.name}",
-                }
-            )
-    except OSError:
-        index = []
-
-    _STORE_PRODUCT_IMAGE_INDEX = index
-    return _STORE_PRODUCT_IMAGE_INDEX
-
-
-def _local_static_path_from_url(static_url):
-    url = str(static_url or "").strip()
-    if not url.startswith("/static/products/"):
-        return None
-    filename = url.split("/static/products/", 1)[1]
-    if not filename or "/" in filename or "\\" in filename:
-        return None
-    return STATIC_PRODUCTS_DIR / filename
-
-
-def resolve_store_product_image_url(product):
-    """Prefer a stable local image URL when possible (avoids external Unsplash dependency)."""
-    raw = str(getattr(product, "image_url", "") or "").strip()
-
-    # If admin provided a remote URL, keep it.
-    if raw and (raw.startswith("http://") or raw.startswith("https://")):
-        return raw
-
-    # If it's a local static products URL and the file exists, use it.
-    local_path = _local_static_path_from_url(raw) if raw else None
-    if local_path is not None and local_path.exists():
-        return raw
-
-    # Try exact matches by slug / name.
-    slug = str(getattr(product, "slug", "") or "").strip().lower()
-    name_slug = slugify_crop_name(getattr(product, "name", "") or "")
-    for candidate_base in [slug, name_slug]:
-        if not candidate_base:
-            continue
-        for ext in [".jpg", ".jpeg", ".png", ".webp"]:
-            candidate = STATIC_PRODUCTS_DIR / f"{candidate_base}{ext}"
-            if candidate.exists():
-                return f"/static/products/{candidate.name}"
-
-    # Fuzzy match against local images by token overlap.
-    tokens = _tokenize_filename(slug) | _tokenize_filename(name_slug) | _tokenize_filename(getattr(product, "name", ""))
-    best = None
-    best_score = 0
-    for item in _build_store_product_image_index():
-        overlap = len(tokens & (item.get("tokens") or set()))
-        if overlap > best_score:
-            best_score = overlap
-            best = item
-
-    if best is not None and best_score >= 2:
-        return best.get("url") or STORE_PRODUCT_FALLBACK_IMAGE
-
-    return STORE_PRODUCT_FALLBACK_IMAGE
-STORE_DISEASE_PRODUCT_RULES = [
-    (("healthy",), None),
-    # Keep mappings aligned with products that actually exist in dataset/store_products.json.
-    (("pest", "insect", "mite", "aphid", "vector", "whitefly", "thrips", "armyworm", "worm", "caterpillar", "mosaic", "curl virus"), "Neem Oil"),
-    (("blight", "mold", "rust", "spot", "mildew", "fungal", "fungus", "bacterial", "rot", "scab"), "Bio Pesticide"),
-    (("organic", "chemical-free", "bio"), "Organic Pest Spray"),
-]
-DISEASE_PRODUCT_PREFERENCES = {
-    "healthy": ["Soil Health Booster", "Natural Plant Care Kit"],
-    "brown spot": ["Soil Health Booster", "NPK Fertilizer", "Bio Pesticide"],
-    "rice blast": ["Pesticide Spray", "Bio Pesticide"],
-    "leaf blight": ["Pesticide Spray", "Bio Pesticide"],
-    "early blight": ["Bio Pesticide", "Pesticide Spray"],
-    "late blight": ["Pesticide Spray", "Bio Pesticide"],
-    "yellow rust": ["Bio Pesticide", "Pesticide Spray"],
-    "leaf rust": ["Bio Pesticide", "Pesticide Spray"],
-    "powdery mildew": ["Organic Pest Spray", "Bio Pesticide"],
-    "leaf mold": ["Natural Plant Care Kit", "Bio Pesticide"],
-    "bacterial spot": ["Pesticide Spray", "Bio Pesticide"],
-    "mosaic disease": ["Neem Oil", "Organic Pest Spray"],
-    "leaf curl virus": ["Neem Oil", "Organic Pest Spray"],
-    "spider mite infestation": ["Neem Oil", "Organic Pest Spray"],
-    "fall armyworm": ["Neem Oil", "Pesticide Spray"],
-    "stem borer": ["Neem Oil", "Pesticide Spray"],
-    "whitefly": ["Neem Oil", "Organic Pest Spray"],
-    "aphids": ["Neem Oil", "Organic Pest Spray"],
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 }
 RAZORPAY_KEY_ID = (os.getenv("RAZORPAY_KEY_ID") or "rzp_test_SRyeQDEMFrRHwD").strip()
 RAZORPAY_KEY_SECRET = (os.getenv("RAZORPAY_KEY_SECRET") or "b1mY7dNC8mDuxekLF2YmiV0I").strip()
@@ -534,6 +361,34 @@ SUBSCRIPTION_PLANS = {
         "description": "All Pro features + satellite farm twin monitoring.",
     },
 }
+
+TRACTOR_SERVICE_CATEGORIES = [
+    {"id": "all", "label": "All Services", "icon": "fa-table-cells-large"},
+    {"id": "land_preparation", "label": "Land Preparation", "icon": "fa-tractor"},
+    {"id": "sowing", "label": "Sowing", "icon": "fa-seedling"},
+    {"id": "harvesting", "label": "Harvesting", "icon": "fa-scissors"},
+    {"id": "transport", "label": "Transport", "icon": "fa-truck"},
+    {"id": "spraying", "label": "Spraying", "icon": "fa-wind"},
+]
+
+TRACTOR_MARKETPLACE_MACHINES = [
+    {"id": "rotavator-7ft-puri", "category": "land_preparation", "name": "Rotavator (7ft)", "hp": "45HP+", "price_per_hour": 800, "rating": 4.8, "rating_count": 124, "availability": "Available now", "lat": 19.8181, "lng": 85.8224, "seller": "Puri Agro Fleet", "features": ["Fast soil turning", "Residue mixing", "Same-day dispatch"]},
+    {"id": "cultivator-9tyre-puri", "category": "land_preparation", "name": "Cultivator (9 Tyres)", "hp": "35HP+", "price_per_hour": 600, "rating": 4.6, "rating_count": 88, "availability": "Available in 15 min", "lat": 19.8092, "lng": 85.8408, "seller": "Mahadev Implements", "features": ["Bed loosening", "Affordable tillage", "Village support"]},
+    {"id": "mb-plough-puri", "category": "land_preparation", "name": "MB Plough", "hp": "50HP+", "price_per_hour": 900, "rating": 4.7, "rating_count": 61, "availability": "Available in 20 min", "lat": 19.8218, "lng": 85.8451, "seller": "FieldPro Machinery", "features": ["Deep ploughing", "Heavy-duty frame", "Operator included"]},
+    {"id": "laser-leveller-puri", "category": "land_preparation", "name": "Laser Leveller", "hp": "55HP+", "price_per_hour": 1200, "rating": 4.9, "rating_count": 33, "availability": "Available tomorrow", "lat": 19.7995, "lng": 85.8287, "seller": "Precision Farm Works", "features": ["Level field faster", "Water saving", "High-precision setup"]},
+    {"id": "seed-drill-puri", "category": "sowing", "name": "Seed Drill", "hp": "40HP+", "price_per_hour": 700, "rating": 4.5, "rating_count": 71, "availability": "Available now", "lat": 19.8268, "lng": 85.8329, "seller": "Sowing Solutions Hub", "features": ["Uniform seed depth", "Faster coverage", "Operator ready"]},
+    {"id": "rice-transplanter-puri", "category": "sowing", "name": "Rice Transplanter", "hp": "30HP+", "price_per_hour": 950, "rating": 4.7, "rating_count": 46, "availability": "Available in 40 min", "lat": 19.8044, "lng": 85.8501, "seller": "Paddy Tech Point", "features": ["Paddy nursery support", "Uniform spacing", "Lower labor cost"]},
+    {"id": "maize-planter-puri", "category": "sowing", "name": "Maize Planter", "hp": "35HP+", "price_per_hour": 750, "rating": 4.4, "rating_count": 29, "availability": "Available in 30 min", "lat": 19.8122, "lng": 85.8146, "seller": "GreenRow Agro", "features": ["Row precision", "Fertilizer attachment", "Quick deployment"]},
+    {"id": "mini-reaper-puri", "category": "harvesting", "name": "Mini Reaper", "hp": "28HP+", "price_per_hour": 850, "rating": 4.6, "rating_count": 58, "availability": "Available in 30 min", "lat": 19.8204, "lng": 85.8583, "seller": "Harvest Express", "features": ["Small plot friendly", "Clean cut", "Fuel efficient"]},
+    {"id": "combine-harvester-puri", "category": "harvesting", "name": "Combine Harvester", "hp": "76HP+", "price_per_hour": 2200, "rating": 4.9, "rating_count": 41, "availability": "Available in 2 hr", "lat": 19.7925, "lng": 85.8164, "seller": "Odisha Harvest Pro", "features": ["Large acreage ready", "Operator with crew", "High output"]},
+    {"id": "paddy-harvester-puri", "category": "harvesting", "name": "Paddy Harvester", "hp": "62HP+", "price_per_hour": 1800, "rating": 4.8, "rating_count": 39, "availability": "Available in 1 hr", "lat": 19.8075, "lng": 85.8612, "seller": "Rice Cut Fleet", "features": ["Paddy focused", "Low grain loss", "Field pickup ready"]},
+    {"id": "tractor-trolley-puri", "category": "transport", "name": "Tractor Trolley", "hp": "35HP+", "price_per_hour": 500, "rating": 4.4, "rating_count": 93, "availability": "Available now", "lat": 19.8152, "lng": 85.8421, "seller": "Village Move Logistics", "features": ["Crop hauling", "Input carrying", "Local route support"]},
+    {"id": "water-tanker-puri", "category": "transport", "name": "Water Tanker", "hp": "45HP+", "price_per_hour": 650, "rating": 4.5, "rating_count": 57, "availability": "Available in 20 min", "lat": 19.8017, "lng": 85.8362, "seller": "Aqua Farm Carrier", "features": ["Water supply", "Irrigation assist", "Fast refill cycle"]},
+    {"id": "input-trailer-puri", "category": "transport", "name": "Input Carrier Trailer", "hp": "32HP+", "price_per_hour": 450, "rating": 4.3, "rating_count": 37, "availability": "Available in 25 min", "lat": 19.8227, "lng": 85.8174, "seller": "Farm Cargo Point", "features": ["Input delivery", "Feed transfer", "Flexible trip rate"]},
+    {"id": "boom-sprayer-puri", "category": "spraying", "name": "Boom Sprayer", "hp": "25HP+", "price_per_hour": 900, "rating": 4.7, "rating_count": 68, "availability": "Available in 22 min", "lat": 19.8148, "lng": 85.8525, "seller": "SprayLine Services", "features": ["Wide spray width", "Uniform coverage", "Trained operator"]},
+    {"id": "battery-spray-puri", "category": "spraying", "name": "Battery Spray Unit", "hp": "Portable", "price_per_hour": 350, "rating": 4.2, "rating_count": 54, "availability": "Available in 15 min", "lat": 19.8054, "lng": 85.8248, "seller": "QuickSpray Rural", "features": ["Budget friendly", "Small farms", "Quick turnaround"]},
+    {"id": "agri-drone-puri", "category": "spraying", "name": "Agri Drone", "hp": "Smart Flight", "price_per_hour": 1500, "rating": 4.9, "rating_count": 25, "availability": "Available in 3 hr", "lat": 19.8284, "lng": 85.8388, "seller": "Drone Kisan Ops", "features": ["Precision spray", "Large coverage", "AI route planning"]},
+]
 
 CROP_LIBRARY_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1114,22 +969,6 @@ class User(db.Model):
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
 
-
-class AdminUser(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, index=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), default="admin")
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-    )
-
-    def __init__(self, **kwargs):
-        super(AdminUser, self).__init__(**kwargs)
-
 class DiseaseHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -1226,6 +1065,37 @@ class UserPreference(db.Model):
         super(UserPreference, self).__init__(**kwargs)
 
 
+class AlertRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    farm_id = db.Column(db.Integer, db.ForeignKey("farm.id"), index=True)
+    alert_key = db.Column(db.String(160), nullable=False)
+    category = db.Column(db.String(40), default="system", index=True)
+    severity = db.Column(db.String(20), default="insight", index=True)
+    title = db.Column(db.String(180), nullable=False)
+    detail = db.Column(db.Text, nullable=False)
+    action_url = db.Column(db.String(255), default="/alerts")
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    email_sent = db.Column(db.Boolean, default=False)
+    sms_sent = db.Column(db.Boolean, default=False)
+    last_notified_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "alert_key", name="uq_alert_record_user_key"),
+    )
+
+    def __init__(self, **kwargs):
+        super(AlertRecord, self).__init__(**kwargs)
+
+
 class StoreProduct(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(160), unique=True, nullable=False)
@@ -1296,6 +1166,35 @@ class StoreOrder(db.Model):
         super(StoreOrder, self).__init__(**kwargs)
 
 
+class TractorBooking(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    machine_id = db.Column(db.String(120), nullable=False, index=True)
+    machine_name = db.Column(db.String(180), nullable=False)
+    category = db.Column(db.String(40), nullable=False, index=True)
+    farm_location = db.Column(db.String(160))
+    farm_lat = db.Column(db.Float)
+    farm_lng = db.Column(db.Float)
+    booking_date = db.Column(db.Date, nullable=False, index=True)
+    slot_label = db.Column(db.String(40), nullable=False)
+    duration_hours = db.Column(db.Integer, default=1)
+    price_per_hour = db.Column(db.Integer, default=0)
+    total_amount_inr = db.Column(db.Integer, default=0)
+    payment_mode = db.Column(db.String(20), default="pay_later")
+    payment_status = db.Column(db.String(20), default="pending")
+    booking_status = db.Column(db.String(20), default="confirmed")
+    notes = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    def __init__(self, **kwargs):
+        super(TractorBooking, self).__init__(**kwargs)
+
+
 class WalletTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
@@ -1344,25 +1243,6 @@ class SubscriptionPayment(db.Model):
 
 def generate_otp():
     return "".join([str(random.randint(0, 9)) for _ in range(6)])
-
-
-def compute_otp_signature(otp, target_email, otp_type):
-    secret = app.secret_key or ""
-    if isinstance(secret, str):
-        secret_bytes = secret.encode("utf-8", errors="ignore")
-    else:
-        secret_bytes = bytes(secret)
-
-    payload = f"{str(otp_type or '').strip().lower()}|{str(target_email or '').strip().lower()}|{str(otp or '').strip()}"
-    return hmac.new(secret_bytes, payload.encode("utf-8", errors="ignore"), sha256).hexdigest()
-
-
-def verify_otp_signature(user_otp, expected_signature, target_email, otp_type):
-    expected = str(expected_signature or "").strip().lower()
-    if not expected:
-        return False
-    actual = compute_otp_signature(user_otp, target_email, otp_type).strip().lower()
-    return hmac.compare_digest(actual, expected)
 
 
 def is_password_hash(password_value):
@@ -1486,21 +1366,12 @@ def require_plan(min_plan_name):
             ensure_user_subscription_state(user, commit=True)
             user_plan = normalize_plan_name(user.plan)
 
-<<<<<<< HEAD
             # Free plan always has access to non-premium routes.
             if plan_rank(user_plan) >= plan_rank(min_plan) and is_paid_subscription_active(user):
                 return f(*args, **kwargs)
 
             # Trial acts like Pro access for a limited window.
             if min_plan == "pro" and is_trial_active(user):
-=======
-            # Trial is full-access for a limited window (all plans, including premium).
-            if is_trial_active(user):
-                return f(*args, **kwargs)
-
-            # Paid access (after trial) requires an active subscription.
-            if plan_rank(user_plan) >= plan_rank(min_plan) and is_paid_subscription_active(user):
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                 return f(*args, **kwargs)
 
             return redirect("/subscriptions?required=1")
@@ -1514,74 +1385,6 @@ def check_subscription(f):
     return require_plan("pro")(f)
 
 
-<<<<<<< HEAD
-=======
-def is_user_paywall_blocked(user):
-    """After the free trial ends, block access unless the user has an active paid plan."""
-    if user is None:
-        return False
-    ensure_user_subscription_state(user, commit=True)
-    if is_trial_active(user):
-        return False
-    return not (normalize_plan_name(user.plan) in {"pro", "premium"} and is_paid_subscription_active(user))
-
-
-def is_paywall_exempt_path(path_value):
-    path = str(path_value or "")
-    if not path or path == "/":
-        return True
-
-    exact_allow = {
-        "/login",
-        "/register",
-        "/verify-otp",
-        "/logout",
-        "/subscriptions",
-    }
-    if path in exact_allow:
-        return True
-
-    prefix_allow = (
-        "/static/",
-        "/admin",
-        "/webhooks/",
-        "/api/subscription/",
-        "/api/apply-wallet",
-    )
-    return any(path.startswith(prefix) for prefix in prefix_allow)
-
-
-@app.before_request
-def enforce_trial_paywall():
-    """Give 7-day full access; after that redirect to subscriptions until paid."""
-    # Skip preflight/health.
-    if request.method == "OPTIONS":
-        return None
-
-    if is_paywall_exempt_path(request.path):
-        return None
-
-    user = get_current_user()
-    if not user:
-        return None
-
-    if not is_user_paywall_blocked(user):
-        return None
-
-    # For API-like routes, return JSON so frontend can handle gracefully.
-    if request.path.startswith("/api/") or request.path == "/predict-disease":
-        return jsonify(
-            {
-                "success": False,
-                "error": "Trial ended. Please subscribe to continue using AgroVision AI.",
-                "redirect_url": "/subscriptions?expired=1",
-            }
-        ), 403
-
-    return redirect("/subscriptions?expired=1")
-
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def check_user_password(user, password_value, upgrade_legacy=True):
     if user is None:
         return False, False
@@ -1604,7 +1407,6 @@ def check_user_password(user, password_value, upgrade_legacy=True):
 
 
 def check_admin_password(candidate_password):
-<<<<<<< HEAD
     stored = (ADMIN_PASSWORD or "").strip()
     candidate = (candidate_password or "").strip()
     if not stored or not candidate:
@@ -1613,51 +1415,11 @@ def check_admin_password(candidate_password):
     if is_password_hash(stored):
         return check_password_hash(stored, candidate)
 
-=======
-    candidate = (candidate_password or "").strip()
-    if not candidate:
-        return False
-
-    # Prefer DB-backed admin users when available.
-    try:
-        admin = AdminUser.query.filter_by(email=ADMIN_EMAIL).first()  # type: ignore
-    except Exception:
-        admin = None
-
-    if admin is not None:
-        return check_password_hash(admin.password_hash or "", candidate)
-
-    # Fallback to env-based credentials (backward compatible).
-    stored = (ADMIN_PASSWORD or "").strip()
-    if not stored:
-        return False
-    if is_password_hash(stored):
-        return check_password_hash(stored, candidate)
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     return stored == candidate
 
 
 def is_admin_authenticated():
-<<<<<<< HEAD
     return bool(session.get("admin_authed") and session.get("admin_email") == ADMIN_EMAIL)
-=======
-    if not session.get("admin_authed"):
-        return False
-    email = (session.get("admin_email") or "").strip().lower()
-    if email and email == ADMIN_EMAIL:
-        return True
-    # If multiple admins are added, fall back to ID check.
-    try:
-        admin_id = int(session.get("admin_id") or 0)
-    except (TypeError, ValueError):
-        admin_id = 0
-    if not admin_id:
-        return False
-    try:
-        return db.session.get(AdminUser, admin_id) is not None
-    except Exception:
-        return False
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 def admin_required(f):
@@ -1673,26 +1435,18 @@ def admin_required(f):
 def clear_otp_session_state():
     for key in (
         "otp",
-        "otp_sig",
         "otp_target",
         "otp_type",
         "otp_user_id",
         "otp_expiry",
-<<<<<<< HEAD
         "otp_notice",
         "otp_debug_available",
         "otp_sent_at",
-=======
-        "otp_attempts",
-        "otp_notice",
-        "otp_dev_code",
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         "pending_user",
     ):
         session.pop(key, None)
 
 
-<<<<<<< HEAD
 def csrf_token():
     token = session.get(CSRF_SESSION_KEY)
     if not token:
@@ -1783,28 +1537,6 @@ def sync_csrf_cookie(response):
             samesite=app.config["SESSION_COOKIE_SAMESITE"],
         )
     return response
-=======
-def read_upload_bytes(file_storage, max_bytes, label="file"):
-    if file_storage is None:
-        raise ValueError("No file uploaded.")
-
-    try:
-        stream = file_storage.stream
-    except Exception as exc:
-        raise ValueError("Upload stream is not available.") from exc
-
-    try:
-        stream.seek(0)
-    except Exception:
-        pass
-
-    data = stream.read(int(max_bytes) + 1)
-    if not data:
-        raise ValueError("Uploaded file is empty.")
-    if len(data) > int(max_bytes):
-        raise ValueError(f"{label} is too large. Please upload a smaller file.")
-    return data
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 def save_profile_photo_upload(file_storage, prefix):
@@ -1813,20 +1545,9 @@ def save_profile_photo_upload(file_storage, prefix):
     if suffix not in ALLOWED_IMAGE_SUFFIXES:
         raise ValueError("Only PNG, JPG, JPEG, or WEBP images are allowed.")
 
-    file_name = f"{prefix}_{uuid.uuid4().hex[:12]}.jpg"
+    file_name = f"{prefix}_{uuid.uuid4().hex[:12]}{suffix}"
     save_path = UPLOADS_DIR / file_name
-
-    image_bytes = read_upload_bytes(file_storage, MAX_PROFILE_PHOTO_BYTES, label="Profile photo")
-
-    try:
-        img = Image.open(BytesIO(image_bytes))
-        img = ImageOps.exif_transpose(img)
-        img = img.convert("RGB")
-        img = ImageOps.fit(img, (512, 512), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
-        img.save(save_path, format="JPEG", quality=86, optimize=True, progressive=True)
-    except (UnidentifiedImageError, OSError, ValueError) as exc:
-        raise ValueError("Could not process profile photo. Please upload a valid image file.") from exc
-
+    file_storage.save(str(save_path))
     return file_name
 
 
@@ -1843,12 +1564,7 @@ def save_product_image_upload(file_storage, slug_hint="product"):
 
     # Normalize all uploads to a square JPEG for consistent store UI.
     try:
-<<<<<<< HEAD
         img = Image.open(file_storage.stream)
-=======
-        image_bytes = read_upload_bytes(file_storage, MAX_PRODUCT_IMAGE_BYTES, label="Product image")
-        img = Image.open(BytesIO(image_bytes))
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         img = ImageOps.exif_transpose(img)
         img = img.convert("RGB")
         img = ImageOps.fit(img, (900, 900), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
@@ -1876,6 +1592,16 @@ SMTP_SENDER_NAME = (os.getenv("SMTP_SENDER_NAME") or APP_DISPLAY_NAME).strip() o
 SMTP_USE_SSL = (os.getenv("SMTP_USE_SSL") or "").strip().lower() in {"1", "true", "yes", "on"}
 SMTP_TIMEOUT_SECONDS = get_env_int("SMTP_TIMEOUT_SECONDS", 20)
 OTP_EMAIL_EMBED_LOGO = (os.getenv("OTP_EMAIL_EMBED_LOGO") or "").strip().lower() in {"1", "true", "yes", "on"}
+TWILIO_ACCOUNT_SID = (os.getenv("TWILIO_ACCOUNT_SID") or "").strip()
+TWILIO_AUTH_TOKEN = (os.getenv("TWILIO_AUTH_TOKEN") or "").strip()
+TWILIO_SMS_FROM = (os.getenv("TWILIO_SMS_FROM") or "").strip()
+TWILIO_WHATSAPP_FROM = (os.getenv("TWILIO_WHATSAPP_FROM") or "").strip()
+TWILIO_CONTENT_SID = (os.getenv("TWILIO_CONTENT_SID") or "").strip()
+TWILIO_USE_WHATSAPP = (os.getenv("TWILIO_USE_WHATSAPP") or "").strip().lower() in {"1", "true", "yes", "on"}
+TASK_REMINDER_INTERVAL_SECONDS = max(60, get_env_int("TASK_REMINDER_INTERVAL_SECONDS", 600))
+TASK_REMINDER_POLL_SECONDS = max(30, min(TASK_REMINDER_INTERVAL_SECONDS, 60))
+TASK_REMINDER_WORKER = {"started": False, "thread": None}
+TASK_REMINDER_LOCK = threading.Lock()
 
 
 def load_email_logo_bytes():
@@ -1986,13 +1712,12 @@ def send_otp_email(target_email, otp):
     """
     Sends a 6-digit OTP to the user's email using SMTP.
     """
+    # Debug Print for Terminal
+    print(f"\n--- [DEBUG OTP] OTP for {target_email} is: {otp} ---\n")
+
     if not SMTP_EMAIL or not SMTP_PASSWORD:
-<<<<<<< HEAD
         print("SMTP credentials are not configured. OTP email skipped.")
         return False, "SMTP credentials are not configured."
-=======
-        return False
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
     logo_bytes = None
     logo_cid = None
@@ -2091,86 +1816,8 @@ def send_admin_order_email(order, user, product):
         return False
 
 
-def send_admin_order_email(order, user, product):
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
-        print("SMTP credentials are not configured. Admin order email skipped.")
-        return False
-
-    if not ADMIN_NOTIFY_EMAIL:
-        print("Admin notification email is not configured. Admin order email skipped.")
-        return False
-
-    order_id = getattr(order, "id", None)
-    amount_paise = int(getattr(order, "amount", 0) or 0)
-    amount_inr = amount_paise / 100.0
-    currency = str(getattr(order, "currency", "INR") or "INR")
-    buyer_name = str(getattr(user, "name", "") or "").strip() or "Customer"
-    buyer_email = str(getattr(user, "email", "") or "").strip()
-    product_name = str(getattr(product, "name", "") or "").strip() or "Store Product"
-
-    subject = f"New Order Received #{order_id}" if order_id else "New Order Received"
-    body_lines = [
-        "New Order Received!",
-        "",
-        f"Order: #{order_id}" if order_id else "Order: (unknown id)",
-        f"Product: {product_name}",
-        f"User: {buyer_name}" + (f" ({buyer_email})" if buyer_email else ""),
-        f"Amount: {currency} {amount_inr:.2f}",
-        f"Status: {get_fulfillment_status(order).title()}",
-    ]
-
-    msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
-    msg["To"] = ADMIN_NOTIFY_EMAIL
-    msg["Reply-To"] = SMTP_EMAIL
-    msg.set_content("\n".join(body_lines))
-
-    try:
-        if SMTP_USE_SSL or SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
-                server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                server.send_message(msg)
-        else:
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                server.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"SMTP Error (admin order email): {e}")
-        return False
-
-
 def clamp(value, lower, upper):
     return max(lower, min(value, upper))
-
-
-def _client_ip():
-    # If behind a proxy, set proper proxy headers in production (not enabled by default).
-    return (request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown").split(",")[0].strip()
-
-
-def rate_limit_exceeded(bucket_key, max_hits, window_seconds):
-    """Return True if exceeded, else False."""
-    now = time.time()
-    window = float(window_seconds or 1)
-    limit = int(max_hits or 1)
-    key = str(bucket_key or "")
-    if not key:
-        return False
-
-    hits = RATE_LIMIT_BUCKET.get(key) or []
-    hits = [ts for ts in hits if now - float(ts) <= window]
-    if len(hits) >= limit:
-        RATE_LIMIT_BUCKET[key] = hits
-        return True
-
-    hits.append(now)
-    RATE_LIMIT_BUCKET[key] = hits
-    return False
 
 def calculate_carbon_credits(user):
     """
@@ -2230,7 +1877,6 @@ def load_kisan_dost_knowledge():
         return []
 
 
-<<<<<<< HEAD
 def load_ai_crop_doctor_faq_reference():
     if not AI_CROP_DOCTOR_FAQ_PATH.exists():
         return ""
@@ -2292,6 +1938,44 @@ def load_ai_crop_doctor_local_qa():
         return []
 
 
+def load_ai_crop_doctor_chat_knowledge():
+    global AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE
+
+    if AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE is not None:
+        return AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE
+
+    default_payload = {
+        "intents": [],
+        "faq": [],
+        "daily_questions": [],
+        "judge_questions": [],
+        "advanced_faq": [],
+        "matching_config": {},
+    }
+    if not AI_CROP_DOCTOR_CHAT_KNOWLEDGE_PATH.exists():
+        AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE = default_payload
+        return AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE
+
+    try:
+        data = json.loads(AI_CROP_DOCTOR_CHAT_KNOWLEDGE_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE = default_payload
+        return AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE
+
+    if not isinstance(data, dict):
+        AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE = default_payload
+        return AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE
+
+    normalized_payload = dict(default_payload)
+    for key in ["intents", "faq", "daily_questions", "judge_questions", "advanced_faq"]:
+        value = data.get(key)
+        normalized_payload[key] = value if isinstance(value, list) else []
+    matching_config = data.get("matching_config")
+    normalized_payload["matching_config"] = matching_config if isinstance(matching_config, dict) else {}
+    AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE = normalized_payload
+    return AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE
+
+
 def get_ai_crop_doctor_local_answer(entry, language="Hinglish"):
     if not isinstance(entry, dict):
         return None
@@ -2317,6 +2001,9 @@ AI_CROP_DOCTOR_LOCAL_QA_STOPWORDS = {
     "kaunse", "kitna", "kitni", "kitne", "dena", "use", "karu", "kare", "karna", "kab",
     "kaise", "kar", "do", "diya", "gaya", "hoon", "hu", "mein", "main", "please", "help",
     "what", "when", "where", "which", "who", "why", "how", "in", "on", "for",
+    "मैं", "मेरे", "मेरी", "मेरा", "मुझे", "है", "हैं", "का", "की", "के", "को", "से",
+    "पर", "और", "क्या", "कैसे", "कब", "क्यों", "करो", "करें", "करना", "रहा", "रहे", "रही",
+    "ongoing",
 }
 
 AI_CROP_DOCTOR_LOCAL_QA_TOKEN_ALIASES = {
@@ -2365,6 +2052,74 @@ AI_CROP_DOCTOR_LOCAL_QA_TOKEN_ALIASES = {
     "sukhe": "dry",
     "drying": "dry",
     "powdery": "powder",
+    "chipchipa": "sticky",
+    "chipchipe": "sticky",
+    "safedi": "white",
+    "keedaa": "pest",
+    "garmi": "heat",
+    "barish": "rain",
+    "baarish": "rain",
+    "medicine": "spray",
+    "medicines": "spray",
+    "doctor": "help",
+    "madad": "help",
+    "mur": "curl",
+    "mura": "curl",
+    "murra": "curl",
+    "twisted": "curl",
+    "sticky": "sticky",
+    "hollow": "hole",
+    "holes": "hole",
+    "worms": "worm",
+    "keedae": "pest",
+    "jadon": "root",
+    "peeli": "yellow",
+    "marks": "spots",
+    "patches": "patch",
+    "patchy": "patch",
+    "पत्ता": "leaf",
+    "पत्ते": "leaf",
+    "पत्ती": "leaf",
+    "पौधा": "plant",
+    "पौधे": "plant",
+    "पील": "yellow",
+    "पीला": "yellow",
+    "पीले": "yellow",
+    "पीली": "yellow",
+    "पीलीं": "yellow",
+    "पीलापन": "yellow",
+    "पड़": "change",
+    "पड़ना": "change",
+    "रहा": "ongoing",
+    "रहे": "ongoing",
+    "हैं": "is",
+    "है": "is",
+    "सफेद": "white",
+    "भूरा": "brown",
+    "भूरे": "brown",
+    "काला": "black",
+    "काले": "black",
+    "धब्बा": "spots",
+    "धब्बे": "spots",
+    "दाग": "spots",
+    "जड़": "root",
+    "जड़े": "root",
+    "कीड़ा": "pest",
+    "कीड़े": "pest",
+    "कीट": "pest",
+    "चिपचिपा": "sticky",
+    "सूखा": "dry",
+    "सूखी": "dry",
+    "सूख": "dry",
+    "मुड़": "curl",
+    "मुड़ना": "curl",
+    "मुड़ रहे": "curl",
+    "बारिश": "rain",
+    "गर्मी": "heat",
+    "पानी": "water",
+    "दवा": "spray",
+    "खाद": "fertilizer",
+    "मिट्टी": "soil",
 }
 
 AI_CROP_DOCTOR_SYMPTOM_CUES = {
@@ -2377,9 +2132,54 @@ AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS = {
 }
 
 
+AI_CROP_DOCTOR_CHAT_INTENT_ALIAS_MAP = {
+    "fallback_help": "general_help",
+    "multi_analysis": "general_help",
+    "multi_issue_analysis": "general_help",
+    "caterpillar": "fall_armyworm",
+    "avoid_spray": "rain_warning",
+    "heat_protection": "heatwave_issue",
+    "irrigation_timing": "irrigation_timing",
+    "ai_explanation": "ai_explanation",
+    "accuracy_info": "accuracy_info",
+    "fallback_response": "fallback_response",
+    "product_recommendation": "best_fungicide",
+    "organic_solution": "organic_treatment",
+    "comparison_answer": "organic_vs_chemical",
+    "last_solution": "last_solution",
+    "project_uniqueness": "project_uniqueness",
+    "impact_answer": "impact_answer",
+    "scalability_answer": "scalability_answer",
+    "fungal_solution": "fungal_solution",
+    "virus_no_cure": "virus_no_cure",
+}
+
+
+AI_CROP_DOCTOR_LOCAL_QA_PHRASE_ALIASES = {
+    "पीले पड़ रहे": "yellow leaf",
+    "पीला पड़ रहा": "yellow leaf",
+    "पीली पड़ रही": "yellow leaf",
+    "पीले हो रहे": "yellow leaf",
+    "पीला हो रहा": "yellow leaf",
+    "सफेद पाउडर": "white powder",
+    "भूरे धब्बे": "brown spots",
+    "काले धब्बे": "black spots",
+    "जड़ काली": "root black",
+    "जड़ें काली": "root black",
+    "चिपचिपे पत्ते": "sticky leaf",
+    "चिपचिपा पत्ता": "sticky leaf",
+    "धीमी बढ़त": "slow growth",
+    "धीमी ग्रोथ": "slow growth",
+}
+
+
 def normalize_ai_crop_doctor_match_text(text):
+    normalized_source = str(text or "").lower()
+    for source_phrase, target_phrase in AI_CROP_DOCTOR_LOCAL_QA_PHRASE_ALIASES.items():
+        normalized_source = normalized_source.replace(source_phrase, f" {target_phrase} ")
+
     tokens = []
-    for raw_token in re.findall(r"[a-z0-9]+", str(text or "").lower()):
+    for raw_token in re.findall(r"[a-z0-9\u0900-\u097f]+", normalized_source):
         token = AI_CROP_DOCTOR_LOCAL_QA_TOKEN_ALIASES.get(raw_token, raw_token)
         if token.endswith("s") and len(token) > 4 and token not in {"ph", "tips"}:
             token = token[:-1]
@@ -2394,6 +2194,247 @@ def extract_ai_crop_doctor_match_tokens(text):
         for token in normalized_text.split()
         if token and token not in AI_CROP_DOCTOR_LOCAL_QA_STOPWORDS
     }
+
+
+def format_ai_crop_doctor_products(products):
+    labels = []
+    if not isinstance(products, list):
+        return labels
+    for item in products:
+        raw_value = ""
+        if isinstance(item, dict):
+            raw_value = str(item.get("id") or item.get("product") or item.get("name") or "").strip()
+        else:
+            raw_value = str(item or "").strip()
+        if not raw_value:
+            continue
+        labels.append(raw_value.replace("_", " ").replace("-", " ").title())
+    return labels
+
+
+def join_ai_crop_doctor_list(values, limit=3):
+    cleaned_values = [str(value or "").strip() for value in values if str(value or "").strip()]
+    if not cleaned_values:
+        return ""
+    return ", ".join(cleaned_values[:limit])
+
+
+def format_ai_crop_doctor_structured_answer(answer, language="Hinglish", follow_up=None):
+    normalized_language = str(language or "Hinglish").strip().lower()
+    follow_up = [str(item or "").strip() for item in (follow_up or []) if str(item or "").strip()]
+
+    if isinstance(answer, str):
+        message = answer.strip()
+    elif isinstance(answer, list):
+        message = str(answer[0] or "").strip() if answer else ""
+    elif isinstance(answer, dict):
+        if str(answer.get("message") or "").strip():
+            message = str(answer.get("message") or "").strip()
+        else:
+            parts = []
+            subject = (
+                str(answer.get("disease") or "").strip()
+                or str(answer.get("problem") or "").strip()
+                or str(answer.get("definition") or "").strip()
+            )
+            confidence_hint = str(answer.get("confidence_hint") or "").strip()
+            cause = str(answer.get("cause") or "").strip()
+            note = str(answer.get("note") or "").strip()
+            warning = str(answer.get("warning") or "").strip()
+            tip = str(answer.get("tip") or "").strip()
+            benefit = str(answer.get("benefit") or "").strip()
+            recommendation = str(answer.get("recommendation") or "").strip()
+            example = str(answer.get("example") or "").strip()
+
+            symptoms = answer.get("symptoms") if isinstance(answer.get("symptoms"), list) else []
+            prevention = answer.get("prevention") if isinstance(answer.get("prevention"), list) else []
+            solution = answer.get("solution")
+            comparison = answer.get("comparison") if isinstance(answer.get("comparison"), dict) else {}
+            impact = answer.get("impact") if isinstance(answer.get("impact"), list) else []
+            products = format_ai_crop_doctor_products(answer.get("products"))
+
+            if subject:
+                if normalized_language == "english":
+                    subject_line = f"It looks related to {subject}."
+                    if confidence_hint:
+                        subject_line += f" Confidence hint: {confidence_hint}."
+                    parts.append(subject_line.strip())
+                else:
+                    subject_line = f"Yeh {subject} se related lag raha hai."
+                    if confidence_hint:
+                        subject_line += f" Confidence hint {confidence_hint}."
+                    parts.append(subject_line.strip())
+            if symptoms:
+                label = "Symptoms" if normalized_language == "english" else "Symptoms"
+                parts.append(f"{label}: {join_ai_crop_doctor_list(symptoms, limit=3)}.")
+            if cause:
+                label = "Cause" if normalized_language == "english" else "Cause"
+                parts.append(f"{label}: {cause}.")
+            if isinstance(solution, dict):
+                organic = solution.get("organic") if isinstance(solution.get("organic"), list) else []
+                chemical = solution.get("chemical") if isinstance(solution.get("chemical"), list) else []
+                if organic:
+                    label = "Organic" if normalized_language == "english" else "Organic"
+                    parts.append(f"{label}: {join_ai_crop_doctor_list(organic, limit=2)}.")
+                if chemical:
+                    label = "Chemical" if normalized_language == "english" else "Chemical"
+                    parts.append(f"{label}: {join_ai_crop_doctor_list(chemical, limit=2)}.")
+            elif isinstance(solution, list):
+                label = "Action" if normalized_language == "english" else "Action"
+                parts.append(f"{label}: {join_ai_crop_doctor_list(solution, limit=3)}.")
+            elif str(solution or "").strip():
+                label = "Action" if normalized_language == "english" else "Action"
+                parts.append(f"{label}: {str(solution).strip()}.")
+            if prevention:
+                label = "Prevention" if normalized_language == "english" else "Prevention"
+                parts.append(f"{label}: {join_ai_crop_doctor_list(prevention, limit=2)}.")
+            if comparison:
+                organic_line = str(comparison.get("organic") or "").strip()
+                chemical_line = str(comparison.get("chemical") or "").strip()
+                if organic_line or chemical_line:
+                    parts.append(
+                        "Organic: "
+                        + (organic_line or "N/A")
+                        + " | Chemical: "
+                        + (chemical_line or "N/A")
+                        + "."
+                    )
+            if products:
+                label = "Suggested products" if normalized_language == "english" else "Suggested products"
+                parts.append(f"{label}: {join_ai_crop_doctor_list(products, limit=3)}.")
+            if recommendation:
+                parts.append(f"{recommendation}.")
+            if benefit:
+                parts.append(f"{benefit}.")
+            if note:
+                parts.append(f"{note}.")
+            if warning:
+                parts.append(f"Warning: {warning}.")
+            if tip:
+                parts.append(f"Tip: {tip}.")
+            if impact:
+                parts.append(f"Impact: {join_ai_crop_doctor_list(impact, limit=3)}.")
+            if example:
+                parts.append(f"Example: {example}.")
+            message = " ".join(part.strip() for part in parts if str(part or "").strip())
+    else:
+        message = ""
+
+    message = re.sub(r"\s+", " ", str(message or "").strip())
+    if not message:
+        return None
+    if follow_up:
+        message = f"{message} Confirm karne ke liye batayein: {join_ai_crop_doctor_list(follow_up, limit=2)}?"
+    return message
+
+
+def load_ai_crop_doctor_chat_match_entries():
+    global AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE
+
+    if AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE is not None:
+        return AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE
+
+    knowledge = load_ai_crop_doctor_chat_knowledge()
+    entries = []
+    intent_index = {}
+
+    def build_entry(source, tag, patterns, keywords, answer, category="", follow_up=None, confidence_threshold=0.5):
+        entry = {
+            "source": source,
+            "tag": str(tag or "").strip().lower(),
+            "category": str(category or "").strip().lower(),
+            "patterns": [str(item or "").strip() for item in (patterns or []) if str(item or "").strip()],
+            "keywords": [str(item or "").strip() for item in (keywords or []) if str(item or "").strip()],
+            "answer": answer,
+            "follow_up": [str(item or "").strip() for item in (follow_up or []) if str(item or "").strip()],
+            "confidence_threshold": float(confidence_threshold or 0.5),
+        }
+        if entry["tag"]:
+            intent_index.setdefault(entry["tag"], entry)
+        entries.append(entry)
+
+    for intent in knowledge.get("intents", []):
+        if not isinstance(intent, dict):
+            continue
+        responses = intent.get("responses")
+        answer = responses if isinstance(responses, (str, list, dict)) else None
+        build_entry(
+            "intent",
+            intent.get("tag"),
+            intent.get("patterns", []),
+            intent.get("keywords", []),
+            answer,
+            category="intent",
+            follow_up=intent.get("follow_up", []),
+            confidence_threshold=float(intent.get("confidence_threshold") or 0.5),
+        )
+
+    for item in knowledge.get("faq", []):
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("question") or "").strip()
+        patterns = list(item.get("patterns", [])) if isinstance(item.get("patterns"), list) else []
+        if question:
+            patterns.insert(0, question)
+        build_entry(
+            "faq",
+            item.get("tag") or question,
+            patterns,
+            item.get("keywords", []),
+            item.get("answer"),
+            category="faq",
+            confidence_threshold=0.5,
+        )
+
+    for item in knowledge.get("daily_questions", []):
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("question") or "").strip()
+        answer = str(item.get("answer") or "").strip()
+        if not question or not answer:
+            continue
+        build_entry(
+            "daily_question",
+            item.get("tag") or question,
+            [question],
+            item.get("keywords", []),
+            answer,
+            category="daily_question",
+            confidence_threshold=0.5,
+        )
+
+    for item in knowledge.get("advanced_faq", []):
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("question") or "").strip()
+        patterns = list(item.get("patterns", [])) if isinstance(item.get("patterns"), list) else []
+        if question:
+            patterns.insert(0, question)
+        build_entry(
+            "advanced_faq",
+            item.get("tag") or question,
+            patterns,
+            item.get("keywords", []),
+            item.get("answer"),
+            category="advanced_faq",
+            confidence_threshold=0.5,
+        )
+
+    for item in knowledge.get("judge_questions", []):
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("question") or "").strip()
+        if not question:
+            continue
+        expected_intent = str(item.get("expected_intent") or "").strip().lower()
+        resolved_tag = AI_CROP_DOCTOR_CHAT_INTENT_ALIAS_MAP.get(expected_intent, expected_intent)
+        target_entry = intent_index.get(resolved_tag)
+        if target_entry is not None:
+            if question not in target_entry["patterns"]:
+                target_entry["patterns"].append(question)
+
+    AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE = entries
+    return AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE
 
 
 def format_ai_crop_doctor_symptom_rule_answer(rule, language="Hinglish"):
@@ -2455,6 +2496,100 @@ def lookup_ai_crop_doctor_project_faq(query_text):
     return None
 
 
+def lookup_ai_crop_doctor_chat_knowledge(query_text):
+    query_text = str(query_text or "").strip()
+    if not query_text:
+        return None
+
+    query_lower = query_text.lower()
+    normalized_query = normalize_ai_crop_doctor_match_text(query_text)
+    query_tokens = extract_ai_crop_doctor_match_tokens(query_text)
+    if not query_tokens:
+        return None
+
+    language = detect_ai_chat_language(query_text)
+    best_entry = None
+    best_score = 0.0
+    best_strong_overlap = 0
+    best_phrase_match = False
+    best_threshold = 7.0
+
+    for entry in load_ai_crop_doctor_chat_match_entries():
+        signature_tokens = set()
+        score = 0.0
+        phrase_match = False
+        keyword_hits = 0
+
+        for pattern in entry.get("patterns", []):
+            normalized_pattern = normalize_ai_crop_doctor_match_text(pattern)
+            pattern_tokens = extract_ai_crop_doctor_match_tokens(pattern)
+            signature_tokens.update(pattern_tokens)
+            if not normalized_pattern:
+                continue
+            if normalized_query == normalized_pattern:
+                score += 14
+                phrase_match = True
+            elif normalized_pattern in normalized_query or normalized_query in normalized_pattern:
+                score += 7
+                phrase_match = True
+            overlap = len(query_tokens & pattern_tokens)
+            if overlap:
+                score += min(5, overlap * 1.5)
+
+        for keyword in entry.get("keywords", []):
+            normalized_keyword = normalize_ai_crop_doctor_match_text(keyword)
+            keyword_tokens = extract_ai_crop_doctor_match_tokens(keyword)
+            signature_tokens.update(keyword_tokens)
+            if not normalized_keyword:
+                continue
+            if normalized_keyword in normalized_query or str(keyword).strip().lower() in query_lower:
+                score += 5
+                phrase_match = True
+                keyword_hits += 1
+            overlap = len(query_tokens & keyword_tokens)
+            if overlap:
+                score += min(4, overlap * 2)
+
+        tag_text = str(entry.get("tag") or "").replace("_", " ").strip().lower()
+        tag_tokens = extract_ai_crop_doctor_match_tokens(tag_text)
+        signature_tokens.update(tag_tokens)
+
+        strong_query_tokens = query_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
+        strong_signature_tokens = signature_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
+        strong_overlap = len(strong_query_tokens & strong_signature_tokens)
+        if not phrase_match and strong_overlap == 0:
+            continue
+
+        score += strong_overlap * 3
+        if strong_query_tokens:
+            score += round((strong_overlap / max(len(strong_query_tokens), 1)) * 4, 2)
+        if tag_text and any(token in tag_text for token in strong_query_tokens):
+            score += 1
+        if entry.get("category") and str(entry.get("category")) in query_lower:
+            score += 1
+
+        threshold = max(6.0, 5.0 + float(entry.get("confidence_threshold") or 0.5) * 5.0)
+        if keyword_hits and strong_overlap:
+            threshold -= 0.5
+
+        if score > best_score:
+            best_score = score
+            best_entry = entry
+            best_strong_overlap = strong_overlap
+            best_phrase_match = phrase_match
+            best_threshold = threshold
+
+    if best_entry and best_score >= best_threshold and (best_phrase_match or best_strong_overlap >= 2):
+        add_follow_up = best_score < best_threshold + 2 and best_entry.get("follow_up")
+        return format_ai_crop_doctor_structured_answer(
+            best_entry.get("answer"),
+            language=language,
+            follow_up=best_entry.get("follow_up") if add_follow_up else None,
+        )
+
+    return None
+
+
 def lookup_ai_crop_doctor_local_qa(query_text):
     query_text = str(query_text or "").strip()
     query_lower = query_text.lower()
@@ -2462,6 +2597,10 @@ def lookup_ai_crop_doctor_local_qa(query_text):
     query_tokens = extract_ai_crop_doctor_match_tokens(query_text)
     if not query_tokens:
         return None
+
+    structured_answer = lookup_ai_crop_doctor_chat_knowledge(query_text)
+    if structured_answer:
+        return structured_answer
 
     language = detect_ai_chat_language(query_text)
     best_entry = None
@@ -2558,9 +2697,34 @@ def find_store_product_by_asset_hint(product_hint):
         "fungicide": "Bio Pesticide",
         "neem_oil": "Neem Oil",
         "neem-oil": "Neem Oil",
+        "mancozeb": "Mancozeb 75% WP",
+        "copper_oxychloride": "Copper Oxychloride 50% WP",
+        "copper-oxychloride": "Copper Oxychloride 50% WP",
+        "propiconazole": "Propiconazole 25 EC",
+        "chlorothalonil": "Chlorothalonil 75 WP",
+        "metalaxyl": "Ridomil Gold 68 WG",
+        "ridomil": "Ridomil Gold 68 WG",
+        "sulfur": "Sulfur 80 WDG",
+        "imidacloprid": "Imidacloprid 17.8 SL",
+        "azoxystrobin": "Azoxystrobin 23 SC",
+        "tricyclazole": "Tricyclazole 75 WP",
+        "leaf_mold": "Chlorothalonil 75 WP",
+        "leaf-mold": "Chlorothalonil 75 WP",
+        "target_spot": "Azoxystrobin 23 SC",
+        "target-spot": "Azoxystrobin 23 SC",
+        "leaf_rust": "Propiconazole 25 EC",
+        "leaf-rust": "Propiconazole 25 EC",
+        "yellow_rust": "Propiconazole 25 EC",
+        "yellow-rust": "Propiconazole 25 EC",
+        "common_rust": "Propiconazole 25 EC",
+        "common-rust": "Propiconazole 25 EC",
+        "rice_blast": "Tricyclazole 75 WP",
+        "rice-blast": "Tricyclazole 75 WP",
+        "copper": "Copper Oxychloride 50% WP",
         "pesticide": "Pesticide Spray",
         "irrigation": "Drip Pipes",
         "fertilizer": "NPK Fertilizer",
+        "fertilizer.jpg": "NPK Fertilizer",
         "soil_booster": "Soil Health Booster",
         "soil-booster": "Soil Health Booster",
     }
@@ -2611,8 +2775,6 @@ def match_disease_symptom_rule(*values):
     return {"key": best_key, **best_rule}
 
 
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def slugify_crop_name(name):
     parts = re.findall(r"[a-z0-9]+", (name or "").lower())
     return "-".join(parts) or "crop"
@@ -2624,164 +2786,6 @@ def normalize_disease_key(disease_name):
     return value
 
 
-<<<<<<< HEAD
-=======
-def resolve_disease_library_image(raw_item):
-    item = raw_item if isinstance(raw_item, dict) else {}
-    explicit = str(item.get("image") or "").strip()
-    if explicit:
-        if explicit.startswith(("http://", "https://", "data:image/")):
-            return explicit
-        if explicit.startswith("/static/"):
-            candidate = Path(app.root_path) / explicit.lstrip("/").replace("/", os.sep)
-            if candidate.exists():
-                return explicit
-
-    name = str(item.get("name") or item.get("slug") or "").strip()
-    slug = slugify_crop_name(item.get("slug") or name)
-    tags = [str(tag).strip().lower() for tag in (item.get("tags") or []) if str(tag).strip()]
-    disease_type = str(item.get("type") or "disease").strip().lower()
-
-    candidate_keys = [
-        slug,
-        normalize_disease_key(name).replace(" ", "-"),
-    ]
-
-    alias_map = {
-        "common-rust": "yellow-rust",
-        "leaf-rust": "yellow-rust",
-        "rust-leaf-spot": "yellow-rust",
-        "northern-leaf-blight": "leaf-blight",
-        "gray-leaf-spot": "brown-spot",
-        "spider-mite-infestation": "aphids",
-        "spider-mites-two-spotted-spider-mite": "aphids",
-        "leaf-curl-virus": "leaf-curl-virus",
-        "tomato-yellowleaf-curl-virus": "leaf-curl-virus",
-        "tomato-mosaic-virus": "mosaic-disease",
-        "mosaic-virus": "mosaic-disease",
-        "target-spot": "brown-spot",
-    }
-
-    keyword_candidates = [
-        ("armyworm", "fall-armyworm"),
-        ("stem borer", "stem-borer"),
-        ("hispa", "rice-hispa"),
-        ("thrips", "thrips"),
-        ("whitefly", "whitefly"),
-        ("aphid", "aphids"),
-        ("mite", "aphids"),
-        ("mosaic", "mosaic-disease"),
-        ("curl", "leaf-curl-virus"),
-        ("blast", "rice-blast"),
-        ("powdery mildew", "powdery-mildew"),
-        ("downy mildew", "downy-mildew"),
-        ("mildew", "powdery-mildew"),
-        ("rust", "yellow-rust"),
-        ("leaf mold", "leaf-mold"),
-        ("mold", "leaf-mold"),
-        ("bacterial leaf blight", "bacterial-leaf-blight"),
-        ("bacterial spot", "bacterial-spot"),
-        ("leaf blight", "leaf-blight"),
-        ("blight", "leaf-blight"),
-        ("root rot", "root-rot"),
-        ("damping off", "damping-off"),
-        ("brown spot", "brown-spot"),
-        ("spot", "brown-spot"),
-    ]
-
-    for key in list(candidate_keys):
-        mapped_key = alias_map.get(key)
-        if mapped_key:
-            candidate_keys.append(mapped_key)
-
-    search_text = " ".join(
-        [name.lower(), slug.replace("-", " "), disease_type, " ".join(tags)]
-    )
-    for keyword, asset_key in keyword_candidates:
-        if keyword in search_text:
-            candidate_keys.append(asset_key)
-
-    seen = set()
-    for key in candidate_keys:
-        key = str(key or "").strip().lower()
-        if not key or key in seen:
-            continue
-        seen.add(key)
-        for suffix in ALLOWED_IMAGE_SUFFIXES:
-            image_path = DISEASE_LIBRARY_IMAGE_DIR / f"{key}{suffix}"
-            if image_path.exists():
-                return f"/static/library/diseases/{image_path.name}"
-
-    return DISEASE_LIBRARY_DEFAULT_IMAGES.get(disease_type, DISEASE_LIBRARY_DEFAULT_IMAGES["disease"])
-
-
-def get_best_disease_library_entry(disease_name, crop_name=""):
-    disease_key = normalize_disease_key(disease_name)
-    crop_key = normalize_crop_key(crop_name)
-    if not disease_key:
-        return None
-
-    entries = load_disease_library()
-    scored_matches = []
-
-    for entry in entries:
-        entry_name = str(entry.get("name") or "").strip()
-        entry_key = normalize_disease_key(entry_name)
-        if not entry_key:
-            continue
-
-        score = 0.0
-        if entry_key == disease_key or entry.get("slug") == slugify_crop_name(disease_name):
-            score += 7.0
-        elif disease_key in entry_key or entry_key in disease_key:
-            score += 4.2
-
-        disease_tokens = set(re.findall(r"[a-z0-9]+", disease_key))
-        entry_tokens = set(re.findall(r"[a-z0-9]+", entry_key))
-        score += len(disease_tokens & entry_tokens) * 1.1
-
-        crops = [str(c).strip().lower() for c in (entry.get("crops") or []) if str(c).strip()]
-        if crops:
-            if crop_key != "generic" and any(normalize_crop_key(crop) == crop_key for crop in crops):
-                score += 3.4
-            elif crop_name and any(str(crop_name).strip().lower() == crop for crop in crops):
-                score += 2.0
-
-        if score > 0:
-            scored_matches.append((score, entry))
-
-    if not scored_matches:
-        return None
-
-    scored_matches.sort(key=lambda item: item[0], reverse=True)
-    return scored_matches[0][1]
-
-
-def summarize_disease_symptoms(entry, fallback_text=""):
-    if isinstance(entry, dict):
-        symptoms = [str(item).strip() for item in (entry.get("symptoms") or []) if str(item).strip()]
-        if symptoms:
-            return "; ".join(symptoms[:3])
-    return str(fallback_text or "Visible crop stress markers detected on the leaf surface.").strip()
-
-
-def derive_organic_solution(disease_name="", entry=None, crop_name=""):
-    disease_text = normalize_disease_key(disease_name)
-    crop_label = str(crop_name or "crop").strip() or "crop"
-    entry_type = str((entry or {}).get("type") or "").strip().lower() if isinstance(entry, dict) else ""
-
-    if any(keyword in disease_text for keyword in ("mite", "whitefly", "thrips", "aphid", "armyworm", "borer", "pest", "insect")) or entry_type in {"insect", "pest"}:
-        return f"Spray neem oil during evening hours, remove heavily infested leaves, and keep {crop_label} scouting frequent."
-    if any(keyword in disease_text for keyword in ("virus", "mosaic", "curl")) or entry_type == "virus":
-        return "Rogue infected plants early, sanitize tools, and suppress vector insects with neem-based management."
-    if any(keyword in disease_text for keyword in ("bacterial",)) or entry_type == "bacteria":
-        return "Use copper-compatible organic support, avoid overhead irrigation, and keep tools and hands sanitized."
-    if any(keyword in disease_text for keyword in ("brown spot", "nutrient", "deficiency")):
-        return f"Add compost or soil booster, keep irrigation uniform, and reduce stress on {crop_label} plants."
-    return "Use a bio-protective spray, prune infected leaves, and improve airflow around the crop canopy."
-
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def resolve_crop_library_image(slug):
     for suffix in (".jpg", ".jpeg", ".png", ".webp"):
         image_path = CROP_LIBRARY_IMAGE_DIR / f"{slug}{suffix}"
@@ -2969,7 +2973,6 @@ def build_crop_library_context():
     }
 
 
-<<<<<<< HEAD
 def infer_library_disease_type(entry):
     text = " ".join(
         [
@@ -3009,15 +3012,39 @@ def resolve_library_disease_image(slug, disease_name):
     disease_slug = slugify_crop_name(disease_name)
     image_dir = Path(app.root_path) / "static" / "library" / "diseases"
     candidates = [
+        str(disease_name or "").strip(),
         slug,
         disease_slug,
         slug.replace("generic-", ""),
     ]
+
+    seen_candidates = set()
     for candidate in candidates:
+        candidate = str(candidate or "").strip()
+        if not candidate or candidate in seen_candidates:
+            continue
+        seen_candidates.add(candidate)
         for suffix in (".jpg", ".jpeg", ".png", ".webp"):
             file_path = image_dir / f"{candidate}{suffix}"
             if file_path.exists():
                 return f"/static/library/diseases/{candidate}{suffix}"
+
+    normalized_candidates = []
+    for candidate in candidates:
+        normalized_candidate = "-".join(re.findall(r"[a-z0-9]+", str(candidate or "").lower()))
+        if normalized_candidate and normalized_candidate not in normalized_candidates:
+            normalized_candidates.append(normalized_candidate)
+
+    try:
+        for file_path in image_dir.iterdir():
+            if not file_path.is_file() or file_path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
+                continue
+            normalized_stem = "-".join(re.findall(r"[a-z0-9]+", file_path.stem.lower()))
+            if normalized_stem in normalized_candidates:
+                return f"/static/library/diseases/{file_path.name}"
+    except OSError:
+        pass
+
     return build_disease_sample_data_uri(disease_name)
 
 
@@ -3195,6 +3222,11 @@ def get_library_crop_options():
     return ["All"] + crop_labels
 
 
+def get_library_tips_crop_options():
+    crop_labels = sorted({item["name"] for item in load_crop_library() if str(item.get("name") or "").strip()})
+    return ["All"] + crop_labels
+
+
 def build_library_stage_sections(items):
     grouped = {}
     for item in items:
@@ -3229,65 +3261,171 @@ def build_library_home_context():
     }
 
 
+def load_cultivation_tips_dataset():
+    global CULTIVATION_TIPS_CACHE
+
+    if CULTIVATION_TIPS_CACHE is not None:
+        return CULTIVATION_TIPS_CACHE
+
+    if not CULTIVATION_TIPS_DATA_PATH.exists():
+        CULTIVATION_TIPS_CACHE = {"tasks": [], "stages": []}
+        return CULTIVATION_TIPS_CACHE
+
+    try:
+        raw_data = json.loads(CULTIVATION_TIPS_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        CULTIVATION_TIPS_CACHE = {"tasks": [], "stages": []}
+        return CULTIVATION_TIPS_CACHE
+
+    if not isinstance(raw_data, dict):
+        CULTIVATION_TIPS_CACHE = {"tasks": [], "stages": []}
+        return CULTIVATION_TIPS_CACHE
+
+    tasks = raw_data.get("tasks", [])
+    stages = raw_data.get("stages", [])
+    CULTIVATION_TIPS_CACHE = {
+        "tasks": tasks if isinstance(tasks, list) else [],
+        "stages": stages if isinstance(stages, list) else [],
+    }
+    return CULTIVATION_TIPS_CACHE
+
+
+def get_crop_library_entry_by_name(crop_name):
+    normalized_name = str(crop_name or "").strip().lower()
+    if not normalized_name or normalized_name == "all":
+        return None
+    return next((entry for entry in load_crop_library() if str(entry.get("name") or "").strip().lower() == normalized_name), None)
+
+
 def build_library_tips_data(active_crop):
-    crop_name = active_crop if active_crop and active_crop != "All" else "your crop"
+    base_data = load_cultivation_tips_dataset()
+    crop_entry = get_crop_library_entry_by_name(active_crop)
+    crop_name = crop_entry["name"] if crop_entry is not None else (active_crop if active_crop and active_crop != "All" else "your crop")
     crop_text = str(crop_name)
+
+    if crop_entry is not None:
+        profile_cards = [
+            {"icon": "fa-seedling", "label": "Planting", "value": crop_entry["planting_method"]},
+            {"icon": "fa-ruler-combined", "label": "Spacing", "value": f"{crop_entry['row_spacing']} rows | {crop_entry['plant_spacing']} plants"},
+            {"icon": "fa-mountain-sun", "label": "Soil & pH", "value": f"{crop_entry['soil_type']} | pH {crop_entry['ph_range']}"},
+            {"icon": "fa-cloud-sun-rain", "label": "Climate", "value": f"{crop_entry['temperature']} | {crop_entry['rainfall']}"},
+            {"icon": "fa-sun-plant-wilt", "label": "Sun & Humidity", "value": f"{crop_entry['sunlight']} | {crop_entry['humidity']}"},
+            {"icon": "fa-flask", "label": "NPK Target", "value": f"N {crop_entry['nitrogen']} | P {crop_entry['phosphorus']} | K {crop_entry['potassium']}"},
+        ]
+        crop_guides = [
+            {
+                "title": "Field setup",
+                "items": [
+                    f"Use {crop_entry['planting_method']} planting for a more uniform {crop_text.lower()} stand.",
+                    f"Keep row spacing near {crop_entry['row_spacing']} and plant spacing near {crop_entry['plant_spacing']} to reduce canopy congestion.",
+                    f"Prefer {crop_entry['soil_type']} and hold the root zone close to pH {crop_entry['ph_range']}.",
+                ],
+            },
+            {
+                "title": "Nutrition and water",
+                "items": [
+                    f"Plan the nutrient schedule around N {crop_entry['nitrogen']}, P {crop_entry['phosphorus']}, and K {crop_entry['potassium']}.",
+                    f"Match irrigation frequency to the local weather window because {crop_text.lower()} performs best around {crop_entry['temperature']}.",
+                    f"Keep moisture steady without waterlogging, especially when humidity stays around {crop_entry['humidity']}.",
+                ],
+            },
+            {
+                "title": "Companion planning",
+                "items": [
+                    f"Good companion crops: {', '.join(crop_entry['good_companions'][:4]) or 'No companion guidance available yet.'}",
+                    f"Avoid pairing with: {', '.join(crop_entry['bad_companions'][:4]) or 'No avoid-list available yet.'}",
+                    f"Life cycle: {crop_entry['life_cycle']} crop, so keep labour and harvest planning aligned with that cycle.",
+                ],
+            },
+            {
+                "title": "Crop-specific reminders",
+                "items": list(crop_entry["farming_tips"][:5]),
+            },
+        ]
+    else:
+        profile_cards = [
+            {"icon": "fa-location-dot", "label": "Start with field choice", "value": "Select a crop to unlock soil, spacing, and climate guidance."},
+            {"icon": "fa-vial-circle-check", "label": "Test before input", "value": "Use soil pH and fertility results before deciding irrigation or fertilizer loads."},
+            {"icon": "fa-shield-heart", "label": "Prevent stress early", "value": "Good drainage, clean tools, and regular scouting avoid costly recovery sprays later."},
+        ]
+        crop_guides = [
+            {
+                "title": "How to use this page",
+                "items": [
+                    "Pick a crop from the filter to see climate, soil, spacing, and nutrient guidance.",
+                    "Use By Task for operational reminders and By Stage for a simple season-wise checklist.",
+                    "Match these tips with your local weather, soil, and disease history before applying inputs.",
+                ],
+            }
+        ]
+
+    tasks = []
+    for raw_task in base_data.get("tasks", []):
+        if not isinstance(raw_task, dict):
+            continue
+        tasks.append(
+            {
+                "icon": str(raw_task.get("icon") or "fa-list-check"),
+                "label": str(raw_task.get("label") or "Field task").strip() or "Field task",
+                "summary": str(raw_task.get("summary") or "").strip(),
+                "detail": str(raw_task.get("detail") or "").strip(),
+            }
+        )
+
+    tasks.extend(
+        [
+            {
+                "icon": "fa-ruler-combined",
+                "label": "Spacing and canopy control",
+                "summary": f"Keep {crop_text} canopy open enough for airflow, spray coverage, and even light capture.",
+                "detail": f"Follow recommended row and plant spacing, remove weak or overcrowded plants, and stop dense canopy pockets from trapping humidity around {crop_text.lower()}.",
+            },
+            {
+                "icon": "fa-cloud-sun-rain",
+                "label": "Weather readiness",
+                "summary": "Adjust irrigation, sprays, and field visits around rain, humidity, and heat shifts.",
+                "detail": f"Before wet spells, improve drainage and postpone unnecessary irrigation. In heat windows, protect {crop_text.lower()} from sudden moisture stress and increase field checks.",
+            },
+            {
+                "icon": "fa-clipboard-check",
+                "label": "Harvest and records",
+                "summary": "Track field actions so you can connect yield, disease pressure, and input timing.",
+                "detail": f"Record irrigation dates, fertilizer splits, spray rounds, and harvest notes for {crop_text.lower()} so the next season becomes easier to plan and troubleshoot.",
+            },
+        ]
+    )
+
+    stages = []
+    for raw_stage in base_data.get("stages", []):
+        if not isinstance(raw_stage, dict):
+            continue
+        items = [str(item).strip() for item in raw_stage.get("items", []) if str(item).strip()]
+        label = str(raw_stage.get("label") or "Crop stage").strip() or "Crop stage"
+        if crop_entry is not None:
+            if "seedling" in label.lower():
+                items.append(f"Keep spacing close to {crop_entry['row_spacing']} x {crop_entry['plant_spacing']} from the beginning.")
+            elif "vegetative" in label.lower():
+                items.append(f"Maintain root-zone conditions around {crop_entry['soil_type']} and pH {crop_entry['ph_range']}.")
+            elif "flower" in label.lower():
+                items.append(f"Protect flowering with steady moisture and timely potassium close to {crop_entry['potassium']}.")
+            elif "harvest" in label.lower():
+                items.append(f"Plan harvest labour early because {crop_text} follows a {crop_entry['life_cycle'].lower()} production cycle.")
+            elif "post" in label.lower():
+                items.append(f"Review companion and rotation choices before replanting {crop_text.lower()} in the same field.")
+        stages.append(
+            {
+                "icon": str(raw_stage.get("icon") or "fa-leaf"),
+                "label": label,
+                "items": unique_crop_list(items),
+            }
+        )
+
     return {
-        "tasks": [
-            {
-                "icon": "fa-droplet",
-                "label": "Irrigation planning",
-                "summary": f"Keep irrigation balanced for {crop_text} based on soil moisture and weather.",
-                "detail": f"Water early in the day, avoid long leaf wetness at night, and increase scouting after irrigation cycles in {crop_text} fields.",
-            },
-            {
-                "icon": "fa-flask",
-                "label": "Nutrition management",
-                "summary": "Split fertilizer doses and avoid stress from over-application.",
-                "detail": f"Use balanced nitrogen, phosphorus, and potassium so {crop_text} plants stay vigorous and less prone to disease pressure.",
-            },
-            {
-                "icon": "fa-bug",
-                "label": "Pest scouting",
-                "summary": "Scout twice a week and act on hotspots before spread accelerates.",
-                "detail": f"Check lower leaves, canopy edges, and humid zones in {crop_text} plots for early symptoms, eggs, or insect feeding damage.",
-            },
-            {
-                "icon": "fa-scissors",
-                "label": "Field sanitation",
-                "summary": "Remove infected residue and improve airflow around plants.",
-                "detail": "Discard badly infected leaves, keep beds clean, and avoid moving infected plant material between plots.",
-            },
-        ],
-        "stages": [
-            {
-                "icon": "fa-seedling",
-                "label": "Early growth",
-                "items": [
-                    "Use healthy seed or planting material.",
-                    "Check emergence and replace weak gaps quickly.",
-                    "Protect seedlings from water stress and soil splash.",
-                ],
-            },
-            {
-                "icon": "fa-leaf",
-                "label": "Vegetative stage",
-                "items": [
-                    "Monitor canopy color and leaf spots every few days.",
-                    "Maintain airflow and avoid waterlogging.",
-                    "Correct nutrient imbalance before symptoms spread.",
-                ],
-            },
-            {
-                "icon": "fa-wheat-awn",
-                "label": "Flowering to harvest",
-                "items": [
-                    "Avoid heavy stress during flowering and grain fill.",
-                    "Act fast on disease outbreaks to protect yield.",
-                    "Keep harvest tools and storage areas clean.",
-                ],
-            },
-        ],
+        "crop_name": crop_text,
+        "profile_cards": profile_cards,
+        "crop_guides": crop_guides,
+        "tasks": tasks,
+        "stages": stages,
     }
 
 
@@ -3415,8 +3553,6 @@ def build_admin_audit_context():
     }
 
 
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def safe_json_loads(raw_value, default):
     if raw_value in (None, ""):
         return default
@@ -3426,105 +3562,6 @@ def safe_json_loads(raw_value, default):
         return default
 
 
-<<<<<<< HEAD
-=======
-def _cache_file_mtime(path):
-    try:
-        return float(path.stat().st_mtime)
-    except OSError:
-        return 0.0
-
-
-def load_disease_library():
-    """Load pests & disease reference data from dataset/disease_data.json (cached)."""
-    global DISEASE_LIBRARY_CACHE
-
-    mtime = _cache_file_mtime(DISEASE_LIBRARY_DATA_PATH)
-    if DISEASE_LIBRARY_CACHE.get("items") and DISEASE_LIBRARY_CACHE.get("mtime") == mtime:
-        return DISEASE_LIBRARY_CACHE["items"]
-
-    if not DISEASE_LIBRARY_DATA_PATH.exists():
-        DISEASE_LIBRARY_CACHE = {"mtime": 0.0, "items": []}
-        return []
-
-    try:
-        raw = json.loads(DISEASE_LIBRARY_DATA_PATH.read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError):
-        DISEASE_LIBRARY_CACHE = {"mtime": mtime, "items": []}
-        return []
-
-    items = raw if isinstance(raw, list) else []
-    normalized = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        name = str(item.get("name") or "").strip()
-        if not name:
-            continue
-        slug = slugify_crop_name(item.get("slug") or name)
-        normalized.append(
-            {
-                "slug": slug,
-                "name": name,
-                "type": str(item.get("type") or "Disease").strip() or "Disease",
-                "crops": [str(c).strip() for c in (item.get("crops") or []) if str(c).strip()] if isinstance(item.get("crops"), list) else [],
-                "stages": [str(s).strip().lower() for s in (item.get("stages") or []) if str(s).strip()] if isinstance(item.get("stages"), list) else [],
-                "symptoms": [str(s).strip() for s in (item.get("symptoms") or []) if str(s).strip()] if isinstance(item.get("symptoms"), list) else [],
-                "cause": str(item.get("cause") or "").strip(),
-                "solution": str(item.get("solution") or "").strip(),
-                "prevention": [str(p).strip() for p in (item.get("prevention") or []) if str(p).strip()] if isinstance(item.get("prevention"), list) else [],
-                "image": resolve_disease_library_image(item),
-                "tags": [str(t).strip() for t in (item.get("tags") or []) if str(t).strip()] if isinstance(item.get("tags"), list) else [],
-            }
-        )
-
-    DISEASE_LIBRARY_CACHE = {"mtime": mtime, "items": normalized}
-    return normalized
-
-
-def get_disease_library_entry(slug_or_name):
-    key = slugify_crop_name(slug_or_name)
-    return next((entry for entry in load_disease_library() if entry["slug"] == key), None)
-
-
-def load_cultivation_tips():
-    """Load cultivation tips reference data from dataset/cultivation_tips.json (cached)."""
-    global CULTIVATION_TIPS_CACHE
-
-    mtime = _cache_file_mtime(CULTIVATION_TIPS_DATA_PATH)
-    if CULTIVATION_TIPS_CACHE.get("payload") and CULTIVATION_TIPS_CACHE.get("mtime") == mtime:
-        return CULTIVATION_TIPS_CACHE["payload"]
-
-    if not CULTIVATION_TIPS_DATA_PATH.exists():
-        CULTIVATION_TIPS_CACHE = {"mtime": 0.0, "payload": {}}
-        return {}
-
-    try:
-        raw = json.loads(CULTIVATION_TIPS_DATA_PATH.read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError):
-        CULTIVATION_TIPS_CACHE = {"mtime": mtime, "payload": {}}
-        return {}
-
-    payload = raw if isinstance(raw, dict) else {}
-    CULTIVATION_TIPS_CACHE = {"mtime": mtime, "payload": payload}
-    return payload
-
-
-def build_library_crop_options(user=None):
-    crops = load_crop_library()
-    names = [crop["name"] for crop in crops]
-    # Prefer the user's crop first when possible.
-    preferred = str(getattr(user, "crop_type", "") or "").strip()
-    if preferred:
-        for item in list(names):
-            if item.lower() == preferred.lower():
-                names.remove(item)
-                names.insert(0, item)
-                break
-    return ["All"] + names[:40]
-
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def truncate_text(text, limit=120):
     value = str(text or "").strip()
     if len(value) <= limit:
@@ -3575,7 +3612,6 @@ def get_store_category_meta(category):
 
 
 def load_store_seed_dataset():
-<<<<<<< HEAD
     seed_rows = []
     for path in (STORE_PRODUCTS_DATA_PATH, DISEASE_STORE_PRODUCTS_DATA_PATH):
         if not path.exists():
@@ -3595,13 +3631,6 @@ def load_disease_product_mapping_seed_dataset():
 
     try:
         raw_data = json.loads(DISEASE_PRODUCT_MAPPINGS_DATA_PATH.read_text(encoding="utf-8"))
-=======
-    if not STORE_PRODUCTS_DATA_PATH.exists():
-        return []
-
-    try:
-        raw_data = json.loads(STORE_PRODUCTS_DATA_PATH.read_text(encoding="utf-8"))
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         return raw_data if isinstance(raw_data, list) else []
     except (OSError, ValueError, TypeError):
         return []
@@ -3683,7 +3712,6 @@ def seed_store_products():
     return seeded_count
 
 
-<<<<<<< HEAD
 def seed_disease_product_mappings():
     seed_data = load_disease_product_mapping_seed_dataset()
     if not seed_data:
@@ -3722,8 +3750,6 @@ def seed_disease_product_mappings():
     return seeded_count
 
 
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def build_store_product_highlights(product):
     tags = safe_json_loads(product.tags_json, [])
     if not isinstance(tags, list):
@@ -3762,11 +3788,6 @@ def serialize_store_product(product):
         ]
     ).lower()
 
-<<<<<<< HEAD
-=======
-    image_url = resolve_store_product_image_url(product)
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     return {
         "id": product.id,
         "slug": product.slug,
@@ -3782,7 +3803,6 @@ def serialize_store_product(product):
         "rating": rating_value,
         "rating_label": f"{rating_value:.1f}",
         "rating_count": 48 + (product.id * 13),
-<<<<<<< HEAD
         "image_url": (
             str(product.image_url or "").strip() 
             if str(product.image_url or "").strip()
@@ -3797,9 +3817,6 @@ def serialize_store_product(product):
             if "fertilizer" in product.name.lower()
             else f"https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&q=80&w=600&sig={product.id}"
         ),
-=======
-        "image_url": image_url,
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         "fallback_image": STORE_PRODUCT_FALLBACK_IMAGE,
         "description": description,
         "short_description": truncate_text(description, 96),
@@ -3855,61 +3872,6 @@ def find_store_product_by_name(name):
     return scored_matches[0][2] if scored_matches else None
 
 
-<<<<<<< HEAD
-=======
-def score_store_product_for_diagnosis(product, crop_name="", disease_name="", diagnostic_text=""):
-    disease_key = normalize_disease_key(disease_name)
-    crop_key = normalize_crop_key(crop_name)
-    product_name = str(product.name or "").strip()
-    product_text = " ".join(
-        [
-            product_name.lower(),
-            str(product.category or "").lower(),
-            str(product.description or "").lower(),
-            " ".join(str(tag).lower() for tag in safe_json_loads(product.tags_json, [])),
-        ]
-    )
-
-    score = float(product.rating or 0) * 0.08
-
-    preferred_names = DISEASE_PRODUCT_PREFERENCES.get(disease_key, [])
-    for index, preferred_name in enumerate(preferred_names):
-        if str(preferred_name).strip().lower() == product_name.lower():
-            score += 8.5 - (index * 0.9)
-
-    if disease_key == "healthy":
-        if product.category in {"Fertilizers", "Organic"}:
-            score += 2.8
-        if "soil" in product_text or "care" in product_text or "booster" in product_text:
-            score += 2.0
-    else:
-        if product.category == "Pesticides":
-            score += 2.8
-        if any(keyword in disease_key for keyword in ("fung", "blight", "spot", "rust", "mildew", "mold")) and any(
-            token in product_text for token in ("pesticide", "spray", "fungicide", "bio")
-        ):
-            score += 1.6
-        if any(keyword in disease_key for keyword in ("virus", "mosaic", "curl", "whitefly", "aphid", "thrips", "mite", "armyworm", "borer", "pest")) and any(
-            token in product_text for token in ("neem", "organic pest", "pesticide", "spray")
-        ):
-            score += 1.9
-        if "brown spot" in disease_key and any(token in product_text for token in ("soil", "npk", "booster", "compost")):
-            score += 1.8
-
-    disease_tokens = set(re.findall(r"[a-z0-9]+", disease_key))
-    crop_tokens = set(re.findall(r"[a-z0-9]+", str(crop_key)))
-    product_tokens = set(re.findall(r"[a-z0-9]+", product_text))
-    score += len(disease_tokens & product_tokens) * 0.8
-    score += len(crop_tokens & product_tokens) * 0.35
-
-    if diagnostic_text:
-        diagnostic_tokens = set(re.findall(r"[a-z0-9]+", diagnostic_text.lower()))
-        score += len(diagnostic_tokens & product_tokens) * 0.12
-
-    return score
-
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def apply_store_filters(products, search_query="", active_category="All", sort_option="featured", recommended_slug=None):
     normalized_query = str(search_query or "").strip().lower()
     category = active_category if active_category in STORE_CATEGORY_ORDER else "All"
@@ -4063,7 +4025,6 @@ def get_admin_mapped_product_for_disease(disease_name):
     return mapping.product
 
 
-<<<<<<< HEAD
 def infer_disease_type_from_text(*values):
     diagnostic_text = " ".join(str(value or "") for value in values).lower()
     if not diagnostic_text.strip():
@@ -4134,6 +4095,497 @@ def extract_guidance_points(*values, limit=4):
             chunks = [normalized]
         points.extend(chunks)
     return unique_crop_list(points)[:limit]
+
+
+def parse_percentage_value(value, default=0):
+    text = str(value or "").strip().replace("%", "")
+    if not text:
+        return default
+    try:
+        return clamp(int(float(text)), 0, 99)
+    except (TypeError, ValueError):
+        return default
+
+
+def normalize_disease_dataset_entry(entry_name, raw_entry):
+    if not isinstance(raw_entry, dict):
+        return None
+
+    name = str(raw_entry.get("name") or raw_entry.get("disease_name") or entry_name or "Unknown Disease").strip() or "Unknown Disease"
+    etiology = raw_entry.get("etiology", {})
+    if not isinstance(etiology, dict):
+        etiology = {}
+
+    solution = raw_entry.get("solution", {})
+    if not isinstance(solution, dict):
+        solution = {}
+
+    symptoms = [str(item).strip() for item in raw_entry.get("symptoms", []) if str(item).strip()]
+    prevention = [str(item).strip() for item in raw_entry.get("prevention", []) if str(item).strip()]
+    products = [str(item).strip() for item in raw_entry.get("products", []) if str(item).strip()]
+    organic = [str(item).strip() for item in solution.get("organic", []) if str(item).strip()]
+    chemical = [str(item).strip() for item in solution.get("chemical", []) if str(item).strip()]
+    match_features = raw_entry.get("match_features", {})
+    if not isinstance(match_features, dict):
+        match_features = {}
+    priority_rules = [str(item).strip() for item in raw_entry.get("priority_rules", []) if str(item).strip()]
+
+    return {
+        "name": name,
+        "key": normalize_disease_key(name),
+        "confidence": str(raw_entry.get("confidence") or "").strip(),
+        "etiology": {
+            "pathogen": str(etiology.get("pathogen") or "").strip(),
+            "environment": str(etiology.get("environment") or "").strip(),
+            "transmission": str(etiology.get("transmission") or "").strip(),
+        },
+        "symptoms": symptoms,
+        "solution": {
+            "organic": organic,
+            "chemical": chemical,
+        },
+        "products": products,
+        "prevention": prevention,
+        "match_features": {
+            "color": [str(item).strip() for item in match_features.get("color", []) if str(item).strip()],
+            "pattern": [str(item).strip() for item in match_features.get("pattern", []) if str(item).strip()],
+            "part": [str(item).strip() for item in match_features.get("part", []) if str(item).strip()],
+            "texture": [str(item).strip() for item in match_features.get("texture", []) if str(item).strip()],
+            "spread": str(match_features.get("spread") or "").strip(),
+        },
+        "priority_rules": priority_rules,
+    }
+
+
+def load_disease_dataset():
+    global DISEASE_DATA_CACHE
+
+    if DISEASE_DATA_CACHE is not None:
+        return DISEASE_DATA_CACHE
+
+    DISEASE_DATA_CACHE = {}
+    if not DISEASE_DATASET_PATH.exists():
+        return DISEASE_DATA_CACHE
+
+    try:
+        raw_data = json.loads(DISEASE_DATASET_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return DISEASE_DATA_CACHE
+
+    normalized_entries = {}
+    if isinstance(raw_data, dict):
+        iterable = raw_data.items()
+    elif isinstance(raw_data, list):
+        iterable = ((item.get("name") or item.get("disease_name"), item) for item in raw_data if isinstance(item, dict))
+    else:
+        iterable = []
+
+    for entry_name, raw_entry in iterable:
+        normalized_entry = normalize_disease_dataset_entry(entry_name, raw_entry)
+        if normalized_entry is None:
+            continue
+        normalized_entries[normalized_entry["key"]] = normalized_entry
+
+    DISEASE_DATA_CACHE = normalized_entries
+    return DISEASE_DATA_CACHE
+
+
+def find_disease_dataset_entry(disease_name=""):
+    normalized_name = normalize_disease_key(disease_name)
+    if not normalized_name:
+        return None
+
+    dataset = load_disease_dataset()
+    alias_map = {
+        "mosaic disease": "mosaic virus",
+        "mosaic virus": "mosaic virus",
+        "rust leaf spot": "leaf spot",
+        "rust / leaf spot": "leaf spot",
+        "septoria leaf spot": "leaf spot",
+        "tomato septoria leaf spot": "leaf spot",
+        "leaf curl": "leaf curl virus",
+        "tomato yellowleaf curl virus": "leaf curl virus",
+        "tomato yellow leaf curl virus": "leaf curl virus",
+        "tomato mosaic virus": "mosaic virus",
+        "bacterial spot": "bacterial spot",
+        "bell bacterial spot": "bacterial spot",
+        "pepper bacterial spot": "bacterial spot",
+        "tomato bacterial spot": "bacterial spot",
+        "leaf mold": "leaf mold",
+        "target spot": "target spot",
+        "rice blast": "rice blast",
+        "leaf rust": "leaf rust",
+        "yellow rust": "yellow rust",
+        "common rust": "common rust",
+        "healthy crop": "healthy",
+    }
+    direct_match = dataset.get(normalized_name)
+    if direct_match is not None:
+        return direct_match
+
+    aliased_name = alias_map.get(normalized_name)
+    if aliased_name:
+        direct_alias_match = dataset.get(aliased_name)
+        if direct_alias_match is not None:
+            return direct_alias_match
+
+    stop_tokens = {"crop", "disease", "attack", "damage", "virus", "leaf", "plant", "infection"}
+    name_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", normalized_name)
+        if token not in stop_tokens
+    }
+    if not name_tokens:
+        return None
+
+    scored_matches = []
+    for entry in dataset.values():
+        entry_key = entry["key"]
+        entry_tokens = {
+            token for token in re.findall(r"[a-z0-9]+", entry_key)
+            if token not in stop_tokens
+        }
+        overlap = len(name_tokens & entry_tokens)
+        similarity_ratio = SequenceMatcher(None, normalized_name, entry_key).ratio()
+        if not overlap and similarity_ratio < 0.84:
+            continue
+        if overlap < max(1, min(len(name_tokens), len(entry_tokens), 2)) and similarity_ratio < 0.84:
+            continue
+        score = overlap * 4
+        if normalized_name in entry_key or entry_key in normalized_name:
+            score += 3
+        score += similarity_ratio
+        scored_matches.append((score, len(entry.get("products", [])), len(entry.get("symptoms", [])), entry))
+
+    scored_matches.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
+    return scored_matches[0][3] if scored_matches else None
+
+
+def load_local_product_image_index():
+    global PRODUCT_IMAGE_INDEX_CACHE
+
+    if PRODUCT_IMAGE_INDEX_CACHE is not None:
+        return PRODUCT_IMAGE_INDEX_CACHE
+
+    index = {}
+    if not PRODUCTS_UPLOAD_DIR.exists():
+        PRODUCT_IMAGE_INDEX_CACHE = index
+        return PRODUCT_IMAGE_INDEX_CACHE
+
+    for file_path in PRODUCTS_UPLOAD_DIR.iterdir():
+        if not file_path.is_file():
+            continue
+        url = f"/static/products/{quote(file_path.name)}"
+        index[file_path.name.lower()] = url
+        index[slugify_crop_name(file_path.stem)] = url
+
+    PRODUCT_IMAGE_INDEX_CACHE = index
+    return PRODUCT_IMAGE_INDEX_CACHE
+
+
+def resolve_local_product_image_url(*candidates):
+    image_index = load_local_product_image_index()
+    for candidate in candidates:
+        raw_value = str(candidate or "").strip()
+        if not raw_value:
+            continue
+        basename = Path(urlparse(raw_value).path or raw_value).name
+        stem = Path(basename).stem
+        for key in (raw_value.lower(), basename.lower(), slugify_crop_name(stem), slugify_crop_name(basename)):
+            if key in image_index:
+                return image_index[key]
+    return STORE_PRODUCT_FALLBACK_IMAGE
+
+
+def infer_solution_bucket(product_asset_name="", product_name="", organic_solutions=None):
+    normalized_asset = slugify_crop_name(Path(str(product_asset_name or "")).stem)
+    normalized_name = slugify_crop_name(product_name)
+    organic_haystack = " ".join(str(item or "") for item in (organic_solutions or [])).lower()
+    organic_markers = {"neem", "trichoderma", "solarization", "compost", "bio", "organic", "soap"}
+    if any(marker in organic_haystack for marker in organic_markers):
+        if any(marker in normalized_asset for marker in organic_markers) or any(marker in normalized_name for marker in organic_markers):
+            return "Organic"
+    if any(marker in normalized_asset for marker in organic_markers) or any(marker in normalized_name for marker in organic_markers):
+        return "Organic"
+    return "Chemical"
+
+
+def format_product_asset_name(asset_name):
+    stem = Path(str(asset_name or "")).stem.replace("_", " ").replace("-", " ").strip()
+    return stem.title() if stem else "Crop Care Product"
+
+
+def build_dynamic_product_description(product_name, disease_name, disease_type, solution_bucket, etiology):
+    disease_label = str(disease_name or "crop disease").strip().lower()
+    pathogen = str((etiology or {}).get("pathogen") or "").strip().lower()
+    category_phrase_map = {
+        "fungus": "fungicide",
+        "bacteria": "bactericide",
+        "virus": "vector-management crop-care product",
+        "insect": "insecticide",
+        "stress": "crop recovery input",
+        "healthy": "preventive crop-care input",
+        "general": "crop-care input",
+    }
+    category_phrase = category_phrase_map.get(disease_type, category_phrase_map["general"])
+    if solution_bucket.lower() == "organic":
+        category_phrase = "organic crop-care solution"
+    if pathogen:
+        return f"{product_name} is a {category_phrase} aligned with {disease_label} management and {pathogen} pressure."
+    return f"{product_name} is a {category_phrase} effective for {disease_label} management and field protection."
+
+
+def build_dynamic_product_benefits(disease_name, solution_bucket, symptoms, prevention, etiology):
+    benefits = [f"Recommended for {str(disease_name or 'crop disease').strip()} management."]
+    if symptoms:
+        benefits.append(f"Targets visible issues like {str(symptoms[0]).strip().lower()}.")
+    if str((etiology or {}).get("environment") or "").strip():
+        benefits.append(f"Useful during {str(etiology['environment']).strip().lower()} conditions.")
+    elif prevention:
+        benefits.append(f"Supports prevention steps such as {str(prevention[0]).strip().lower()}.")
+    benefits.append(f"Fits a {solution_bucket.lower()} treatment plan for rapid field action.")
+    return unique_crop_list(benefits)[:3]
+
+
+def build_virtual_store_product(product_asset_name, disease_entry, payload):
+    disease_name = str(payload.get("disease") or disease_entry.get("name") or "Crop Disease").strip()
+    crop_name = str(payload.get("crop") or "Crop").strip()
+    etiology = disease_entry.get("etiology") or build_fallback_etiology(payload)
+    organic_solutions = list((disease_entry.get("solution") or {}).get("organic", []))
+    solution_bucket = infer_solution_bucket(product_asset_name, "", organic_solutions)
+    category = "Organic" if solution_bucket == "Organic" else "Pesticides"
+    category_meta = get_store_category_meta(category)
+    product_name = format_product_asset_name(product_asset_name)
+    detail_slug = slugify_crop_name(product_asset_name or product_name)
+    price_seed = int(sha1(f"{disease_name}|{product_name}|preview".encode("utf-8")).hexdigest(), 16)
+    price = (249 if solution_bucket == "Organic" else 399) + (price_seed % 7) * 35
+    image_url = resolve_local_product_image_url(product_asset_name, product_name)
+    description = build_dynamic_product_description(
+        product_name,
+        disease_name,
+        infer_disease_type_from_text(disease_name, etiology.get("pathogen")),
+        solution_bucket,
+        etiology,
+    )
+    return {
+        "id": None,
+        "slug": detail_slug,
+        "name": product_name,
+        "category": category,
+        "category_label": category,
+        "category_icon": category_meta["icon"],
+        "category_accent": category_meta["accent"],
+        "price": int(price),
+        "mrp": int(price + max(60, int(price * 0.18))),
+        "discount_pct": 12,
+        "rating": 4.5,
+        "rating_label": "4.5",
+        "rating_count": 36,
+        "image_url": image_url,
+        "fallback_image": STORE_PRODUCT_FALLBACK_IMAGE,
+        "description": description,
+        "short_description": truncate_text(description, 96),
+        "seller": default_store_seller(category),
+        "unit": "Pack",
+        "tags": [str(disease_name).lower(), str(solution_bucket).lower(), str(crop_name).lower()],
+        "highlights": build_dynamic_product_benefits(
+            disease_name,
+            solution_bucket,
+            disease_entry.get("symptoms", []),
+            disease_entry.get("prevention", []),
+            etiology,
+        ),
+        "detail_url": f"/market/recommendation/{detail_slug}?asset={quote(str(product_asset_name or ''))}&disease={quote(disease_name)}&crop={quote(crop_name)}",
+        "search_text": " ".join([product_name, category, description, disease_name, crop_name]).lower(),
+    }
+
+
+def build_fallback_etiology(payload):
+    cause = str(payload.get("cause") or "").strip()
+    disease_type = infer_disease_type_from_text(
+        payload.get("disease"),
+        payload.get("cause"),
+        payload.get("organic_solution"),
+        payload.get("chemical_solution"),
+    )
+    environment_map = {
+        "fungus": "Humid canopy and leaf wetness conditions",
+        "bacteria": "Warm wet conditions with splash spread",
+        "virus": "Vector-prone warm field conditions",
+        "insect": "Active pest movement in the crop canopy",
+        "stress": "Field stress and crop imbalance",
+        "healthy": "Healthy growing conditions",
+        "general": "Field conditions need closer verification",
+    }
+    transmission_map = {
+        "fungus": "Airborne spores and water splash",
+        "bacteria": "Rain splash, tools, and infected tissue",
+        "virus": "Insect vectors and infected plants",
+        "insect": "Flying pests, larvae, or plant-to-plant spread",
+        "stress": "Abiotic stress across the affected patch",
+        "healthy": "None",
+        "general": "Requires field scouting for confirmation",
+    }
+    return {
+        "pathogen": cause or "Needs field confirmation",
+        "environment": environment_map.get(disease_type, environment_map["general"]),
+        "transmission": transmission_map.get(disease_type, transmission_map["general"]),
+    }
+
+
+def build_dataset_do_now_checklist(disease_entry):
+    actions = ["Inspect nearby plants for the same symptoms before full-field treatment."]
+    solution = disease_entry.get("solution") or {}
+    organic = [str(item).strip() for item in solution.get("organic", []) if str(item).strip()]
+    chemical = [str(item).strip() for item in solution.get("chemical", []) if str(item).strip()]
+    prevention = [str(item).strip() for item in disease_entry.get("prevention", []) if str(item).strip()]
+
+    if organic:
+        actions.append(f"Start with organic option: {organic[0]}")
+    if chemical:
+        actions.append(f"If pressure continues, use chemical option: {chemical[0]}")
+    if prevention:
+        actions.append(prevention[0])
+    actions.append("Review the affected patch again within 24 to 48 hours.")
+    return unique_crop_list(actions)[:4]
+
+
+def resolve_dataset_store_products(disease_entry):
+    matched_products = []
+    seen_ids = set()
+    for asset_name in disease_entry.get("products", []):
+        product = find_store_product_by_asset_hint(asset_name)
+        if product is None:
+            continue
+        if getattr(product, "id", None) in seen_ids:
+            continue
+        seen_ids.add(product.id)
+        matched_products.append(product)
+    return matched_products
+
+
+def build_disease_product_card(product_asset_name, disease_entry, payload, store_product=None):
+    disease_name = str(payload.get("disease") or disease_entry.get("name") or "Crop Disease").strip()
+    crop_name = str(payload.get("crop") or "Crop").strip()
+    etiology = disease_entry.get("etiology") or build_fallback_etiology(payload)
+    organic_solutions = list((disease_entry.get("solution") or {}).get("organic", []))
+    disease_type = infer_disease_type_from_text(disease_name, etiology.get("pathogen"))
+    solution_bucket = infer_solution_bucket(product_asset_name, getattr(store_product, "name", ""), organic_solutions)
+    serialized_product = serialize_store_product(store_product) if store_product is not None else None
+    virtual_product = build_virtual_store_product(product_asset_name, disease_entry, payload) if serialized_product is None else None
+    product_name = serialized_product["name"] if serialized_product is not None else format_product_asset_name(product_asset_name)
+    category = serialized_product["category"] if serialized_product is not None else ("Organic" if solution_bucket == "Organic" else "Pesticides")
+    brand = serialized_product["seller"] if serialized_product is not None else default_store_seller(category)
+    price_seed = int(sha1(f"{disease_name}|{product_name}".encode("utf-8")).hexdigest(), 16)
+    rating = serialized_product["rating"] if serialized_product is not None else round(4.3 + (price_seed % 5) * 0.1, 1)
+    price = serialized_product["price"] if serialized_product is not None else (249 if solution_bucket == "Organic" else 399) + (price_seed % 7) * 35
+    detail_url = serialized_product["detail_url"] if serialized_product is not None else virtual_product["detail_url"]
+    image_url = resolve_local_product_image_url(
+        serialized_product["image_url"] if serialized_product is not None else "",
+        virtual_product["image_url"] if virtual_product is not None else "",
+        product_asset_name,
+        getattr(store_product, "image_url", "") if store_product is not None else "",
+        product_name,
+    )
+    description = build_dynamic_product_description(product_name, disease_name, disease_type, solution_bucket, etiology)
+    benefits = build_dynamic_product_benefits(
+        disease_name,
+        solution_bucket,
+        disease_entry.get("symptoms", []),
+        disease_entry.get("prevention", []),
+        etiology,
+    )
+    return {
+        "id": serialized_product["id"] if serialized_product is not None else None,
+        "name": product_name,
+        "brand": brand,
+        "category": category,
+        "solution_type": f"{solution_bucket} Solution",
+        "rating": rating,
+        "rating_label": f"{float(rating):.1f}",
+        "price": int(price),
+        "description": description,
+        "benefits": benefits,
+        "image_url": image_url,
+        "fallback_image": STORE_PRODUCT_FALLBACK_IMAGE,
+        "detail_url": detail_url,
+        "buy_url": detail_url,
+        "buy_product_id": serialized_product["id"] if serialized_product is not None else None,
+        "reason": f"Selected for {crop_name} because it supports the treatment plan for {disease_name}.",
+        "asset_name": str(product_asset_name or "").strip(),
+    }
+
+
+def build_disease_report_context(payload, recommended_product=None, best_product_name=""):
+    disease_name = str(payload.get("disease") or "").strip()
+    disease_entry = find_disease_dataset_entry(disease_name)
+    if disease_entry is not None:
+        payload["disease"] = disease_entry["name"]
+
+    report_name = str(payload.get("disease") or disease_name or "Unknown Disease").strip() or "Unknown Disease"
+    confidence_value = int(payload.get("confidence") or 0) or parse_percentage_value(
+        disease_entry.get("confidence") if disease_entry is not None else "",
+        default=65,
+    )
+    etiology = disease_entry.get("etiology") if disease_entry is not None else build_fallback_etiology(payload)
+    symptoms = list(disease_entry.get("symptoms", [])) if disease_entry is not None else extract_guidance_points(payload.get("symptoms"), limit=5)
+    organic_solutions = (
+        list((disease_entry.get("solution") or {}).get("organic", []))
+        if disease_entry is not None
+        else extract_guidance_points(payload.get("organic_solution"), limit=3)
+    )
+    chemical_solutions = (
+        list((disease_entry.get("solution") or {}).get("chemical", []))
+        if disease_entry is not None
+        else extract_guidance_points(payload.get("chemical_solution"), limit=3)
+    )
+    prevention = list(disease_entry.get("prevention", [])) if disease_entry is not None else (
+        list(payload.get("prevention") or [])
+        if isinstance(payload.get("prevention"), list)
+        else extract_guidance_points(payload.get("prevention"), limit=4)
+    )
+
+    card_seed = {
+        "name": report_name,
+        "symptoms": symptoms,
+        "prevention": prevention,
+        "solution": {"organic": organic_solutions, "chemical": chemical_solutions},
+        "etiology": etiology,
+    }
+    suggested_products = []
+    for asset_name in list(disease_entry.get("products", [])) if disease_entry is not None else []:
+        matched_product = find_store_product_by_asset_hint(asset_name)
+        suggested_products.append(build_disease_product_card(asset_name, card_seed, payload, store_product=matched_product))
+
+    if not suggested_products and recommended_product is not None:
+        suggested_products.append(
+            build_disease_product_card(
+                recommended_product.get("name", best_product_name),
+                card_seed,
+                payload,
+                store_product=get_store_product_by_id(recommended_product.get("id")),
+            )
+        )
+    elif not suggested_products and best_product_name:
+        matched_product = find_store_product_by_name(best_product_name)
+        suggested_products.append(build_disease_product_card(best_product_name, card_seed, payload, store_product=matched_product))
+
+    payload["confidence"] = confidence_value
+    payload["symptoms"] = "; ".join(symptoms) if symptoms else str(payload.get("symptoms") or "")
+    payload["organic_solution"] = "; ".join(organic_solutions) if organic_solutions else str(payload.get("organic_solution") or "")
+    payload["chemical_solution"] = "; ".join(chemical_solutions) if chemical_solutions else str(payload.get("chemical_solution") or "")
+    payload["prevention"] = prevention
+
+    return {
+        "report_title": f"{report_name} Disease Report",
+        "confidence_display": f"{confidence_value}%",
+        "etiology": etiology,
+        "symptoms_list": symptoms,
+        "organic_solutions": organic_solutions,
+        "chemical_solutions": chemical_solutions,
+        "prevention_tips": prevention,
+        "suggested_products": suggested_products,
+        "disease_dataset_found": disease_entry is not None,
+    }
 
 
 def build_confidence_label(confidence):
@@ -4225,6 +4677,30 @@ def enrich_disease_response_payload(payload):
     if risk_level not in {"Low", "Medium", "High"}:
         risk_level = "Low" if confidence >= 88 else "Medium" if confidence >= 72 else "High"
 
+    dataset_entry = find_disease_dataset_entry(enriched.get("disease"))
+    if dataset_entry is not None:
+        etiology = dataset_entry.get("etiology", {})
+        organic_solutions = [str(item).strip() for item in (dataset_entry.get("solution") or {}).get("organic", []) if str(item).strip()]
+        chemical_solutions = [str(item).strip() for item in (dataset_entry.get("solution") or {}).get("chemical", []) if str(item).strip()]
+        prevention = [str(item).strip() for item in dataset_entry.get("prevention", []) if str(item).strip()]
+        symptoms = [str(item).strip() for item in dataset_entry.get("symptoms", []) if str(item).strip()]
+
+        enriched["disease"] = dataset_entry["name"]
+        enriched["confidence"] = confidence or parse_percentage_value(dataset_entry.get("confidence"), default=65)
+        enriched["risk_level"] = risk_level
+        enriched["analysis_source"] = str(enriched.get("analysis_source") or "AI diagnosis").strip()
+        enriched["confidence_label"] = build_confidence_label(enriched["confidence"])
+        enriched["cause"] = str(etiology.get("pathogen") or enriched.get("cause") or "").strip()
+        enriched["symptoms"] = "; ".join(symptoms)
+        enriched["organic_solution"] = "; ".join(organic_solutions)
+        enriched["chemical_solution"] = "; ".join(chemical_solutions)
+        enriched["prevention"] = prevention
+        enriched["matched_symptoms"] = symptoms[:4]
+        enriched["why_this_result"] = str(enriched.get("diagnostic_reason") or "Matched with disease_data.json entry.").strip()
+        enriched["consult_expert"] = build_consult_expert_note(enriched["confidence"], risk_level)
+        enriched["do_now_checklist"] = build_dataset_do_now_checklist(dataset_entry)
+        return enriched
+
     library_item = get_library_disease_item_by_name(
         disease_name=enriched.get("disease"),
         crop_name=enriched.get("crop"),
@@ -4309,9 +4785,6 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
     if any(term in diagnostic_summary for term in ("healthy", "no disease", "routine care", "continue monitoring")):
         return None
 
-=======
-def resolve_store_recommendation(disease_name="", cause="", organic_solution="", chemical_solution="", best_product_name="", crop_name=""):
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     admin_mapped = get_admin_mapped_product_for_disease(disease_name)
     if admin_mapped is not None:
         return admin_mapped
@@ -4321,27 +4794,8 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
         if direct_product:
             return direct_product
 
-<<<<<<< HEAD
     diagnostic_text = diagnostic_summary
     disease_type = infer_disease_type_from_text(disease_name, cause, organic_solution, chemical_solution)
-=======
-    disease_key = normalize_disease_key(disease_name)
-    preferred_names = DISEASE_PRODUCT_PREFERENCES.get(disease_key, [])
-    for preferred_name in preferred_names:
-        preferred_product = find_store_product_by_name(preferred_name)
-        if preferred_product is not None:
-            return preferred_product
-
-    diagnostic_text = " ".join(
-        [
-            str(crop_name or ""),
-            str(disease_name or ""),
-            str(cause or ""),
-            str(organic_solution or ""),
-            str(chemical_solution or ""),
-        ]
-    ).lower()
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
     for keywords, mapped_name in STORE_DISEASE_PRODUCT_RULES:
         if any(keyword in diagnostic_text for keyword in keywords):
@@ -4351,7 +4805,6 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
             if mapped_product:
                 return mapped_product
 
-<<<<<<< HEAD
     scored_matches = []
     for product in get_all_store_products():
         score = score_store_product_for_diagnosis(product, disease_type, diagnostic_text, crop_name=crop_name)
@@ -4363,65 +4816,48 @@ def resolve_store_recommendation(disease_name="", cause="", organic_solution="",
 
 def attach_store_recommendation(payload, best_product_name=""):
     payload = enrich_disease_response_payload(payload)
+    dataset_entry = find_disease_dataset_entry(payload.get("disease"))
     disease_type = infer_disease_type_from_text(
         payload.get("disease"),
         payload.get("cause"),
         payload.get("organic_solution"),
         payload.get("chemical_solution"),
     )
-=======
-    if "fungicide" in diagnostic_text or "copper" in diagnostic_text:
-        return find_store_product_by_name("Bio Pesticide")
-    if "pest" in diagnostic_text or "neem" in diagnostic_text or "vector" in diagnostic_text:
-        return find_store_product_by_name("Neem Oil")
-
-    products = get_all_store_products()
-    if not products:
-        return None
-
-    scored_products = []
-    for product in products:
-        score = score_store_product_for_diagnosis(
-            product,
-            crop_name=crop_name,
-            disease_name=disease_name,
-            diagnostic_text=diagnostic_text,
-        )
-        scored_products.append((score, float(product.rating or 0), product))
-
-    scored_products.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    best_score, _, best_product = scored_products[0]
-    return best_product if best_score > 0.4 else None
-
-
-def attach_store_recommendation(payload, best_product_name=""):
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
-    recommended_product = resolve_store_recommendation(
-        disease_name=payload.get("disease"),
-        cause=payload.get("cause"),
-        organic_solution=payload.get("organic_solution"),
-        chemical_solution=payload.get("chemical_solution"),
-        best_product_name=best_product_name,
-        crop_name=payload.get("crop"),
-    )
-
+    recommended_product = None
+    if dataset_entry is not None:
+        dataset_products = resolve_dataset_store_products(dataset_entry)
+        recommended_product = dataset_products[0] if dataset_products else None
     if recommended_product is None:
+        recommended_product = resolve_store_recommendation(
+            disease_name=payload.get("disease"),
+            cause=payload.get("cause"),
+            organic_solution=payload.get("organic_solution"),
+            chemical_solution=payload.get("chemical_solution"),
+            best_product_name=best_product_name,
+            crop_name=payload.get("crop"),
+        )
+
+    serialized_product = None
+    if recommended_product is not None:
+        serialized_product = serialize_store_product(recommended_product)
+        serialized_product["reason"] = build_store_recommendation_reason(payload, serialized_product, disease_type)
+        payload["recommended_product"] = serialized_product
+        payload["best_product"] = serialized_product["name"]
+        payload["product_link"] = serialized_product["detail_url"]
+    else:
         payload["recommended_product"] = None
         payload.setdefault("best_product", "")
         payload.setdefault("product_link", "")
-        return payload
 
-    serialized_product = serialize_store_product(recommended_product)
-<<<<<<< HEAD
-    serialized_product["reason"] = build_store_recommendation_reason(payload, serialized_product, disease_type)
-=======
-    serialized_product["reason"] = (
-        f"Recommended for {payload.get('disease', 'the detected issue')} based on the AI diagnosis and treatment context."
+    payload.update(
+        build_disease_report_context(
+            payload,
+            recommended_product=serialized_product,
+            best_product_name=best_product_name,
+        )
     )
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
-    payload["recommended_product"] = serialized_product
-    payload["best_product"] = serialized_product["name"]
-    payload["product_link"] = serialized_product["detail_url"]
+    if payload.get("suggested_products") and not payload.get("product_link"):
+        payload["product_link"] = payload["suggested_products"][0].get("detail_url", "/market")
     return payload
 
 
@@ -4473,117 +4909,6 @@ def verify_razorpay_signature(order_id, payment_id, signature):
     return hmac.compare_digest(generated_signature, signature)
 
 
-<<<<<<< HEAD
-=======
-def verify_razorpay_webhook_signature(raw_body, signature):
-    """Verify Razorpay webhook signature (X-Razorpay-Signature) using webhook secret."""
-    if not (raw_body and signature and RAZORPAY_WEBHOOK_SECRET):
-        return False
-
-    generated = hmac.new(
-        RAZORPAY_WEBHOOK_SECRET.encode("utf-8"),
-        raw_body,
-        sha256,
-    ).hexdigest()
-
-    try:
-        return hmac.compare_digest(generated, str(signature))
-    except Exception:
-        return False
-
-
-def _wallet_debit_exists_for_subscription_payment(user_id, payment_id):
-    """Best-effort idempotency: check if a wallet debit was already applied for a subscription payment."""
-    if not (user_id and payment_id):
-        return False
-    try:
-        recent = (
-            WalletTransaction.query.filter_by(user_id=int(user_id), direction="debit", reason="subscription_wallet_applied")
-            .order_by(WalletTransaction.created_at.desc())
-            .limit(50)
-            .all()
-        )
-    except Exception:
-        return False
-
-    for tx in recent:
-        meta = safe_json_loads(getattr(tx, "meta_json", None), {}) if tx is not None else {}
-        if str(meta.get("payment_id") or "") == str(payment_id):
-            return True
-    return False
-
-
-@app.route("/webhooks/razorpay", methods=["POST"])
-def razorpay_webhook():
-    """Razorpay webhook receiver (best-effort). Keeps orders/subscriptions in sync even if client verify fails."""
-    signature = request.headers.get("X-Razorpay-Signature") or ""
-    raw_body = request.get_data(cache=False) or b""
-
-    # If webhook secret isn't configured, do not accept webhooks silently.
-    if not RAZORPAY_WEBHOOK_SECRET:
-        return jsonify({"success": False, "error": "Webhook secret not configured."}), 400
-
-    if not verify_razorpay_webhook_signature(raw_body, signature):
-        return jsonify({"success": False, "error": "Invalid webhook signature."}), 400
-
-    payload = request.get_json(silent=True) or {}
-    event_type = str(payload.get("event") or "").strip().lower()
-
-    payment_entity = (
-        (((payload.get("payload") or {}).get("payment") or {}).get("entity") or {})
-        if isinstance(payload, dict)
-        else {}
-    )
-    order_id = str(payment_entity.get("order_id") or "").strip()
-    payment_id = str(payment_entity.get("id") or "").strip()
-
-    if not order_id:
-        # Signature is valid but payload isn't useful. Ack to avoid retries.
-        return jsonify({"success": True, "message": "No order_id in webhook."}), 200
-
-    # Subscription payments
-    sub_payment = SubscriptionPayment.query.filter_by(razorpay_order_id=order_id).first()
-    if sub_payment is not None:
-        if sub_payment.status == "paid":
-            return jsonify({"success": True, "message": "Subscription already paid."}), 200
-
-        user = db.session.get(User, sub_payment.user_id) if sub_payment.user_id else None
-        sub_payment.razorpay_payment_id = payment_id or sub_payment.razorpay_payment_id
-
-        wallet_use = int(sub_payment.wallet_used_inr or 0)
-        if user is not None and wallet_use and not _wallet_debit_exists_for_subscription_payment(user.id, sub_payment.id):
-            # If wallet debit fails (balance changed), proceed without wallet discount to avoid blocking paid access.
-            if not wallet_debit(user, wallet_use, "subscription_wallet_applied", {"payment_id": sub_payment.id, "plan": sub_payment.plan}):
-                sub_payment.wallet_used_inr = 0
-
-        if user is not None:
-            apply_user_subscription(user, sub_payment.plan)
-
-        sub_payment.status = "paid" if event_type in {"payment.captured", "payment.authorized"} or payment_id else "paid"
-        db.session.commit()
-        return jsonify({"success": True, "message": "Subscription updated via webhook."}), 200
-
-    # Store orders
-    order_record = StoreOrder.query.filter_by(razorpay_order_id=order_id).first()
-    if order_record is not None:
-        if str(order_record.status or "").strip().lower() == "paid":
-            return jsonify({"success": True, "message": "Store order already paid."}), 200
-
-        order_record.razorpay_payment_id = payment_id or order_record.razorpay_payment_id
-        order_record.status = "paid"
-        notes = get_order_notes(order_record)
-        notes["verified_by_webhook"] = True
-        notes["webhook_event"] = event_type or "unknown"
-        notes["webhook_seen_at"] = datetime.now(timezone.utc).isoformat()
-        set_order_notes(order_record, notes)
-        db.session.commit()
-        return jsonify({"success": True, "message": "Store order updated via webhook."}), 200
-
-    # Unknown order id: acknowledge to avoid retries.
-    return jsonify({"success": True, "message": "No matching order found."}), 200
-
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 def lookup_kisan_dost_knowledge(query_text, crop_name):
     query_lower = (query_text or "").lower()
     query_tokens = set(re.findall(r"[a-z0-9]+", query_lower))
@@ -5011,6 +5336,59 @@ def fetch_bytes(url, params=None, method="GET", headers=None, json_body=None):
         return None
 
 
+def geocode_location_label(location_label):
+    location_text = str(location_label or "").strip()
+    if not location_text:
+        return None
+
+    cache_key = location_text.lower()
+    if cache_key in LOCATION_GEOCODE_CACHE:
+        return LOCATION_GEOCODE_CACHE[cache_key]
+
+    queries = [location_text]
+    if "india" not in cache_key:
+        queries.append(f"{location_text}, India")
+
+    for query in queries:
+        payload = fetch_json(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "q": query,
+                "format": "jsonv2",
+                "limit": 1,
+            },
+            headers={
+                "User-Agent": "AgroVisionAI/1.0 (farm map geocoder)",
+                "Accept": "application/json",
+            },
+        )
+        if not isinstance(payload, list) or not payload:
+            continue
+
+        first = payload[0] or {}
+        try:
+            lat = float(first.get("lat"))
+            lng = float(first.get("lon"))
+        except (TypeError, ValueError):
+            continue
+
+        zoom = 12
+        location_type = str(first.get("type") or "").strip().lower()
+        if location_type in {"village", "hamlet", "suburb", "neighbourhood"}:
+            zoom = 14
+        elif location_type in {"city", "town", "municipality"}:
+            zoom = 12
+        elif location_type in {"state", "region", "county", "district"}:
+            zoom = 10
+
+        result = {"lat": lat, "lng": lng, "zoom": zoom}
+        LOCATION_GEOCODE_CACHE[cache_key] = result
+        return result
+
+    LOCATION_GEOCODE_CACHE[cache_key] = None
+    return None
+
+
 def normalize_timestamp(value):
     if value is None:
         return None
@@ -5041,6 +5419,515 @@ def format_relative_time(value):
     if minutes >= 1:
         return f"{minutes}m ago"
     return "Just now"
+
+
+def send_smtp_message(msg, label="email"):
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False, f"SMTP credentials are not configured for {label}."
+
+    try:
+        if SMTP_USE_SSL or SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.send_message(msg)
+        return True, None
+    except Exception as e:
+        print(f"SMTP Error ({label}): {e}")
+        return False, str(e)
+
+
+def normalize_alert_phone_number(raw_phone):
+    raw_text = str(raw_phone or "").strip()
+    if not raw_text:
+        return ""
+    if raw_text.startswith("whatsapp:"):
+        return raw_text
+
+    prefix = "+" if raw_text.startswith("+") else ""
+    digits_only = re.sub(r"\D+", "", raw_text)
+    if not digits_only:
+        return ""
+    if not prefix and len(digits_only) == 10:
+        digits_only = f"91{digits_only}"
+        prefix = "+"
+    if not prefix:
+        prefix = "+"
+    return f"{prefix}{digits_only}"
+
+
+def build_alert_email_text(alert, user):
+    farm_label = getattr(user, "location", "") or "your farm"
+    return (
+        f"{APP_DISPLAY_NAME} Alert\n\n"
+        f"{alert.title}\n\n"
+        f"{alert.detail}\n\n"
+        f"Farm context: {farm_label}\n"
+        f"Open: {alert.action_url or '/alerts'}\n\n"
+        f"- Team {APP_DISPLAY_NAME}\n"
+    )
+
+
+def send_alert_email(user, preferences, alert):
+    target_email = str(getattr(preferences, "alert_email", "") or getattr(user, "email", "") or "").strip()
+    if not target_email:
+        return False, "Alert email address is missing."
+
+    msg = EmailMessage()
+    msg["Subject"] = f"{APP_DISPLAY_NAME} Alert: {alert.title}"
+    msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
+    msg["To"] = target_email
+    msg["Reply-To"] = SMTP_EMAIL
+    msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
+    msg.set_content(build_alert_email_text(alert, user))
+    return send_smtp_message(msg, label="alert email")
+
+
+def build_alert_phone_message(alert):
+    return f"{APP_DISPLAY_NAME}: {alert.title}. {alert.detail}"
+
+
+def send_alert_phone_message(user, preferences, alert):
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        return False, "Twilio credentials are not configured."
+
+    to_number = normalize_alert_phone_number(getattr(preferences, "alert_phone", "") or getattr(user, "phone", ""))
+    if not to_number:
+        return False, "Alert phone number is missing."
+
+    from_number = TWILIO_WHATSAPP_FROM if TWILIO_USE_WHATSAPP and TWILIO_WHATSAPP_FROM else TWILIO_SMS_FROM
+    if not from_number:
+        return False, "Twilio sender number is not configured."
+
+    if TWILIO_USE_WHATSAPP:
+        if not str(from_number).startswith("whatsapp:"):
+            from_number = f"whatsapp:{normalize_alert_phone_number(from_number)}"
+        if not str(to_number).startswith("whatsapp:"):
+            to_number = f"whatsapp:{to_number}"
+    else:
+        from_number = normalize_alert_phone_number(from_number)
+
+    form_body = {"To": to_number, "From": from_number}
+    if TWILIO_CONTENT_SID:
+        form_body["ContentSid"] = TWILIO_CONTENT_SID
+        form_body["ContentVariables"] = json.dumps(
+            {"1": alert.title[:60], "2": (alert.detail or "")[:120]}
+        )
+    else:
+        form_body["Body"] = build_alert_phone_message(alert)
+
+    auth_token = b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode("utf-8")).decode("utf-8")
+    response = fetch_json(
+        f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
+        method="POST",
+        headers={"Authorization": f"Basic {auth_token}", "Accept": "application/json"},
+        form_body=form_body,
+    )
+    if response and response.get("sid"):
+        return True, None
+
+    error_message = ""
+    if isinstance(response, dict):
+        error_message = str(response.get("message") or response.get("detail") or "").strip()
+    return False, error_message or "Twilio API request failed."
+
+
+def build_task_reminder_alert_key(task_or_id):
+    task_id = getattr(task_or_id, "id", task_or_id)
+    return f"task-reminder-{int(task_id)}"
+
+
+def build_task_reminder_detail(task):
+    farm_label = "All farms"
+    farm_id = getattr(task, "farm_id", None)
+    if farm_id:
+        with db.session.no_autoflush:
+            farm = Farm.query.filter_by(id=farm_id).first()
+        if farm and getattr(farm, "name", ""):
+            farm_label = farm.name
+    due_label = format_task_due_label(task)
+    category_label = (getattr(task, "category", "") or "General").strip() or "General"
+    detail_parts = [
+        f"'{task.title}' is still pending in your farm planner.",
+        f"Farm: {farm_label}.",
+        f"Category: {category_label}.",
+    ]
+    if due_label and due_label != "No deadline":
+        detail_parts.append(f"Timeline: {due_label}.")
+    detail_parts.append("Mark it done once the field work is completed.")
+    return " ".join(detail_parts)
+
+
+def deactivate_task_reminder_alert(task_id, user_id=None, commit=True):
+    query = AlertRecord.query.filter_by(alert_key=build_task_reminder_alert_key(task_id))
+    if user_id is not None:
+        query = query.filter_by(user_id=user_id)
+    alert = query.first()
+    if alert is None:
+        return None
+    alert.is_active = False
+    alert.is_read = True
+    if commit:
+        db.session.commit()
+    return alert
+
+
+def upsert_task_reminder_alert(task, force_notify=False, commit=True):
+    if task is None:
+        return None
+
+    if (getattr(task, "status", "") or "").strip().lower() == "done":
+        return deactivate_task_reminder_alert(task.id, user_id=task.user_id, commit=commit)
+
+    user = User.query.filter_by(id=task.user_id).first()
+    if user is None:
+        return None
+
+    preferences = get_or_create_user_preferences(user, commit=False)
+    now = datetime.now(timezone.utc)
+    alert_key = build_task_reminder_alert_key(task)
+    alert_title = f"Task reminder: {task.title}"
+    alert_detail = build_task_reminder_detail(task)
+    alert_action_url = "/farms#task-planner"
+    alert = AlertRecord.query.filter_by(user_id=user.id, alert_key=alert_key).first()
+    is_new = alert is None
+    if alert is None:
+        alert = AlertRecord(user_id=user.id, alert_key=alert_key)  # type: ignore
+
+    previous_signature = (
+        getattr(alert, "title", ""),
+        getattr(alert, "detail", ""),
+        getattr(alert, "action_url", ""),
+        bool(getattr(alert, "is_active", False)),
+    )
+
+    alert.farm_id = task.farm_id
+    alert.category = "task"
+    alert.severity = "insight"
+    alert.title = alert_title
+    alert.detail = alert_detail
+    alert.action_url = alert_action_url
+    alert.is_active = True
+    if is_new:
+        db.session.add(alert)
+
+    current_signature = (
+        alert.title,
+        alert.detail,
+        alert.action_url,
+        bool(alert.is_active),
+    )
+    became_active_or_changed = is_new or previous_signature != current_signature
+    if became_active_or_changed or force_notify:
+        alert.is_read = False
+
+    last_notified_at = normalize_timestamp(getattr(alert, "last_notified_at", None))
+    should_notify = force_notify or became_active_or_changed
+    if not should_notify:
+        if last_notified_at is None:
+            should_notify = True
+        else:
+            should_notify = (now - last_notified_at).total_seconds() >= TASK_REMINDER_INTERVAL_SECONDS
+
+    if should_notify:
+        email_sent = False
+        sms_sent = False
+        if getattr(preferences, "email_alerts", False):
+            email_sent, _ = send_alert_email(user, preferences, alert)
+        if getattr(preferences, "sms_alerts", False):
+            sms_sent, _ = send_alert_phone_message(user, preferences, alert)
+        alert.last_notified_at = now
+        alert.email_sent = bool(alert.email_sent or email_sent)
+        alert.sms_sent = bool(alert.sms_sent or sms_sent)
+
+    if commit:
+        db.session.commit()
+    return alert
+
+
+def process_open_task_reminders():
+    active_keys = set()
+    open_tasks = FarmTask.query.filter(FarmTask.status != "done").all()
+    for task in open_tasks:
+        active_keys.add(build_task_reminder_alert_key(task))
+        upsert_task_reminder_alert(task, force_notify=False, commit=False)
+
+    active_reminder_alerts = AlertRecord.query.filter(
+        AlertRecord.is_active.is_(True),
+        AlertRecord.alert_key.like("task-reminder-%"),
+    ).all()
+    for alert in active_reminder_alerts:
+        if alert.alert_key not in active_keys:
+            alert.is_active = False
+            alert.is_read = True
+
+    db.session.commit()
+
+
+def task_reminder_worker_loop():
+    while True:
+        try:
+            with app.app_context():
+                process_open_task_reminders()
+        except Exception as exc:
+            print(f"Task reminder worker error: {exc}")
+        time.sleep(TASK_REMINDER_POLL_SECONDS)
+
+
+@app.before_request
+def ensure_task_reminder_worker_started():
+    if app.config.get("TESTING"):
+        return
+    if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return
+    if TASK_REMINDER_WORKER.get("started"):
+        return
+
+    with TASK_REMINDER_LOCK:
+        if TASK_REMINDER_WORKER.get("started"):
+            return
+        worker = threading.Thread(target=task_reminder_worker_loop, name="task-reminder-worker", daemon=True)
+        worker.start()
+        TASK_REMINDER_WORKER["thread"] = worker
+        TASK_REMINDER_WORKER["started"] = True
+
+
+def build_alert_history_chart(alert_records, days=7):
+    today = datetime.now(timezone.utc).date()
+    counts_by_day = {}
+    for record in alert_records:
+        record_time = normalize_timestamp(getattr(record, "updated_at", None) or getattr(record, "created_at", None))
+        if record_time is None:
+            continue
+        day_key = record_time.astimezone(timezone.utc).date()
+        counts_by_day[day_key] = counts_by_day.get(day_key, 0) + 1
+
+    labels = []
+    values = []
+    for offset in range(days - 1, -1, -1):
+        day = today - timedelta(days=offset)
+        labels.append(day.strftime("%d %b"))
+        values.append(int(counts_by_day.get(day, 0)))
+    return {"labels": labels, "values": values}
+
+
+def serialize_alert_record(record):
+    severity = str(getattr(record, "severity", "") or "insight").strip().lower()
+    if severity not in {"heat", "rain", "disease", "insight"}:
+        severity = "insight"
+
+    return {
+        "id": record.id,
+        "severity": severity,
+        "title": getattr(record, "title", "") or "Farm alert",
+        "detail": getattr(record, "detail", "") or "Review this alert for more details.",
+        "time_ago": format_relative_time(getattr(record, "updated_at", None) or getattr(record, "created_at", None)),
+        "action_url": getattr(record, "action_url", "") or "/alerts",
+        "is_read": bool(getattr(record, "is_read", False)),
+        "open_url": f"/alerts/{record.id}/open",
+    }
+
+
+def build_user_alert_candidates(user, preferences, primary_farm, weather, soil, crop_health, task_summary):
+    crop_label = normalize_kisan_dost_crop_name(getattr(user, "crop_type", "") or "crop")
+    location_label = (
+        (getattr(primary_farm, "location", "") or "").strip()
+        or (getattr(user, "location", "") or "").strip()
+        or "your farm"
+    )
+    farm_id = getattr(primary_farm, "id", None)
+    candidates = []
+
+    def add_candidate(alert_key, category, severity, title, detail, action_url):
+        candidates.append(
+            {
+                "alert_key": alert_key,
+                "category": category,
+                "severity": severity,
+                "title": title,
+                "detail": detail,
+                "action_url": action_url,
+                "farm_id": farm_id,
+            }
+        )
+
+    if getattr(preferences, "weather_alerts", False) and float(weather.get("temp", 0) or 0) >= 34:
+        add_candidate(
+            "weather-heat",
+            "weather",
+            "heat",
+            "Heat stress risk",
+            f"Temperature near {location_label} is around {weather['temp']} C. Shift irrigation and field work to cooler hours.",
+            "/weather",
+        )
+
+    if getattr(preferences, "weather_alerts", False) and (
+        float(weather.get("rainfall_mm", 0) or 0) >= 6 or float(weather.get("humidity", 0) or 0) >= 88
+    ):
+        add_candidate(
+            "weather-rain",
+            "weather",
+            "rain",
+            "Rain and waterlogging alert",
+            f"Moisture levels are rising around {location_label}. Check field drainage before the next irrigation cycle.",
+            "/weather",
+        )
+
+    if getattr(preferences, "disease_alerts", False) and (
+        float(weather.get("humidity", 0) or 0) >= 78 and (
+            float(weather.get("rainfall_mm", 0) or 0) >= 3 or float(weather.get("clouds", 0) or 0) >= 60
+        )
+    ):
+        add_candidate(
+            "disease-risk",
+            "disease",
+            "disease",
+            "Disease pressure rising",
+            f"Humidity and moisture can increase fungal disease risk for {crop_label} near {location_label}. Inspect affected leaves closely.",
+            "/disease-detection",
+        )
+
+    if getattr(preferences, "crop_alerts", False) and int(soil.get("nitrogen", 0) or 0) < 45:
+        add_candidate(
+            "soil-low-nitrogen",
+            "soil",
+            "insight",
+            "Low nitrogen detected",
+            f"Soil nitrogen is trending low for {crop_label}. Plan a nutrient top-up before the next growth stage.",
+            "/soil-health",
+        )
+
+    soil_ph = float(soil.get("ph", 6.5) or 6.5)
+    if getattr(preferences, "crop_alerts", False) and (soil_ph < 6.0 or soil_ph > 7.5):
+        add_candidate(
+            "soil-ph-imbalance",
+            "soil",
+            "insight",
+            "Soil pH imbalance",
+            f"Soil pH is currently {soil_ph}. Review soil corrections before applying the next input mix.",
+            "/soil-health",
+        )
+
+    if getattr(preferences, "crop_alerts", False) and int(crop_health.get("score", 80) or 80) < 60:
+        add_candidate(
+            "crop-health-drop",
+            "crop",
+            "insight",
+            "Crop health needs attention",
+            f"{crop_label} health score is {crop_health['score']}%. Review crop stress indicators and recent field conditions.",
+            "/crop-monitoring",
+        )
+
+    overdue_tasks = [item for item in task_summary.get("all", []) if item.get("overdue")]
+    if overdue_tasks:
+        add_candidate(
+            "task-overdue",
+            "task",
+            "insight",
+            "Planner task overdue",
+            f"{len(overdue_tasks)} planner task(s) are overdue. Clear urgent field work before it affects crop timing.",
+            "/farms#task-planner",
+        )
+
+    due_today_count = int(task_summary.get("due_today_count", 0) or 0)
+    if due_today_count:
+        add_candidate(
+            "task-due-today",
+            "task",
+            "insight",
+            "Task due today",
+            f"{due_today_count} planner task(s) need attention today. Review irrigation, spray, or inspection work now.",
+            "/farms#task-planner",
+        )
+
+    return candidates
+
+
+def sync_user_alerts(user):
+    preferences = get_or_create_user_preferences(user)
+    primary_farm, _ = ensure_user_farm_setup(user)
+    location_label = (
+        (getattr(primary_farm, "location", "") or "").strip()
+        or (getattr(user, "location", "") or "").strip()
+        or "Bhubaneswar"
+    )
+    weather = fetch_weather_bundle(location_label)
+    soil = build_soil_profile(user, weather)
+    crop_health = build_crop_health(user, weather, soil)
+    task_summary = build_task_summary(user, limit=24)
+    candidates = build_user_alert_candidates(user, preferences, primary_farm, weather, soil, crop_health, task_summary)
+    active_keys = set()
+    now = datetime.now(timezone.utc)
+
+    for candidate in candidates:
+        active_keys.add(candidate["alert_key"])
+        alert = AlertRecord.query.filter_by(user_id=user.id, alert_key=candidate["alert_key"]).first()
+        is_new = alert is None
+        if alert is None:
+            alert = AlertRecord(user_id=user.id, alert_key=candidate["alert_key"])  # type: ignore
+            db.session.add(alert)
+
+        previous_signature = (
+            getattr(alert, "severity", ""),
+            getattr(alert, "title", ""),
+            getattr(alert, "detail", ""),
+            getattr(alert, "action_url", ""),
+            bool(getattr(alert, "is_active", False)),
+        )
+
+        alert.farm_id = candidate["farm_id"]
+        alert.category = candidate["category"]
+        alert.severity = candidate["severity"]
+        alert.title = candidate["title"]
+        alert.detail = candidate["detail"]
+        alert.action_url = candidate["action_url"]
+        alert.is_active = True
+
+        current_signature = (
+            alert.severity,
+            alert.title,
+            alert.detail,
+            alert.action_url,
+            bool(alert.is_active),
+        )
+        became_active_or_changed = is_new or previous_signature != current_signature
+        if became_active_or_changed:
+            alert.is_read = False
+
+        email_sent = False
+        sms_sent = False
+        if became_active_or_changed:
+            if getattr(preferences, "email_alerts", False):
+                email_sent, _ = send_alert_email(user, preferences, alert)
+            if getattr(preferences, "sms_alerts", False):
+                sms_sent, _ = send_alert_phone_message(user, preferences, alert)
+            if email_sent or sms_sent:
+                alert.last_notified_at = now
+            alert.email_sent = bool(alert.email_sent or email_sent)
+            alert.sms_sent = bool(alert.sms_sent or sms_sent)
+
+    for stale_alert in AlertRecord.query.filter_by(user_id=user.id, is_active=True).all():
+        if str(getattr(stale_alert, "alert_key", "") or "").startswith("task-reminder-"):
+            continue
+        if stale_alert.alert_key not in active_keys:
+            stale_alert.is_active = False
+
+    db.session.commit()
+    return {
+        "preferences": preferences,
+        "weather": weather,
+        "soil": soil,
+        "crop_health": crop_health,
+        "task_summary": task_summary,
+        "active_alerts": AlertRecord.query.filter_by(user_id=user.id, is_active=True).order_by(AlertRecord.updated_at.desc()).all(),
+        "history_alerts": AlertRecord.query.filter_by(user_id=user.id).order_by(AlertRecord.updated_at.desc()).limit(12).all(),
+    }
 
 
 def parse_due_date_input(raw_value):
@@ -5277,6 +6164,745 @@ def build_recent_activity(user, limit=8):
     return activity_items[:limit]
 
 
+def format_wallet_reason_label(reason):
+    labels = {
+        "referral_bonus": "Referral bonus received",
+        "referral_signup_bonus": "Welcome bonus added",
+        "subscription_wallet_applied": "Wallet used for subscription",
+    }
+    normalized = str(reason or "").strip()
+    if normalized in labels:
+        return labels[normalized]
+    if not normalized:
+        return "Wallet activity"
+    return normalized.replace("_", " ").strip().title()
+
+
+def build_village_module_context(user, module_key):
+    primary_farm = (
+        Farm.query.filter_by(user_id=user.id, is_primary=True).order_by(Farm.created_at.asc()).first()
+        or Farm.query.filter_by(user_id=user.id).order_by(Farm.created_at.asc()).first()
+    )
+    farm_count = Farm.query.filter_by(user_id=user.id).count()
+    task_summary = build_task_summary(user, limit=4)
+    recent_activity = build_recent_activity(user, limit=5)
+    preferences = UserPreference.query.filter_by(user_id=user.id).first()
+    recent_scan_count = DiseaseHistory.query.filter_by(user_id=user.id).count()
+    active_product_count = StoreProduct.query.filter_by(is_active=True).count()
+    wallet_balance = int(user.wallet_balance or 0)
+    loyalty_points = int(user.loyalty_points or 0)
+    current_plan_key = normalize_plan_name(user.plan)
+    current_plan = SUBSCRIPTION_PLANS.get(current_plan_key, SUBSCRIPTION_PLANS["free"])
+    alert_count = sum(
+        [
+            1 if getattr(preferences, "crop_alerts", False) else 0,
+            1 if getattr(preferences, "disease_alerts", False) else 0,
+            1 if getattr(preferences, "weather_alerts", False) else 0,
+            1 if getattr(preferences, "data_updates", False) else 0,
+        ]
+    )
+    channel_count = sum(
+        [
+            1 if getattr(preferences, "email_alerts", False) else 0,
+            1 if getattr(preferences, "sms_alerts", False) else 0,
+            1 if getattr(preferences, "daily_briefing", False) else 0,
+        ]
+    )
+
+    wallet_feed = []
+    wallet_transactions = (
+        WalletTransaction.query.filter_by(user_id=user.id)
+        .order_by(WalletTransaction.created_at.desc())
+        .limit(6)
+        .all()
+    )
+    for tx in wallet_transactions:
+        amount = int(tx.amount_inr or 0)
+        direction = str(tx.direction or "credit").strip().lower()
+        wallet_feed.append(
+            {
+                "title": format_wallet_reason_label(tx.reason),
+                "detail": "Added to your balance." if direction == "credit" else "Used from your balance.",
+                "meta": format_relative_time(tx.created_at),
+                "badge": f"{'+' if direction == 'credit' else '-'}Rs {amount}",
+                "badge_tone": "positive" if direction == "credit" else "neutral",
+            }
+        )
+    if not wallet_feed:
+        wallet_feed.append(
+            {
+                "title": "No wallet activity yet",
+                "detail": "Referral rewards and subscription credits will appear here.",
+                "meta": "Start with Refer and Earn",
+                "badge": f"Rs {wallet_balance}",
+                "badge_tone": "neutral",
+            }
+        )
+
+    notification_feed = [
+        {
+            "title": item["title"],
+            "detail": item["detail"],
+            "meta": item["time_ago"],
+            "badge": str(item["tone"]).replace("_", " ").title(),
+            "badge_tone": "neutral",
+        }
+        for item in recent_activity[:4]
+    ]
+    if not notification_feed:
+        notification_feed.append(
+            {
+                "title": "Notification center is ready",
+                "detail": "Weather, disease, and farm task updates will be listed here.",
+                "meta": "Connect alerts in settings",
+                "badge": "Ready",
+                "badge_tone": "positive",
+            }
+        )
+
+    module_map = {
+        "rent_tractor": {
+            "active_page": "rent_tractor",
+            "title": "Rent a Tractor",
+            "badge": "Mechanization on demand",
+            "description": "Plan field work faster with tractor, tiller, seed drill, and spraying support around your farm cluster.",
+            "stats": [
+                {"label": "Primary farm", "value": primary_farm.name if primary_farm else "Setup pending"},
+                {"label": "Open tasks", "value": str(task_summary["open_count"])},
+                {"label": "Location", "value": user.location or "Rural zone"},
+            ],
+            "panel_title": "Suggested setup",
+            "panel_text": "Use your farm planner to mark land prep, sowing, or spray tasks first, then confirm machine timing from one place.",
+            "actions": [
+                {"label": "Open Farms", "href": "/farms"},
+                {"label": "View Tools", "href": "/tools"},
+            ],
+            "cards": [
+                {"icon": "fa-tractor", "title": "Quick machine booking", "detail": "Reserve tractors, cultivators, and rotavators for sowing, tilling, and residue management."},
+                {"icon": "fa-clock", "title": "Hourly slot planning", "detail": "Match machine timing with your next open farm task to avoid labor delays."},
+                {"icon": "fa-screwdriver-wrench", "title": "Equipment support", "detail": "Track which machine type fits land prep, spraying, or harvest support before dispatch."},
+            ],
+        },
+        "land_lease": {
+            "active_page": "land_lease",
+            "title": "Land Lease",
+            "badge": "Flexible acreage access",
+            "description": "Organize short-term and seasonal land partnerships with clearer plot details, cropping intent, and contact readiness.",
+            "stats": [
+                {"label": "Farm count", "value": str(farm_count)},
+                {"label": "Target crop", "value": user.crop_type or "Mixed crop"},
+                {"label": "Farm size", "value": user.farm_size or "Flexible"},
+            ],
+            "panel_title": "Lease checklist",
+            "panel_text": "Keep location, plot size, crop type, and contact number updated so land opportunities can be reviewed faster.",
+            "actions": [
+                {"label": "Update Profile", "href": "/profile"},
+                {"label": "Manage Farms", "href": "/farms"},
+            ],
+            "cards": [
+                {"icon": "fa-map", "title": "Plot listing readiness", "detail": "Capture location, acreage, and irrigation notes before you offer or request a lease."},
+                {"icon": "fa-file-signature", "title": "Seasonal agreements", "detail": "Prepare simple lease terms for kharif, rabi, or mixed-cycle cultivation planning."},
+                {"icon": "fa-people-arrows", "title": "Farmer-to-farmer matching", "detail": "Coordinate with nearby growers and village contacts for temporary land access."},
+            ],
+        },
+        "rural_services": {
+            "active_page": "rural_services",
+            "title": "Rural Services",
+            "badge": "Field support hub",
+            "description": "Bundle practical services like soil testing, irrigation repair, spraying help, and local field assistance into one place.",
+            "stats": [
+                {"label": "Service lanes", "value": "6"},
+                {"label": "Open support needs", "value": str(task_summary["open_count"])},
+                {"label": "Village base", "value": user.location or "Service region"},
+            ],
+            "panel_title": "What to coordinate first",
+            "panel_text": "Start with the field issue that is slowing work today, then assign the right service category and timing.",
+            "actions": [
+                {"label": "Open Settings", "href": "/settings"},
+                {"label": "Farm Planner", "href": "/farms#task-planner"},
+            ],
+            "cards": [
+                {"icon": "fa-flask-vial", "title": "Soil and water testing", "detail": "Track testing support for pH, nutrients, water source quality, and follow-up action notes."},
+                {"icon": "fa-faucet-drip", "title": "Irrigation assistance", "detail": "Coordinate repair and setup requests for pumps, pipes, and flow distribution across plots."},
+                {"icon": "fa-users-gear", "title": "On-field manpower", "detail": "Organize spraying, weeding, harvesting, and transport support when labor demand spikes."},
+            ],
+        },
+        "govt_schemes": {
+            "active_page": "govt_schemes",
+            "title": "Govt Schemes",
+            "badge": "Benefits and eligibility",
+            "description": "Keep farmer profile details ready for subsidy discovery, seasonal support programs, and application reminders.",
+            "stats": [
+                {"label": "Current location", "value": user.location or "Not set"},
+                {"label": "Profile status", "value": "Ready" if user.phone and user.email else "Needs update"},
+                {"label": "Preferred crop", "value": user.crop_type or "General farming"},
+            ],
+            "panel_title": "Application readiness",
+            "panel_text": "Accurate phone, email, crop, and location details make it easier to surface the right scheme pathway.",
+            "actions": [
+                {"label": "Open Govt Buddy AI", "href": "/govt-buddy-ai"},
+                {"label": "Edit Profile", "href": "/profile"},
+            ],
+            "cards": [
+                {"icon": "fa-building-columns", "title": "Scheme discovery", "detail": "Review support options for equipment, crop insurance, irrigation, and input assistance."},
+                {"icon": "fa-id-card", "title": "Eligibility checklist", "detail": "Track which farmer details and documents should be complete before submission."},
+                {"icon": "fa-calendar-check", "title": "Reminder flow", "detail": "Keep submission windows, verification steps, and follow-up actions visible in one module."},
+            ],
+        },
+        "money_manager": {
+            "active_page": "money_manager",
+            "title": "Money Manager",
+            "badge": "Farm finance overview",
+            "description": "Monitor seasonal spending, wallet credits, and upgrade costs so cash planning stays visible alongside farm work.",
+            "stats": [
+                {"label": "Wallet balance", "value": f"Rs {wallet_balance}"},
+                {"label": "Loyalty points", "value": str(loyalty_points)},
+                {"label": "Current plan", "value": current_plan['label']},
+            ],
+            "panel_title": "Keep finance simple",
+            "panel_text": "Use wallet credits, referral bonuses, and plan pricing together so monthly farm tools stay affordable.",
+            "actions": [
+                {"label": "Open My Wallet", "href": "/my-wallet"},
+                {"label": "Upgrade Hub", "href": "/upgrade-hub"},
+            ],
+            "cards": [
+                {"icon": "fa-wallet", "title": "Cashflow snapshot", "detail": "See how wallet credits and monthly plan fees affect your digital farming budget."},
+                {"icon": "fa-chart-line", "title": "Expense planning", "detail": "Prepare for seeds, inputs, repairs, and services before the next major farm cycle starts."},
+                {"icon": "fa-hand-holding-dollar", "title": "Savings opportunities", "detail": "Combine referrals, plan perks, and market offers to reduce repeat spending."},
+            ],
+        },
+        "ai_crop_scan": {
+            "active_page": "ai_crop_scan",
+            "title": "AI Crop Scan",
+            "badge": "Leaf photo diagnosis",
+            "description": "Run image-based crop checks, compare symptom patterns, and jump directly into treatment guidance from one scan flow.",
+            "stats": [
+                {"label": "Scans completed", "value": str(recent_scan_count)},
+                {"label": "Focus crop", "value": user.crop_type or "General crop"},
+                {"label": "Best next step", "value": "Upload leaf"},
+            ],
+            "panel_title": "Start with one clear photo",
+            "panel_text": "A close leaf image in natural light gives the disease engine a stronger signal and cleaner recommendation trail.",
+            "actions": [
+                {"label": "Open Live Scan", "href": "/disease-detection"},
+                {"label": "Crop Library", "href": "/crop-library"},
+            ],
+            "cards": [
+                {"icon": "fa-camera", "title": "Fast leaf analysis", "detail": "Upload crop photos and check likely disease patterns with AI-supported matching."},
+                {"icon": "fa-stethoscope", "title": "Symptom guidance", "detail": "Compare disease signs, possible causes, and treatment direction before field action."},
+                {"icon": "fa-seedling", "title": "Crop-specific context", "detail": "Connect each scan with crop type and local field conditions for better follow-up."},
+            ],
+        },
+        "farming_solutions": {
+            "active_page": "farming_solutions",
+            "title": "Farming Solutions",
+            "badge": "Integrated farm actions",
+            "description": "Bring weather, soil, crop monitoring, and AI suggestions together so farm decisions feel connected instead of scattered.",
+            "stats": [
+                {"label": "Primary crop", "value": user.crop_type or "Farm mix"},
+                {"label": "Farm records", "value": str(farm_count)},
+                {"label": "Open actions", "value": str(task_summary["open_count"])},
+            ],
+            "panel_title": "One workflow, multiple signals",
+            "panel_text": "Use the existing monitoring modules together to turn weather and field signals into practical work plans.",
+            "actions": [
+                {"label": "Weather", "href": "/weather"},
+                {"label": "Soil Health", "href": "/soil-health"},
+                {"label": "AI Insights", "href": "/ai-insights"},
+            ],
+            "cards": [
+                {"icon": "fa-cloud-sun", "title": "Weather-led planning", "detail": "Check rain, heat, and humidity before irrigation, spraying, or transplanting work."},
+                {"icon": "fa-leaf", "title": "Crop health monitoring", "detail": "Use monitoring tools and alerts to review plant stress and farm-level changes faster."},
+                {"icon": "fa-brain", "title": "AI-backed recommendations", "detail": "Combine dashboard insights with next-step suggestions tailored to your active crop cycle."},
+            ],
+        },
+        "agri_market": {
+            "active_page": "agri_market",
+            "title": "Agri Market",
+            "badge": "Input and demand signals",
+            "description": "Browse farm products, track mandi momentum, and connect market visibility with the buying decisions already in your app.",
+            "stats": [
+                {"label": "Active products", "value": str(active_product_count)},
+                {"label": "Buyer location", "value": user.location or "India"},
+                {"label": "Wallet ready", "value": f"Rs {wallet_balance}"},
+            ],
+            "panel_title": "Market workflow",
+            "panel_text": "Use the store for immediate input buying, then compare product choices with your current crop stage and farm tasks.",
+            "actions": [
+                {"label": "Open Market", "href": "/market"},
+                {"label": "Community", "href": "/community"},
+            ],
+            "cards": [
+                {"icon": "fa-store", "title": "Input marketplace", "detail": "Browse seeds, tools, and crop-care products already available inside your website."},
+                {"icon": "fa-chart-column", "title": "Rate awareness", "detail": "Use mandi rate signals and field demand context to time purchasing decisions more clearly."},
+                {"icon": "fa-truck-fast", "title": "Procurement readiness", "detail": "Prepare for product ordering, delivery flow, and farm-level purchase planning from one view."},
+            ],
+        },
+        "govt_buddy_ai": {
+            "active_page": "govt_buddy_ai",
+            "title": "Govt Buddy AI",
+            "badge": "Scheme helper assistant",
+            "description": "Ask for scheme direction, document preparation, and farmer benefit guidance in a simpler, more guided format.",
+            "stats": [
+                {"label": "Eligible crop region", "value": user.location or "Not selected"},
+                {"label": "Alert readiness", "value": str(alert_count)},
+                {"label": "Support channel", "value": "AI assisted"},
+            ],
+            "panel_title": "How to use it",
+            "panel_text": "Start with your crop, village, or support goal. The assistant can narrow which scheme path to review next.",
+            "actions": [
+                {"label": "AI Insights", "href": "/ai-insights"},
+                {"label": "Govt Schemes", "href": "/govt-schemes"},
+            ],
+            "cards": [
+                {"icon": "fa-comments", "title": "Question and answer flow", "detail": "Ask about subsidy options, application readiness, and next steps without scanning many pages."},
+                {"icon": "fa-folder-open", "title": "Document preparation", "detail": "Review the common identity, land, and farm data details usually needed before you apply."},
+                {"icon": "fa-language", "title": "Farmer-friendly guidance", "detail": "Keep explanations simple for multilingual support and easier scheme understanding."},
+            ],
+        },
+        "my_wallet": {
+            "active_page": "my_wallet",
+            "title": "My Wallet",
+            "badge": "Credits, rewards, and balance",
+            "description": "Track referral bonuses, subscription usage, and available wallet balance without leaving your dashboard flow.",
+            "stats": [
+                {"label": "Available balance", "value": f"Rs {wallet_balance}"},
+                {"label": "Loyalty points", "value": str(loyalty_points)},
+                {"label": "Current plan", "value": current_plan['label']},
+            ],
+            "panel_title": "Ways to grow balance",
+            "panel_text": "Referral bonuses and wallet-based subscription discounts are already connected to your account activity.",
+            "actions": [
+                {"label": "Refer and Earn", "href": "/refer-and-earn"},
+                {"label": "Upgrade Hub", "href": "/upgrade-hub"},
+            ],
+            "cards": [
+                {"icon": "fa-wallet", "title": "Live balance view", "detail": "See how much wallet credit is available before you pay for plans and eligible checkouts."},
+                {"icon": "fa-gift", "title": "Referral rewards", "detail": "Referral signups can add bonus value that reduces future digital farming costs."},
+                {"icon": "fa-clock-rotate-left", "title": "Usage history", "detail": "Review recent credit and debit activity to understand where wallet value moved."},
+            ],
+            "feed_title": "Recent wallet activity",
+            "feed_entries": wallet_feed,
+        },
+        "notifications": {
+            "active_page": "notifications",
+            "title": "Notifications",
+            "badge": "Farm updates and reminders",
+            "description": "Keep weather alerts, disease notices, task reminders, and update preferences visible from one notification center.",
+            "stats": [
+                {"label": "Alert types on", "value": str(alert_count)},
+                {"label": "Channels active", "value": str(channel_count)},
+                {"label": "Open tasks", "value": str(task_summary["open_count"])},
+            ],
+            "panel_title": "Control what reaches you",
+            "panel_text": "Review notification settings and the latest farm activity together so you do not miss weather or crop changes.",
+            "actions": [
+                {"label": "Open Alerts", "href": "/alerts"},
+                {"label": "Notification Settings", "href": "/settings"},
+            ],
+            "cards": [
+                {"icon": "fa-bell", "title": "Critical alert center", "detail": "Review weather, disease, and field-triggered updates from a single hub."},
+                {"icon": "fa-list-check", "title": "Task reminders", "detail": "Stay aware of pending field jobs, due dates, and actions that need same-day attention."},
+                {"icon": "fa-sliders", "title": "Delivery controls", "detail": "Adjust which alerts are sent by email, SMS, and daily briefing preferences."},
+            ],
+            "feed_title": "Recent activity feed",
+            "feed_entries": notification_feed,
+        },
+        "upgrade_hub": {
+            "active_page": "upgrade_hub",
+            "title": "Upgrade Hub",
+            "badge": "Plans, perks, and premium access",
+            "description": "Compare plans, use wallet credits, and unlock more advanced AI tools from a dedicated upgrade surface.",
+            "stats": [
+                {"label": "Current plan", "value": current_plan['label']},
+                {"label": "Wallet support", "value": f"Rs {wallet_balance}"},
+                {"label": "Referral code", "value": user.referral_code or "Invite ready"},
+            ],
+            "panel_title": "Upgrade path",
+            "panel_text": "Choose the right plan for disease scans, AI insights, and premium monitoring without losing track of wallet savings.",
+            "actions": [
+                {"label": "View Plans", "href": "/subscriptions"},
+                {"label": "Refer and Earn", "href": "/refer-and-earn"},
+            ],
+            "cards": [
+                {"icon": "fa-crown", "title": "Plan comparison", "detail": "Review Free, Pro, and Premium access levels with pricing and feature lift."},
+                {"icon": "fa-bolt", "title": "Premium AI tools", "detail": "Unlock stronger AI workflows for scanning, insight generation, and advanced monitoring."},
+                {"icon": "fa-wallet", "title": "Wallet-assisted upgrade", "detail": "Apply available wallet balance during eligible subscription checkout flows."},
+            ],
+        },
+    }
+
+    module_page = module_map.get(module_key)
+    if module_page is None:
+        abort(404)
+    return module_page
+
+
+def render_village_module_page(module_key):
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+    if module_key in DISABLED_DASHBOARD_MODULES:
+        abort(404)
+    module_page = build_village_module_context(user, module_key)
+    return render_template("village_module.html", user=user, module=module_page)
+
+
+def resolve_rent_tractor_map_center(location_label):
+    location_text = str(location_label or "").strip().lower()
+    location_map = [
+        ("puri", {"lat": 19.8135, "lng": 85.8312, "zoom": 14}),
+        ("bhubaneswar", {"lat": 20.2961, "lng": 85.8245, "zoom": 14}),
+        ("cuttack", {"lat": 20.4625, "lng": 85.8828, "zoom": 13}),
+        ("odisha", {"lat": 20.2961, "lng": 85.8245, "zoom": 13}),
+    ]
+    for keyword, payload in location_map:
+        if keyword in location_text:
+            return payload
+    return {"lat": 19.8135, "lng": 85.8312, "zoom": 14}
+
+
+def resolve_dashboard_map_center(location_label, weather=None):
+    location_text = str(location_label or "").strip().lower()
+    fallback_options = [
+        ("delhi", {"lat": 28.6139, "lng": 77.2090, "zoom": 12}),
+        ("new delhi", {"lat": 28.6139, "lng": 77.2090, "zoom": 12}),
+        ("mumbai", {"lat": 19.0760, "lng": 72.8777, "zoom": 12}),
+        ("kolkata", {"lat": 22.5726, "lng": 88.3639, "zoom": 12}),
+        ("chennai", {"lat": 13.0827, "lng": 80.2707, "zoom": 12}),
+        ("bengaluru", {"lat": 12.9716, "lng": 77.5946, "zoom": 12}),
+        ("bangalore", {"lat": 12.9716, "lng": 77.5946, "zoom": 12}),
+        ("hyderabad", {"lat": 17.3850, "lng": 78.4867, "zoom": 12}),
+        ("pune", {"lat": 18.5204, "lng": 73.8567, "zoom": 12}),
+        ("bhubaneswar", {"lat": 20.2961, "lng": 85.8245, "zoom": 13}),
+        ("malkangiri", {"lat": 18.3646, "lng": 81.8880, "zoom": 12}),
+        ("koraput", {"lat": 18.8110, "lng": 82.7105, "zoom": 12}),
+        ("jeypore", {"lat": 18.8563, "lng": 82.5716, "zoom": 13}),
+        ("rayagada", {"lat": 19.1712, "lng": 83.4160, "zoom": 12}),
+        ("berhampur", {"lat": 19.3149, "lng": 84.7941, "zoom": 12}),
+        ("ganjam", {"lat": 19.3871, "lng": 85.0502, "zoom": 11}),
+        ("cuttack", {"lat": 20.4625, "lng": 85.8828, "zoom": 12}),
+        ("odisha", {"lat": 20.2961, "lng": 85.8245, "zoom": 13}),
+    ]
+    fallback_center = next((payload for keyword, payload in fallback_options if keyword in location_text), None)
+    if fallback_center is None:
+        fallback_center = {"lat": 20.5937, "lng": 78.9629, "zoom": 5}
+    weather_payload = weather if isinstance(weather, dict) else {}
+    lat_value = weather_payload.get("lat")
+    lon_value = weather_payload.get("lon")
+
+    try:
+        lat = float(lat_value)
+    except (TypeError, ValueError):
+        lat = None
+
+    try:
+        lng = float(lon_value)
+    except (TypeError, ValueError):
+        lng = None
+
+    if lat is None or lng is None:
+        geocoded_center = geocode_location_label(location_label)
+        if geocoded_center is not None:
+            return geocoded_center
+        lat = float(fallback_center["lat"])
+        lng = float(fallback_center["lng"])
+
+    return {
+        "lat": lat,
+        "lng": lng,
+        "zoom": int(fallback_center.get("zoom") or 14),
+    }
+
+
+def haversine_distance_km(lat1, lng1, lat2, lng2):
+    lat1_rad = radians(float(lat1))
+    lng1_rad = radians(float(lng1))
+    lat2_rad = radians(float(lat2))
+    lng2_rad = radians(float(lng2))
+    delta_lat = lat2_rad - lat1_rad
+    delta_lng = lng2_rad - lng1_rad
+    arc = sin(delta_lat / 2) ** 2 + cos(lat1_rad) * cos(lat2_rad) * sin(delta_lng / 2) ** 2
+    return 6371.0 * 2 * asin(sqrt(max(arc, 0)))
+
+
+def estimate_travel_minutes(distance_km):
+    return max(6, int(round(float(distance_km) * 3.4 + 6)))
+
+
+def format_travel_minutes(minutes):
+    if int(minutes) >= 60:
+        hours = round(float(minutes) / 60, 1)
+        return f"{hours:g} hr away"
+    return f"{int(minutes)} min away"
+
+
+def get_tractor_slot_options():
+    today = datetime.now().date()
+    labels = ["06:00 AM", "08:00 AM", "10:00 AM", "12:00 PM", "02:00 PM", "04:00 PM", "06:00 PM"]
+    options = []
+    for offset in range(3):
+        day_value = today + timedelta(days=offset)
+        for label in labels:
+            options.append(
+                {
+                    "value": f"{day_value.isoformat()}|{label}",
+                    "date": day_value.isoformat(),
+                    "label": label,
+                    "display": f"{day_value.strftime('%d %b')} • {label}",
+                }
+            )
+    return options
+
+
+def get_tractor_category_meta(category_id):
+    subtitle_map = {
+        "all": "Browse every machine near your farm",
+        "land_preparation": "Plough, Rotavator, Cultivator",
+        "sowing": "Seed Drill, Planter, Transplanter",
+        "harvesting": "Harvester, Reaper",
+        "transport": "Trolley, Tanker, Trailer",
+        "spraying": "Boom Sprayer, Drone",
+    }
+    title_map = {
+        "all": "All Services",
+        "land_preparation": "Land Preparation",
+        "sowing": "Sowing",
+        "harvesting": "Harvesting",
+        "transport": "Transport",
+        "spraying": "Spraying",
+    }
+    icon_map = {item["id"]: item["icon"] for item in TRACTOR_SERVICE_CATEGORIES}
+    return {
+        "id": category_id,
+        "title": title_map.get(category_id, "Service"),
+        "subtitle": subtitle_map.get(category_id, "Farm machinery"),
+        "icon": icon_map.get(category_id, "fa-tractor"),
+    }
+
+
+def parse_booking_date_value(raw_value):
+    raw = str(raw_value or "").strip()
+    if not raw:
+        return datetime.now().date()
+    try:
+        return datetime.strptime(raw, "%Y-%m-%d").date()
+    except ValueError:
+        return datetime.now().date()
+
+
+def build_tractor_machine_catalog(user, center_lat, center_lng, selected_category="all", sort_option="nearest", booking_date=None):
+    selected_date = booking_date or datetime.now().date()
+    busy_pairs = {
+        (item.machine_id, item.slot_label)
+        for item in TractorBooking.query.filter_by(booking_date=selected_date).filter(TractorBooking.booking_status != "cancelled").all()
+    }
+    slot_options = get_tractor_slot_options()
+    serialized = []
+
+    for machine in TRACTOR_MARKETPLACE_MACHINES:
+        if selected_category not in {"", "all"} and machine["category"] != selected_category:
+            continue
+
+        distance_km = haversine_distance_km(center_lat, center_lng, machine["lat"], machine["lng"])
+        minutes = estimate_travel_minutes(distance_km)
+        available_slots = [slot for slot in slot_options if slot["date"] == selected_date.isoformat() and (machine["id"], slot["label"]) not in busy_pairs]
+        serialized.append(
+            {
+                **machine,
+                "distance_km": round(distance_km, 1),
+                "distance_label": format_travel_minutes(minutes),
+                "distance_minutes": minutes,
+                "price_label": f"Rs {int(machine['price_per_hour'])}",
+                "availability_label": machine["availability"] if available_slots else "Busy for selected day",
+                "is_available": bool(available_slots),
+                "slot_count": len(available_slots),
+                "next_slot": available_slots[0]["display"] if available_slots else "Try another date",
+                "slot_options": available_slots,
+                "category_meta": get_tractor_category_meta(machine["category"]),
+            }
+        )
+
+    if sort_option == "price":
+        serialized.sort(key=lambda item: (int(item["price_per_hour"]), item["distance_minutes"], item["name"].lower()))
+    elif sort_option == "rating":
+        serialized.sort(key=lambda item: (-float(item["rating"]), item["distance_minutes"], item["name"].lower()))
+    else:
+        serialized.sort(key=lambda item: (item["distance_minutes"], -float(item["rating"]), item["name"].lower()))
+
+    return serialized
+
+
+def build_tractor_ai_recommendation(user, machines, selected_category):
+    crop_name = (user.crop_type or "your crop").strip()
+    if not machines:
+        return {
+            "title": "AI recommendation",
+            "detail": "No nearby machine found for this filter. Try switching service type or nearby distance priority.",
+        }
+
+    top_machine = machines[0]
+    category_title = get_tractor_category_meta(selected_category if selected_category != "all" else top_machine["category"])["title"]
+    crop_lower = crop_name.lower()
+    if any(keyword in crop_lower for keyword in ["rice", "paddy"]):
+        detail = f"For {crop_name}, {category_title.lower()} demand is usually time-sensitive. {top_machine['name']} looks strongest because it is {top_machine['distance_label'].lower()} with rating {top_machine['rating']}."
+    elif any(keyword in crop_lower for keyword in ["wheat", "maize"]):
+        detail = f"{crop_name.title()} fields benefit from scheduling the nearest machine first to avoid labor delays. {top_machine['name']} is the best quick-start option right now."
+    else:
+        detail = f"Nearest high-rated machine is {top_machine['name']}. Book the earliest slot to reduce waiting time and field idle hours."
+
+    return {"title": "AI recommendation", "detail": detail}
+
+
+def serialize_tractor_booking(booking):
+    return {
+        "id": booking.id,
+        "machine_name": booking.machine_name,
+        "category": get_tractor_category_meta(booking.category)["title"],
+        "booking_date": booking.booking_date.strftime("%d %b %Y"),
+        "slot_label": booking.slot_label,
+        "duration_hours": int(booking.duration_hours or 1),
+        "total_amount_inr": int(booking.total_amount_inr or 0),
+        "payment_mode": str(booking.payment_mode or "pay_later").replace("_", " ").title(),
+        "payment_status": str(booking.payment_status or "pending").title(),
+        "booking_status": str(booking.booking_status or "confirmed").title(),
+        "created_at": format_relative_time(booking.created_at),
+    }
+
+
+def build_tractor_service_types():
+    items = []
+    for category in TRACTOR_SERVICE_CATEGORIES:
+        if category["id"] == "all":
+            continue
+        meta = get_tractor_category_meta(category["id"])
+        sample_names = [item["name"] for item in TRACTOR_MARKETPLACE_MACHINES if item["category"] == category["id"]][:2]
+        items.append(
+            {
+                "id": meta["id"],
+                "title": meta["title"],
+                "subtitle": meta["subtitle"],
+                "icon": meta["icon"],
+                "sample_names": sample_names,
+            }
+        )
+    return items
+
+
+def get_tractor_machine_by_id(machine_id):
+    machine_key = str(machine_id or "").strip()
+    return next((item for item in TRACTOR_MARKETPLACE_MACHINES if item["id"] == machine_key), None)
+
+
+def build_tractor_marketplace_payload(user, category="all", sort_option="nearest", service_date=None, lat=None, lng=None):
+    location_label = (user.location or "Puri").strip() or "Puri"
+    map_center = resolve_rent_tractor_map_center(location_label)
+    center_lat = float(lat if lat is not None else map_center["lat"])
+    center_lng = float(lng if lng is not None else map_center["lng"])
+    booking_date = parse_booking_date_value(service_date)
+    machines = build_tractor_machine_catalog(
+        user,
+        center_lat,
+        center_lng,
+        selected_category=category,
+        sort_option=sort_option,
+        booking_date=booking_date,
+    )
+    markers = [
+        {
+            "lat": item["lat"],
+            "lng": item["lng"],
+            "title": item["name"],
+            "active": index == 0,
+            "category": item["category"],
+        }
+        for index, item in enumerate(machines[:8])
+    ]
+    return {
+        "category": category,
+        "sort": sort_option,
+        "service_date": booking_date.isoformat(),
+        "machines": machines,
+        "markers": markers,
+        "ai_recommendation": build_tractor_ai_recommendation(user, machines, category),
+        "map_center": {"lat": center_lat, "lng": center_lng, "zoom": map_center["zoom"]},
+    }
+
+
+def build_rent_tractor_page_context(user):
+    primary_farm = (
+        Farm.query.filter_by(user_id=user.id, is_primary=True).order_by(Farm.created_at.asc()).first()
+        or Farm.query.filter_by(user_id=user.id).order_by(Farm.created_at.asc()).first()
+    )
+    location_label = (
+        (getattr(primary_farm, "location", "") or "").strip()
+        or (getattr(user, "location", "") or "").strip()
+        or "Puri"
+    )
+    map_center = resolve_rent_tractor_map_center(location_label)
+    avatar_label = ((user.name or "Farmer").strip()[:1] or "F").upper()
+    selected_category = str(request.args.get("category") or "all").strip().lower() or "all"
+    if selected_category not in {item["id"] for item in TRACTOR_SERVICE_CATEGORIES}:
+        selected_category = "all"
+    sort_option = str(request.args.get("sort") or "nearest").strip().lower()
+    if sort_option not in {"nearest", "price", "rating"}:
+        sort_option = "nearest"
+    selected_date = parse_booking_date_value(request.args.get("service_date"))
+    user_lat = request.args.get("lat", type=float)
+    user_lng = request.args.get("lng", type=float)
+    center_lat = float(user_lat if user_lat is not None else map_center["lat"])
+    center_lng = float(user_lng if user_lng is not None else map_center["lng"])
+    machines = build_tractor_machine_catalog(user, center_lat, center_lng, selected_category=selected_category, sort_option=sort_option, booking_date=selected_date)
+    ai_recommendation = build_tractor_ai_recommendation(user, machines, selected_category)
+    service_types = build_tractor_service_types()
+    markers = [
+        {
+            "lat": item["lat"],
+            "lng": item["lng"],
+            "title": item["name"],
+            "active": index == 0,
+            "category": item["category"],
+        }
+        for index, item in enumerate(machines[:8])
+    ]
+    booking_history = [
+        serialize_tractor_booking(item)
+        for item in TractorBooking.query.filter_by(user_id=user.id).order_by(TractorBooking.created_at.desc()).limit(5).all()
+    ]
+    booking_stats = {
+        "active_bookings": TractorBooking.query.filter_by(user_id=user.id).filter(TractorBooking.booking_status.in_(["confirmed", "pending", "pending_payment"])).count(),
+        "marketplace_machines": len(TRACTOR_MARKETPLACE_MACHINES),
+        "categories": len(TRACTOR_SERVICE_CATEGORIES) - 1,
+    }
+
+    return {
+        "title": "Rent a Tractor",
+        "active_page": "rent_tractor",
+        "location_label": location_label,
+        "farm_name": primary_farm.name if primary_farm else "Primary Farm",
+        "map_center": {"lat": center_lat, "lng": center_lng, "zoom": map_center["zoom"]},
+        "markers": markers,
+        "service_types": service_types,
+        "categories": TRACTOR_SERVICE_CATEGORIES,
+        "sort_options": [
+            {"id": "nearest", "label": "Nearest"},
+            {"id": "price", "label": "Lowest price"},
+            {"id": "rating", "label": "Top rated"},
+        ],
+        "selected_category": selected_category,
+        "selected_sort": sort_option,
+        "selected_date": selected_date.isoformat(),
+        "slot_options": get_tractor_slot_options(),
+        "machines": machines,
+        "default_service_id": selected_category if selected_category != "all" else (service_types[0]["id"] if service_types else "land_preparation"),
+        "avatar_label": avatar_label,
+        "ai_recommendation": ai_recommendation,
+        "booking_history": booking_history,
+        "booking_stats": booking_stats,
+        "payment_enabled": bool(RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET),
+    }
+
+
 def build_dashboard_personalization(user, primary_farm, recommendations, task_summary):
     crop_name = (getattr(user, "crop_type", "") or "").strip() or "your crop"
     farm_name = getattr(primary_farm, "name", "") or "your farm"
@@ -5352,45 +6978,6 @@ def remember_notice(session_key, text, tone="success"):
     session[session_key] = {"text": text, "tone": tone}
 
 
-def get_csrf_token():
-    token = session.get("csrf_token")
-    if token and isinstance(token, str):
-        return token
-    token = uuid.uuid4().hex
-    session["csrf_token"] = token
-    return token
-
-
-@app.context_processor
-def inject_csrf_token():
-    return {"csrf_token": get_csrf_token}
-
-
-def csrf_matches(candidate):
-    expected = session.get("csrf_token") or ""
-    cand = str(candidate or "")
-    if not expected or not cand:
-        return False
-    try:
-        return hmac.compare_digest(str(expected), cand)
-    except Exception:
-        return False
-
-
-def require_csrf():
-    """Validate CSRF for form posts / JSON posts. Returns a response on failure, else None."""
-    token = request.form.get("csrf_token") if request.form else None
-    if not token:
-        token = request.headers.get("X-CSRFToken") or request.headers.get("X-CSRF-Token")
-
-    if csrf_matches(token):
-        return None
-
-    # JSON-friendly response for API callers.
-    if request.path.startswith("/api/") or request.is_json:
-        return jsonify({"success": False, "error": "CSRF validation failed. Please refresh and try again."}), 400
-    return render_template("login.html", error="Security check failed. Please refresh the page and try again."), 400
-
 def get_current_user():
     user = None
     if "user_id" in session:
@@ -5400,13 +6987,6 @@ def get_current_user():
         user = User.query.filter_by(name=session["user"]).first()
 
     if user is not None:
-        # Backward compatible: if older users don't have a trial start date, start it now.
-        if getattr(user, "trial_start_date", None) is None:
-            try:
-                user.trial_start_date = datetime.now(timezone.utc)
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
         ensure_user_farm_setup(user)
         get_or_create_user_preferences(user)
 
@@ -5661,91 +7241,47 @@ def build_recommendations(user, weather, soil, crop_health):
     crop_name = user.crop_type or "your crop"
     location_name = user.location or "your farm"
     recommendations: list[dict] = []
-    crop_key = normalize_crop_key(crop_name)
-    seen_titles = set()
-
-    def add_recommendation(title, detail):
-        key = normalize_disease_key(title)
-        if key in seen_titles:
-            return
-        seen_titles.add(key)
-        recommendations.append({"title": title, "detail": detail})
 
     if weather["rainfall_mm"] < 4:
-        add_recommendation(
-            "Plan a light irrigation cycle",
-            f"Rainfall near {location_name} is low, so maintain steady moisture for {crop_name} without sudden dry stress.",
+        recommendations.append(
+            {
+                "title": "Plan a light irrigation cycle",
+                "detail": f"Rainfall near {location_name} is low, so maintain moisture for {crop_name}.",
+            }
         )
 
     if float(soil.get("ph", 0)) < 6.1:
-        add_recommendation(
-            "Correct acidic soil balance",
-            "Add lime or mature organic compost to bring the root zone closer to a balanced pH range.",
+        recommendations.append(
+            {
+                "title": "Correct acidic soil balance",
+                "detail": "Add lime or organic compost to bring the field closer to a balanced pH range.",
+            }
         )
 
     if weather["temp"] >= 34:
-        add_recommendation(
-            "Protect plants from heat stress",
-            f"Shift irrigation, scouting, and spray work for {crop_name} to early morning or evening hours.",
+        recommendations.append(
+            {
+                "title": "Protect plants from heat stress",
+                "detail": "Shift irrigation and field inspection to cooler hours to reduce midday stress.",
+            }
         )
-
-    if float(weather.get("humidity", 0)) >= 78:
-        humidity_detail = {
-            "rice": "High humidity can quickly raise rice blast or blight pressure, so scout lower and middle leaves closely.",
-            "wheat": "Cool humid air can push rust pressure higher, so inspect stripe or pustule development early.",
-            "tomato": "Dense tomato canopy may trap moisture and trigger blight or mold spread, so improve airflow now.",
-            "potato": "Potato foliage can hold late blight pressure after humid nights, so inspect wet patches first.",
-            "maize": "Humid canopy conditions can accelerate blight and gray leaf spotting in denser sections.",
-        }.get(crop_key, "High humidity can increase disease pressure, so inspect leaf wetness zones and improve airflow.")
-        add_recommendation("Watch disease pressure this week", humidity_detail)
 
     if float(soil.get("nitrogen", 0)) < 45:
-        nitrogen_detail = {
-            "rice": "Rice tillers may weaken under low nitrogen, so plan a split nutrient top-up before the next irrigation cycle.",
-            "wheat": "Wheat can lose canopy strength under low nitrogen, so a balanced feed may help maintain vegetative growth.",
-            "tomato": "Tomato plants may lose vigor under low nitrogen, so support growth with a measured nutrient top-up.",
-            "potato": "Balanced nitrogen can help potato foliage recover without pushing too much soft growth.",
-            "maize": "Maize responds well to staged nitrogen support before visible pale-leaf stress expands.",
-        }.get(crop_key, f"{crop_name} will benefit from a balanced nutrient top-up within the next few days.")
-        add_recommendation("Boost nitrogen before the next cycle", nitrogen_detail)
-
-    crop_specific = {
-        "rice": (
-            "Keep standing water uniform",
-            "Avoid repeated dry-wet shock in paddy blocks and watch for patchy stress in low-lying zones.",
-        ),
-        "wheat": (
-            "Scout rust-prone leaves early",
-            "Check leaf strips on the cooler side of the field first, especially after dew-heavy mornings.",
-        ),
-        "tomato": (
-            "Open the tomato canopy",
-            "Prune crowded lower leaves and improve airflow so fungal pressure does not build up after irrigation.",
-        ),
-        "potato": (
-            "Inspect the lower potato canopy",
-            "Older leaves usually show spotting first, so remove infected foliage before lesions climb upward.",
-        ),
-        "maize": (
-            "Check dense maize rows",
-            "Walk humid inner rows first because disease and pest stress usually builds faster in shaded canopy sections.",
-        ),
-    }.get(crop_key)
-    if crop_specific:
-        add_recommendation(crop_specific[0], crop_specific[1])
-
-    if float(crop_health.get("score", 0)) < 72:
-        add_recommendation(
-            "Review weaker crop zones",
-            "Compare the live map and vegetation preview to inspect weak patches before the stress expands to nearby plants.",
-        )
-    else:
-        add_recommendation(
-            "Review satellite and NDVI zones",
-            "Use the live map and vegetation preview to confirm that all field blocks are staying even and stable.",
+        recommendations.append(
+            {
+                "title": "Boost nitrogen before the next cycle",
+                "detail": f"{crop_name} will benefit from a nutrient top-up within the next few days.",
+            }
         )
 
-    return list(recommendations[:4])  # type: ignore
+    recommendations.append(
+        {
+            "title": "Review satellite and NDVI zones",
+            "detail": "Compare the live map and vegetation preview to inspect weaker field patches early.",
+        }
+    )
+
+    return list(recommendations[:3])  # type: ignore
 
 
 def build_forecast_cards(weather, forecast_payload, onecall_payload):
@@ -6477,21 +8013,35 @@ def load_crop_disease_model():
 
     DISEASE_MODEL_CACHE["attempted"] = True
 
-    if torch is None or not CROP_DISEASE_MODEL_PATH.exists():
+    if torch is None:
         return None, None
 
     try:
         device = torch.device('cpu') # type: ignore
+        model_path = CROP_DISEASE_MODEL_PATH
+        labels_path = CROP_DISEASE_LABELS_PATH
+
+        if not model_path.exists():
+            fallback_model_path = Path(app.root_path) / "models" / "crop_disease_model.pth"
+            fallback_labels_path = Path(app.root_path) / "models" / "crop_disease_labels.json"
+            if fallback_model_path.exists():
+                model_path = fallback_model_path
+            if fallback_labels_path.exists():
+                labels_path = fallback_labels_path
+
+        if not model_path.exists():
+            return None, None
+
         model = torch.load( # type: ignore
-            str(CROP_DISEASE_MODEL_PATH),
+            str(model_path),
             map_location=device,
             weights_only=False,
         )
         model.eval()
         DISEASE_MODEL_CACHE["model"] = model
 
-        if CROP_DISEASE_LABELS_PATH.exists():
-            with CROP_DISEASE_LABELS_PATH.open("r", encoding="utf-8") as handle:
+        if labels_path.exists():
+            with labels_path.open("r", encoding="utf-8") as handle:
                 label_data = json.load(handle)
 
             if isinstance(label_data, list):
@@ -6535,13 +8085,18 @@ def predict_with_pytorch(image):
         conf_float = best_prob.item()
         confidence = int(conf_float * 100) # type: ignore
         predicted_class_name = labels[best_idx.item()] # type: ignore
+
+        if str(predicted_class_name or "").strip().lower() in {"plantvillage", "unknown", ""}:
+            return None, 0, None, 0
+        if confidence < 58:
+            return None, conf_float, predicted_class_name, confidence
         
         return class_index, conf_float, predicted_class_name, confidence
     except Exception as e:
         print(f"Error predicting with model: {e}")
         return None, 0, None, 0
 
-from disease_knowledge import get_disease_info
+from disease_knowledge import DISEASE_KNOWLEDGE, get_disease_info
 
 def select_disease_entry(crop_name, signals, seed=0):
     crop_key = normalize_crop_key(crop_name)
@@ -6785,6 +8340,787 @@ def extract_leaf_features(image, weather):
     )
 
     return features, signals, confidence
+
+
+def evaluate_leaf_upload(image):
+    analysis_image = ImageOps.fit(image.convert("RGB"), (256, 256))
+    image_array = np.asarray(analysis_image, dtype=np.float32)
+    hue, saturation, value = rgb_to_hsv_channels(image_array)
+    red = image_array[:, :, 0]
+    green = image_array[:, :, 1]
+    blue = image_array[:, :, 2]
+
+    background_mask = ((red > 246) & (green > 246) & (blue > 246)) | ((red < 8) & (green < 8) & (blue < 8))
+    subject_mask = ~background_mask
+    subject_pixels = max(int(np.count_nonzero(subject_mask)), 1)
+    total_pixels = int(subject_mask.size) or 1
+
+    def masked_ratio(mask):
+        return float(np.count_nonzero(mask & subject_mask)) / subject_pixels
+
+    green_mask = (
+        (hue > 0.20)
+        & (hue < 0.45)
+        & (saturation > 0.16)
+        & (value > 0.18)
+    )
+    brown_mask = (
+        (hue > 0.04)
+        & (hue < 0.15)
+        & (saturation > 0.22)
+        & (value > 0.14)
+        & (value < 0.82)
+    )
+    yellow_mask = (
+        (hue > 0.11)
+        & (hue < 0.19)
+        & (saturation > 0.18)
+        & (value > 0.40)
+    )
+    cool_mask = (
+        (hue > 0.48)
+        & (hue < 0.72)
+        & (saturation > 0.14)
+        & (value > 0.16)
+    )
+    gray_mask = (saturation < 0.12) & (value > 0.18) & (value < 0.90)
+    vivid_red_mask = (((hue < 0.04) | (hue > 0.94)) & (saturation > 0.28) & (value > 0.20))
+    plant_like_mask = green_mask | brown_mask | yellow_mask
+
+    subject_ratio = float(subject_pixels) / float(total_pixels)
+    plant_like_ratio = masked_ratio(plant_like_mask)
+    green_ratio = masked_ratio(green_mask)
+    warm_ratio = masked_ratio(brown_mask | yellow_mask)
+    cool_ratio = masked_ratio(cool_mask)
+    gray_ratio = masked_ratio(gray_mask)
+    red_ratio = masked_ratio(vivid_red_mask)
+    texture_value = float(image_array[subject_mask].std()) if np.any(subject_mask) else float(image_array.std())
+
+    score = 0.0
+    if subject_ratio >= 0.12:
+        score += 0.18
+    if subject_ratio >= 0.20:
+        score += 0.12
+    if plant_like_ratio >= 0.18:
+        score += 0.28
+    if plant_like_ratio >= 0.28:
+        score += 0.18
+    if green_ratio >= 0.07 or warm_ratio >= 0.16:
+        score += 0.14
+    if 18.0 <= texture_value <= 75.0:
+        score += 0.08
+    if cool_ratio <= 0.26:
+        score += 0.08
+    if gray_ratio <= 0.58:
+        score += 0.06
+    if red_ratio <= 0.22:
+        score += 0.06
+
+    if subject_ratio < 0.08:
+        score -= 0.25
+    if plant_like_ratio < 0.10:
+        score -= 0.22
+    if cool_ratio > 0.34 and plant_like_ratio < 0.16:
+        score -= 0.22
+    if gray_ratio > 0.62 and plant_like_ratio < 0.16:
+        score -= 0.20
+
+    leaf_score = clamp(int(round(score * 100)), 0, 100)
+    is_probable_leaf = (
+        subject_ratio >= 0.08
+        and plant_like_ratio >= 0.12
+        and leaf_score >= 42
+        and not (cool_ratio > 0.38 and plant_like_ratio < 0.18)
+        and not (gray_ratio > 0.68 and warm_ratio < 0.10 and green_ratio < 0.08)
+    )
+
+    return {
+        "is_probable_leaf": is_probable_leaf,
+        "leaf_score": leaf_score,
+        "subject_ratio": round(subject_ratio, 4),
+        "plant_like_ratio": round(plant_like_ratio, 4),
+        "green_ratio": round(green_ratio, 4),
+        "warm_ratio": round(warm_ratio, 4),
+        "cool_ratio": round(cool_ratio, 4),
+        "gray_ratio": round(gray_ratio, 4),
+        "texture_value": round(texture_value, 2),
+    }
+
+
+def build_masked_color_histogram(image):
+    analysis_image = ImageOps.fit(image.convert("RGB"), (192, 192))
+    image_array = np.asarray(analysis_image, dtype=np.float32)
+    leaf_mask = build_leaf_mask(image_array)
+
+    histograms = []
+    for channel_index in range(3):
+        channel = image_array[:, :, channel_index][leaf_mask]
+        if channel.size == 0:
+            channel = image_array[:, :, channel_index].reshape(-1)
+        histogram, _ = np.histogram(channel, bins=12, range=(0, 255), density=False)
+        histograms.append(histogram.astype(np.float32))
+
+    flat_hist = np.concatenate(histograms)
+    total = float(np.sum(flat_hist)) or 1.0
+    return flat_hist / total
+
+
+def compute_average_hash(image, hash_size=16):
+    grayscale = ImageOps.fit(image.convert("L"), (hash_size, hash_size))
+    pixels = np.asarray(grayscale, dtype=np.float32)
+    threshold = float(pixels.mean())
+    return (pixels > threshold).astype(np.uint8).flatten()
+
+
+def compute_difference_hash(image, hash_size=16):
+    grayscale = ImageOps.fit(image.convert("L"), (hash_size + 1, hash_size))
+    pixels = np.asarray(grayscale, dtype=np.float32)
+    diff = pixels[:, 1:] > pixels[:, :-1]
+    return diff.astype(np.uint8).flatten()
+
+
+def hash_similarity(left_hash, right_hash):
+    left = np.asarray(left_hash, dtype=np.uint8).flatten()
+    right = np.asarray(right_hash, dtype=np.uint8).flatten()
+    if left.size == 0 or right.size == 0 or left.size != right.size:
+        return 0.0
+    return float(np.mean(left == right))
+
+
+def score_feature_similarity(upload_features, ref_features):
+    weights = {
+        "brown_ratio": 1.4,
+        "yellow_ratio": 1.4,
+        "white_ratio": 1.2,
+        "dark_ratio": 1.1,
+        "gray_ratio": 1.0,
+        "green_ratio": 1.2,
+        "warm_spot_ratio": 1.0,
+        "lesion_ratio": 1.5,
+        "edge_damage": 0.9,
+        "stripe_ratio": 0.9,
+        "mottled_ratio": 0.8,
+        "texture_value": 0.02,
+    }
+    distance = 0.0
+    for key, weight in weights.items():
+        distance += abs(float(upload_features.get(key, 0.0)) - float(ref_features.get(key, 0.0))) * weight
+    return distance
+
+
+def load_disease_reference_signatures():
+    global DISEASE_REFERENCE_SIGNATURE_CACHE
+
+    if DISEASE_REFERENCE_SIGNATURE_CACHE is not None:
+        return DISEASE_REFERENCE_SIGNATURE_CACHE
+
+    neutral_weather = {"humidity": 68, "temp": 28}
+    signatures = []
+    dataset = load_disease_dataset()
+
+    for entry in dataset.values():
+        image_url = resolve_library_disease_image(slugify_crop_name(entry["name"]), entry["name"])
+        if not str(image_url).startswith("/static/library/diseases/"):
+            continue
+
+        file_path = Path(app.root_path) / str(image_url).lstrip("/")
+        if not file_path.exists():
+            continue
+
+        try:
+            ref_image = Image.open(file_path)
+            ref_image = ImageOps.exif_transpose(ref_image).convert("RGB")
+        except (UnidentifiedImageError, OSError, ValueError):
+            continue
+
+        ref_features, ref_signals, _ = extract_leaf_features(ref_image, neutral_weather)
+        signatures.append(
+            {
+                "entry": entry,
+                "features": ref_features,
+                "signals": set(ref_signals),
+                "histogram": build_masked_color_histogram(ref_image),
+                "average_hash": compute_average_hash(ref_image),
+                "difference_hash": compute_difference_hash(ref_image),
+                "image_url": image_url,
+            }
+        )
+
+    DISEASE_REFERENCE_SIGNATURE_CACHE = signatures
+    return DISEASE_REFERENCE_SIGNATURE_CACHE
+
+
+def build_reference_image_diagnosis(image, crop_name, weather):
+    dataset = load_disease_dataset()
+    healthy_entry = dataset.get("healthy")
+    upload_features, upload_signals, base_confidence = extract_leaf_features(image, weather)
+
+    if (
+        healthy_entry is not None
+        and float(upload_features.get("green_ratio", 0.0)) >= 0.58
+        and float(upload_features.get("lesion_ratio", 0.0)) <= 0.055
+        and float(upload_features.get("yellow_ratio", 0.0)) <= 0.04
+        and float(upload_features.get("white_ratio", 0.0)) <= 0.03
+        and float(upload_features.get("dark_ratio", 0.0)) <= 0.03
+    ):
+        return {
+            "disease": healthy_entry["name"],
+            "confidence": max(82, base_confidence),
+            "cause": str(healthy_entry.get("etiology", {}).get("pathogen") or "None"),
+            "symptoms": "; ".join(healthy_entry.get("symptoms", [])),
+            "organic_solution": "; ".join((healthy_entry.get("solution") or {}).get("organic", [])),
+            "chemical_solution": "; ".join((healthy_entry.get("solution") or {}).get("chemical", [])),
+            "prevention": list(healthy_entry.get("prevention", [])),
+            "diagnostic_reason": "Reference image matcher found strong healthy-leaf similarity.",
+            "risk_level": "Low",
+            "crop": crop_name or "Crop",
+            "analysis_source": "Reference image matcher",
+        }
+
+    upload_hist = build_masked_color_histogram(image)
+    upload_average_hash = compute_average_hash(image)
+    upload_difference_hash = compute_difference_hash(image)
+    ranked_matches = []
+
+    for signature in load_disease_reference_signatures():
+        entry = signature["entry"]
+        feature_distance = score_feature_similarity(upload_features, signature["features"])
+        histogram_similarity = float(np.dot(upload_hist, signature["histogram"]))
+        average_hash_similarity = hash_similarity(upload_average_hash, signature["average_hash"])
+        difference_hash_similarity = hash_similarity(upload_difference_hash, signature["difference_hash"])
+        hash_score = (average_hash_similarity + difference_hash_similarity) / 2.0
+        signal_overlap = len(set(upload_signals) & set(signature["signals"]))
+        score = signal_overlap * 2.6 + histogram_similarity * 7.0 + hash_score * 8.0 - feature_distance * 3.4
+        ranked_matches.append(
+            {
+                "entry": entry,
+                "score": score,
+                "signal_overlap": signal_overlap,
+                "histogram_similarity": histogram_similarity,
+                "feature_distance": feature_distance,
+                "hash_similarity": hash_score,
+            }
+        )
+
+    ranked_matches.sort(key=lambda item: item["score"], reverse=True)
+    best_match = ranked_matches[0] if ranked_matches else None
+    second_match = ranked_matches[1] if len(ranked_matches) > 1 else None
+
+    if best_match is None:
+        return None
+
+    confidence = clamp(
+        int(
+            46
+            + best_match["signal_overlap"] * 8
+            + best_match["histogram_similarity"] * 35
+            + best_match["hash_similarity"] * 18
+            + max(0.0, 1.05 - best_match["feature_distance"]) * 22
+        ),
+        60,
+        94,
+    )
+    score_margin = best_match["score"] - (second_match["score"] if second_match is not None else -999.0)
+    if (
+        best_match["score"] < 2.35
+        or best_match["hash_similarity"] < 0.58
+        or (second_match is not None and score_margin < 0.55 and best_match["hash_similarity"] < 0.76)
+    ):
+        return None
+
+    matched_entry = best_match["entry"]
+    return {
+        "disease": matched_entry["name"],
+        "confidence": max(confidence, base_confidence - 3),
+        "cause": str(matched_entry.get("etiology", {}).get("pathogen") or "Reference image match"),
+        "symptoms": "; ".join(matched_entry.get("symptoms", [])),
+        "organic_solution": "; ".join((matched_entry.get("solution") or {}).get("organic", [])),
+        "chemical_solution": "; ".join((matched_entry.get("solution") or {}).get("chemical", [])),
+        "prevention": list(matched_entry.get("prevention", [])),
+        "diagnostic_reason": "Uploaded image matched the closest disease reference image in the dataset.",
+        "risk_level": "Low" if confidence >= 86 else "Medium" if confidence >= 72 else "High",
+        "crop": crop_name or "Crop",
+        "analysis_source": "Reference image matcher",
+    }
+
+
+def build_dataset_entry_diagnosis(entry, crop_name, analysis_source, diagnostic_reason, confidence_override=None):
+    solution = entry.get("solution") or {}
+    confidence_value = parse_percentage_value(entry.get("confidence"), 78)
+    return {
+        "disease": entry["name"],
+        "confidence": confidence_override if confidence_override is not None else confidence_value,
+        "cause": str(entry.get("etiology", {}).get("pathogen") or "Dataset diagnosis"),
+        "symptoms": "; ".join(entry.get("symptoms", [])),
+        "organic_solution": "; ".join(solution.get("organic", [])),
+        "chemical_solution": "; ".join(solution.get("chemical", [])),
+        "prevention": list(entry.get("prevention", [])),
+        "etiology": dict(entry.get("etiology") or {}),
+        "diagnostic_reason": diagnostic_reason,
+        "risk_level": "Low" if confidence_value >= 86 else "Medium" if confidence_value >= 72 else "High",
+        "crop": crop_name or "Crop",
+        "analysis_source": analysis_source,
+        "disease_dataset_found": True,
+        "allow_non_dataset_result": False,
+    }
+
+
+def build_filename_dataset_diagnosis(filename, crop_name):
+    filename_stem = Path(str(filename or "").strip()).stem
+    if not filename_stem:
+        return None
+
+    normalized_name = normalize_disease_key(filename_stem.replace("_", " ").replace("-", " "))
+    meaningful_tokens = [
+        token for token in re.findall(r"[a-z0-9]+", normalized_name)
+        if token not in {"img", "image", "photo", "leaf", "plant", "crop", "scan", "upload"}
+    ]
+    if len(meaningful_tokens) < 1:
+        return None
+
+    dataset_entry = find_disease_dataset_entry(normalized_name)
+    if dataset_entry is None:
+        return None
+
+    entry_key = normalize_disease_key(dataset_entry["name"])
+    similarity_ratio = SequenceMatcher(None, normalized_name, entry_key).ratio()
+    token_overlap = len(set(meaningful_tokens) & set(re.findall(r"[a-z0-9]+", entry_key)))
+    if token_overlap < 1 and similarity_ratio < 0.9:
+        return None
+
+    diagnosis = build_dataset_entry_diagnosis(
+        dataset_entry,
+        crop_name,
+        "Filename dataset match",
+        "Uploaded file name closely matched a disease name in disease_data.json.",
+        confidence_override=max(parse_percentage_value(dataset_entry.get("confidence"), 80), 80),
+    )
+    diagnosis["matched_filename"] = str(filename)
+    return diagnosis
+
+
+def load_kaggle_reference_signatures():
+    global KAGGLE_REFERENCE_SIGNATURE_CACHE
+
+    if KAGGLE_REFERENCE_SIGNATURE_CACHE is not None:
+        return KAGGLE_REFERENCE_SIGNATURE_CACHE
+
+    signatures = []
+    neutral_weather = {"humidity": 68, "temp": 28}
+    seen_files = set()
+
+    for dataset_dir in KAGGLE_REFERENCE_DATASET_DIRS:
+        if not dataset_dir.exists():
+            continue
+
+        try:
+            label_dirs = [item for item in dataset_dir.iterdir() if item.is_dir()]
+        except OSError:
+            continue
+
+        for label_dir in label_dirs:
+            image_paths = [
+                path for path in sorted(label_dir.iterdir())
+                if path.is_file() and path.suffix.lower() in ALLOWED_IMAGE_SUFFIXES
+            ][:3]
+            for image_path in image_paths:
+                if image_path in seen_files:
+                    continue
+                seen_files.add(image_path)
+
+                try:
+                    ref_image = Image.open(image_path)
+                    ref_image = ImageOps.exif_transpose(ref_image).convert("RGB")
+                except (UnidentifiedImageError, OSError, ValueError):
+                    continue
+
+                ref_features, ref_signals, _ = extract_leaf_features(ref_image, neutral_weather)
+                label_name = label_dir.name
+                info = dict(DISEASE_KNOWLEDGE.get(label_name, DISEASE_KNOWLEDGE["DEFAULT"]))
+                disease_name = str(info.get("disease") or label_name).strip() or label_name
+                dataset_entry = find_disease_dataset_entry(disease_name)
+                signatures.append(
+                    {
+                        "label": label_name,
+                        "info": info,
+                        "disease_name": disease_name,
+                        "dataset_entry": dataset_entry,
+                        "features": ref_features,
+                        "signals": set(ref_signals),
+                        "histogram": build_masked_color_histogram(ref_image),
+                        "average_hash": compute_average_hash(ref_image),
+                        "difference_hash": compute_difference_hash(ref_image),
+                    }
+                )
+
+    KAGGLE_REFERENCE_SIGNATURE_CACHE = signatures
+    return KAGGLE_REFERENCE_SIGNATURE_CACHE
+
+
+def build_kaggle_reference_diagnosis(image, crop_name, weather):
+    upload_features, upload_signals, base_confidence = extract_leaf_features(image, weather)
+    upload_hist = build_masked_color_histogram(image)
+    upload_average_hash = compute_average_hash(image)
+    upload_difference_hash = compute_difference_hash(image)
+    ranked_matches = []
+
+    for signature in load_kaggle_reference_signatures():
+        feature_distance = score_feature_similarity(upload_features, signature["features"])
+        histogram_similarity = float(np.dot(upload_hist, signature["histogram"]))
+        average_hash_similarity = hash_similarity(upload_average_hash, signature["average_hash"])
+        difference_hash_similarity = hash_similarity(upload_difference_hash, signature["difference_hash"])
+        hash_score = (average_hash_similarity + difference_hash_similarity) / 2.0
+        signal_overlap = len(set(upload_signals) & set(signature["signals"]))
+        score = signal_overlap * 2.2 + histogram_similarity * 6.8 + hash_score * 7.8 - feature_distance * 3.1
+        ranked_matches.append(
+            {
+                "signature": signature,
+                "score": score,
+                "signal_overlap": signal_overlap,
+                "histogram_similarity": histogram_similarity,
+                "feature_distance": feature_distance,
+                "hash_similarity": hash_score,
+            }
+        )
+
+    ranked_matches.sort(key=lambda item: item["score"], reverse=True)
+    best_match = ranked_matches[0] if ranked_matches else None
+    second_match = ranked_matches[1] if len(ranked_matches) > 1 else None
+    if best_match is None:
+        return None
+
+    score_margin = best_match["score"] - (second_match["score"] if second_match is not None else -999.0)
+    if (
+        best_match["score"] < 1.9
+        or best_match["hash_similarity"] < 0.54
+        or (second_match is not None and score_margin < 0.45 and best_match["hash_similarity"] < 0.7)
+    ):
+        return None
+
+    confidence = clamp(
+        int(
+            42
+            + best_match["signal_overlap"] * 8
+            + best_match["histogram_similarity"] * 32
+            + best_match["hash_similarity"] * 18
+            + max(0.0, 1.02 - best_match["feature_distance"]) * 20
+        ),
+        58,
+        92,
+    )
+    signature = best_match["signature"]
+    dataset_entry = signature.get("dataset_entry")
+    if dataset_entry is not None:
+        diagnosis = build_dataset_entry_diagnosis(
+            dataset_entry,
+            crop_name,
+            "Kaggle reference dataset",
+            "Uploaded image matched the closest PlantVillage/Kaggle-style disease reference.",
+            confidence_override=max(confidence, base_confidence - 2),
+        )
+        diagnosis["kaggle_label"] = signature["label"]
+        return diagnosis
+
+    info = dict(signature.get("info") or {})
+    disease_name = str(info.get("disease") or signature["label"]).strip() or signature["label"]
+    return {
+        "disease": disease_name,
+        "confidence": max(confidence, base_confidence - 2),
+        "cause": info.get("cause") or "Matched with the closest Kaggle disease reference image.",
+        "symptoms": info.get("symptoms") or "Visible disease markers matched a Kaggle reference leaf.",
+        "organic_solution": info.get("organic_solution") or info.get("recommendation") or "Start with non-chemical field hygiene and scouting.",
+        "chemical_solution": info.get("solution") or "Use a labeled crop protection spray only after confirming the disease.",
+        "prevention": [info.get("recommendation") or "Continue close monitoring and compare with more samples."],
+        "diagnostic_reason": "Uploaded image matched the closest PlantVillage/Kaggle-style disease reference.",
+        "risk_level": "Low" if confidence >= 86 else "Medium" if confidence >= 72 else "High",
+        "crop": crop_name or "Crop",
+        "analysis_source": "Kaggle reference dataset",
+        "kaggle_label": signature["label"],
+        "disease_dataset_found": False,
+        "allow_non_dataset_result": True,
+    }
+
+
+def build_kaggle_dataset_diagnosis(image, crop_name, weather):
+    class_index, conf_float, class_name, confidence_pct = predict_with_pytorch(image)
+    if class_name is not None and conf_float is not None and int(confidence_pct or 0) >= 58:
+        disease_info = get_disease_info(class_index, conf_float)
+        dataset_entry = find_disease_dataset_entry(disease_info["disease"])
+        if dataset_entry is not None:
+            diagnosis = build_dataset_entry_diagnosis(
+                dataset_entry,
+                crop_name,
+                "Kaggle model",
+                f"PlantVillage-trained model detected {class_name} ({confidence_pct}%).",
+                confidence_override=confidence_pct,
+            )
+            diagnosis["kaggle_label"] = class_name
+            return diagnosis
+
+        if disease_info.get("disease") and disease_info.get("disease") != "Unknown Disease":
+            return {
+                "disease": disease_info["disease"],
+                "confidence": confidence_pct,
+                "cause": disease_info.get("cause"),
+                "symptoms": disease_info.get("symptoms", ""),
+                "organic_solution": disease_info.get("organic_solution") or disease_info.get("recommendation", ""),
+                "chemical_solution": disease_info.get("solution"),
+                "prevention": [disease_info.get("recommendation", "")],
+                "diagnostic_reason": f"PlantVillage-trained model detected {class_name} ({confidence_pct}%).",
+                "risk_level": "Low" if int(confidence_pct) > 85 else "Medium" if int(confidence_pct) > 70 else "High",
+                "best_product": disease_info.get("best_product", ""),
+                "product_link": disease_info.get("product_link", ""),
+                "crop": crop_name or "Crop",
+                "analysis_source": "Kaggle model",
+                "kaggle_label": class_name,
+                "disease_dataset_found": False,
+                "allow_non_dataset_result": True,
+            }
+
+    return build_kaggle_reference_diagnosis(image, crop_name, weather)
+
+
+def ask_groq_vision_diagnosis(image_bytes, filename, crop_name, weather):
+    if not GROQ_API_KEY:
+        return None
+
+    suffix = Path(str(filename or "")).suffix.lower() or ".jpg"
+    mime_type = {
+        ".png": "image/png",
+        ".webp": "image/webp",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+    }.get(suffix, "image/jpeg")
+    image_data_url = f"data:{mime_type};base64,{b64encode(image_bytes).decode('ascii')}"
+    weather_context = (
+        f"Humidity {weather.get('humidity')}%, temp {weather.get('temp')} C"
+        if isinstance(weather, dict) else "Weather unknown"
+    )
+
+    response_data = fetch_json(
+        "https://api.groq.com/openai/v1/chat/completions",
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json_body={
+            "model": GROQ_VISION_MODEL,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a plant disease vision assistant. Return only raw JSON.",
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                f"Crop context: {crop_name or 'Crop'}. {weather_context}. "
+                                "Return strict JSON with keys disease, confidence, symptoms, cause, "
+                                "organic_solution, chemical_solution, prevention, diagnostic_reason, risk_level, crop."
+                            ),
+                        },
+                        {"type": "image_url", "image_url": {"url": image_data_url}},
+                    ],
+                },
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"},
+        },
+    )
+    if not isinstance(response_data, dict):
+        return None
+
+    choices = response_data.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return None
+
+    message = choices[0].get("message") if isinstance(choices[0], dict) else None
+    content = message.get("content") if isinstance(message, dict) else ""
+    if isinstance(content, list):
+        content = "".join(
+            str(item.get("text") or "")
+            for item in content
+            if isinstance(item, dict)
+        )
+    content = str(content or "").strip()
+    if not content:
+        return None
+
+    try:
+        diagnosis = json.loads(content)
+    except (TypeError, ValueError):
+        return None
+
+    disease_name = str(diagnosis.get("disease") or "").strip()
+    if not disease_name:
+        return None
+
+    dataset_entry = find_disease_dataset_entry(disease_name)
+    if dataset_entry is not None:
+        diagnosis["disease"] = dataset_entry["name"]
+        diagnosis["disease_dataset_found"] = True
+        diagnosis["allow_non_dataset_result"] = False
+    else:
+        diagnosis["disease_dataset_found"] = False
+        diagnosis["allow_non_dataset_result"] = True
+
+    prevention = diagnosis.get("prevention", [])
+    if isinstance(prevention, str):
+        prevention = [tip.strip() for tip in re.split(r"[;\n]+", prevention) if tip.strip()]
+    diagnosis["prevention"] = prevention if isinstance(prevention, list) else []
+    diagnosis["confidence"] = clamp(parse_percentage_value(diagnosis.get("confidence"), 68), 50, 96)
+    diagnosis["analysis_source"] = "Groq vision"
+    diagnosis["crop"] = diagnosis.get("crop") or crop_name or "Crop"
+    diagnosis["diagnostic_reason"] = diagnosis.get("diagnostic_reason") or "Groq reviewed the uploaded leaf image."
+    return diagnosis
+
+
+def build_no_close_match_response(crop_name, preview_url):
+    crop_label = str(crop_name or "Crop").strip() or "Crop"
+    return {
+        "success": True,
+        "disease": "Needs Expert Review",
+        "confidence": 54,
+        "report_title": "Needs Expert Review",
+        "confidence_display": "54%",
+        "cause": "The uploaded image needs a clearer crop-focused diagnosis review.",
+        "symptoms": "Current scan signals are mixed, so a more precise disease confirmation is needed.",
+        "organic_solution": "Retake one clear close-up leaf image in daylight from the affected area only.",
+        "chemical_solution": "Avoid full-field chemical spraying until the disease is confirmed.",
+        "prevention": [
+            "Upload a single affected leaf with a plain background.",
+            "Avoid blurry, dark, or distant crop photos.",
+            "Compare the leaf with the disease guide before treatment."
+        ],
+        "prevention_tips": [
+            "Upload a single affected leaf with a plain background.",
+            "Avoid blurry, dark, or distant crop photos.",
+            "Compare the leaf with the disease guide before treatment."
+        ],
+        "etiology": {
+            "pathogen": "Not confirmed from current dataset",
+            "environment": "Needs a clearer disease-focused image",
+            "transmission": "Unknown until a close match is found"
+        },
+        "symptoms_list": [
+            "Image did not clearly match any supported disease reference.",
+            "Another disease could look visually similar from this angle."
+        ],
+        "organic_solutions": [
+            "Retake a closer image before making treatment decisions."
+        ],
+        "chemical_solutions": [
+            "Do not start broad spraying until the diagnosis is more reliable."
+        ],
+        "do_now_checklist": [
+            "Capture one close-up of the most affected leaf.",
+            "Use daylight and avoid shadow or blur.",
+            "Upload the new image and compare the result again."
+        ],
+        "suggested_products": [],
+        "recommended_product": None,
+        "best_product": "",
+        "product_link": "/market",
+        "image_url": preview_url,
+        "crop": crop_label,
+        "analysis_source": "Expert review fallback",
+        "diagnostic_reason": "A safer review fallback was shown instead of forcing the wrong disease result.",
+        "why_this_result": "A safer review fallback was shown instead of forcing the wrong disease result.",
+        "risk_level": "Medium",
+        "consult_expert": "Capture a clearer leaf image or verify manually before applying disease-specific treatment.",
+        "matched_symptoms": [],
+        "disease_dataset_found": False,
+        "library_url": "/library/diseases",
+    }
+
+
+def build_invalid_leaf_upload_response(crop_name, preview_url, leaf_validation=None):
+    response = build_no_close_match_response(crop_name, preview_url)
+    response.update(
+        {
+            "disease": "Leaf Image Required",
+            "confidence": 18,
+            "report_title": "Leaf Image Required",
+            "confidence_display": "18%",
+            "cause": "The uploaded photo does not appear to be a crop leaf, so disease detection was stopped early.",
+            "symptoms": "This image looks more like a non-leaf object or a mixed scene than a close-up crop leaf.",
+            "organic_solution": "Upload one clear close-up of a single affected leaf in daylight with a simple background.",
+            "chemical_solution": "Do not apply disease-specific spray based on this upload.",
+            "prevention": [
+                "Capture only the affected leaf, not tools, soil sensors, or packaging.",
+                "Keep the leaf centered and fill most of the frame.",
+                "Retake the photo in natural light before running the scan again."
+            ],
+            "prevention_tips": [
+                "Capture only the affected leaf, not tools, soil sensors, or packaging.",
+                "Keep the leaf centered and fill most of the frame.",
+                "Retake the photo in natural light before running the scan again."
+            ],
+            "symptoms_list": [
+                "Leaf validator could not confirm a crop-leaf subject in the uploaded image.",
+                "The scan was blocked to avoid a false disease prediction."
+            ],
+            "organic_solutions": [
+                "Retake a close crop-leaf image before relying on AI disease output."
+            ],
+            "chemical_solutions": [
+                "Wait for a valid leaf scan or manual confirmation before treatment."
+            ],
+            "do_now_checklist": [
+                "Pick one affected leaf and hold it against a plain background.",
+                "Make sure the leaf is in focus and fills most of the frame.",
+                "Upload the new image and scan again."
+            ],
+            "analysis_source": "Leaf image validator",
+            "diagnostic_reason": "The upload was rejected before disease matching because it did not look like a crop leaf image.",
+            "why_this_result": "The upload was rejected before disease matching because it did not look like a crop leaf image.",
+            "risk_level": "Low",
+            "consult_expert": "Retake the image with a clear leaf close-up first, then verify in the field if symptoms persist.",
+        }
+    )
+    if isinstance(leaf_validation, dict):
+        response["leaf_validation"] = leaf_validation
+    return response
+
+
+def save_scan_history(user, diagnosis):
+    new_history = DiseaseHistory(
+        user_id=user.id,
+        crop_type=diagnosis.get("crop", user.crop_type or "Crop"),
+        detected_disease=diagnosis.get("disease", "Unknown"),
+        confidence=int(parse_percentage_value(diagnosis.get("confidence"), 80)),
+    )
+    db.session.add(new_history)
+    db.session.commit()
+
+
+def build_scan_response_payload(diagnosis, preview_url):
+    chemical_solution = diagnosis.get("chemical_solution") or diagnosis.get("solution") or ""
+    organic_solution = diagnosis.get("organic_solution") or ""
+    prevention = diagnosis.get("prevention", [])
+    if isinstance(prevention, str):
+        prevention = [prevention]
+    return {
+        "success": True,
+        "disease": diagnosis.get("disease"),
+        "confidence": parse_percentage_value(diagnosis.get("confidence"), 80),
+        "cause": diagnosis.get("cause"),
+        "symptoms": diagnosis.get("symptoms"),
+        "organic_solution": organic_solution,
+        "chemical_solution": chemical_solution,
+        "prevention": prevention,
+        "explanation_hinglish": diagnosis.get("explanation_hinglish"),
+        "diagnostic_reason": diagnosis.get("diagnostic_reason", "Visual cues identified."),
+        "risk_level": diagnosis.get("risk_level"),
+        "image_url": preview_url,
+        "crop": diagnosis.get("crop", "Crop"),
+        "analysis_source": diagnosis.get("analysis_source", "AI diagnosis"),
+        "best_product": diagnosis.get("best_product", ""),
+        "product_link": diagnosis.get("product_link", ""),
+    }
 
 
 def score_disease_entry_from_features(entry, features, weather, signals):
@@ -7064,8 +9400,7 @@ def build_disease_page_context(
     error_message=None,
 ):
     result = diagnosis or build_default_disease_result(user, weather)
-    matched_entry = get_best_disease_library_entry(result.get("disease"), result.get("crop") or getattr(user, "crop_type", ""))
-    image_url = preview_url or (matched_entry.get("image") if matched_entry else "") or build_disease_sample_data_uri(result["disease"])
+    image_url = preview_url or build_disease_sample_data_uri(result["disease"])
 
     return {
         "location_label": user.location or weather["city"],
@@ -7265,14 +9600,21 @@ def build_dashboard_context(user):
     primary_farm, farms = ensure_user_farm_setup(user)
     task_summary = build_task_summary(user)
     weather = fetch_weather_bundle(user.location or "Bhubaneswar")
+    alert_context = sync_user_alerts(user)
+    dashboard_map_center = resolve_dashboard_map_center(
+        (primary_farm.location if primary_farm and primary_farm.location else user.location) or "Bhubaneswar",
+        weather,
+    )
     soil = build_soil_profile(user, weather)
     crop_health = build_crop_health(user, weather, soil)
     recommendations = build_recommendations(user, weather, soil, crop_health)
-    alerts = build_alerts(weather, soil, crop_health)
+    alerts = [serialize_alert_record(item) for item in alert_context["active_alerts"][:3]]
+    if not alerts:
+        alerts = build_alerts(weather, soil, crop_health)
 
     ndvi_params = {}
-    if weather["lat"] is not None and weather["lon"] is not None:
-        ndvi_params = {"lat": weather["lat"], "lon": weather["lon"]}  # type: ignore
+    if dashboard_map_center["lat"] is not None and dashboard_map_center["lng"] is not None:
+        ndvi_params = {"lat": dashboard_map_center["lat"], "lon": dashboard_map_center["lng"]}  # type: ignore
 
     return {
         "weather": weather,
@@ -7281,9 +9623,9 @@ def build_dashboard_context(user):
         "recommendations": recommendations,
         "alerts": alerts,
         "yield_prediction": crop_health["yield_prediction"],
-        "lat": weather["lat"],
-        "lon": weather["lon"],
-        "map_embed_url": build_map_embed_url(user.location, weather["lat"], weather["lon"]),
+        "lat": dashboard_map_center["lat"],
+        "lon": dashboard_map_center["lng"],
+        "map_embed_url": build_map_embed_url(user.location, dashboard_map_center["lat"], dashboard_map_center["lng"]),
         "ndvi_preview_url": "/dashboard/ndvi-preview"
         + (f"?{urlencode(ndvi_params)}" if ndvi_params else ""),
         "primary_farm_name": primary_farm.name if primary_farm else "Primary Farm",
@@ -7300,7 +9642,9 @@ def build_dashboard_context(user):
 def build_farms_page_context(user):
     primary_farm, farms = ensure_user_farm_setup(user)
     task_summary = build_task_summary(user, limit=12)
-    weather = fetch_weather_bundle((primary_farm.location if primary_farm else user.location) or "Bhubaneswar")
+    map_location = (primary_farm.location if primary_farm and primary_farm.location else user.location) or "Bhubaneswar"
+    weather = fetch_weather_bundle(map_location)
+    map_center = resolve_dashboard_map_center(map_location, weather)
 
     farm_cards = []
     for index, farm in enumerate(farms, start=1):
@@ -7327,6 +9671,12 @@ def build_farms_page_context(user):
 
     return {
         "weather": weather,
+        "primary_map": {
+            "lat": map_center["lat"],
+            "lng": map_center["lng"],
+            "zoom": map_center["zoom"],
+            "location": map_location,
+        },
         "primary_farm": primary_farm,
         "farm_cards": farm_cards,
         "task_summary": task_summary,
@@ -7353,39 +9703,18 @@ def login():
     if request.method == "POST":
         csrf_resp = require_csrf()
         if csrf_resp is not None:
-<<<<<<< HEAD
             return render_template("login.html", error="Security check failed. Please refresh and try again.")
 
         email = (request.form.get("email") or "").strip().lower()
-=======
-            return csrf_resp
-
-        if rate_limit_exceeded(f"login:{_client_ip()}", max_hits=10, window_seconds=5 * 60):
-            return render_template("login.html", error="Too many login attempts. Please wait a few minutes and try again.")
-
-        email = (request.form.get("email") or "").strip()
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         password = request.form.get("password") or ""
 
         # Shortcut: allow admin credentials on the normal user login form.
         if email.strip().lower() == ADMIN_EMAIL and check_admin_password(password):
             session["admin_authed"] = True
             session["admin_email"] = ADMIN_EMAIL
-<<<<<<< HEAD
             return redirect("/admin")
 
         user = User.query.filter(User.email.ilike(email)).first()
-=======
-            try:
-                admin_row = AdminUser.query.filter_by(email=ADMIN_EMAIL).first()  # type: ignore
-                if admin_row is not None:
-                    session["admin_id"] = int(admin_row.id)
-            except Exception:
-                pass
-            return redirect("/admin")
-
-        user = User.query.filter_by(email=email).first()
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         password_ok, upgraded = check_user_password(user, password)
 
         if user and password_ok:
@@ -7406,14 +9735,7 @@ def register():
     if request.method == "POST":
         csrf_resp = require_csrf()
         if csrf_resp is not None:
-<<<<<<< HEAD
             return render_template("register.html", error="Security check failed. Please refresh and try again.")
-=======
-            return csrf_resp
-
-        if rate_limit_exceeded(f"register:{_client_ip()}", max_hits=8, window_seconds=10 * 60):
-            return render_template("register.html", error="Too many attempts. Please wait and try again.")
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
         name = (request.form.get("name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
@@ -7446,15 +9768,10 @@ def register():
                     return render_template("register.html", error=str(exc))
 
         # Store in session for OTP verification
-        password_hash = hash_password(password)
         session["pending_user"] = {
             "name": name,
             "email": email,
-<<<<<<< HEAD
             "password_hash": hash_password(password),
-=======
-            "password_hash": password_hash,
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
             "location": location,
             "crop": crop,
             "phone": phone,
@@ -7463,7 +9780,6 @@ def register():
         }
         
         otp = generate_otp()
-<<<<<<< HEAD
         email_sent, failure_reason = send_otp_email(email, otp)
         update_otp_session_state(
             otp,
@@ -7472,23 +9788,6 @@ def register():
             email_sent=email_sent,
             notice=build_otp_notice(email_sent, failure_reason),
         )
-=======
-        session["otp_sig"] = compute_otp_signature(otp, email, "register")
-        session["otp_target"] = email
-        session["otp_type"] = "register"
-        session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
-        session["otp_attempts"] = 0
-        
-        # Send Real Email
-        email_sent = send_otp_email(email, otp)
-        if not email_sent:
-            # Developer-friendly fallback: show OTP on-screen when SMTP isn't configured.
-            # Never enable this in production.
-            if (os.getenv("FLASK_ENV") or "").strip().lower() != "production":
-                session["otp_dev_code"] = otp
-                session["otp_notice"] = "Email service is not configured. Use the on-screen development code to verify."
-        
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         return redirect("/verify-otp")
 
     return render_template("register.html")
@@ -7496,24 +9795,18 @@ def register():
 
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
-<<<<<<< HEAD
     if (
         "otp" not in session
         or session.get("otp_type") != "register"
         or "pending_user" not in session
     ):
         clear_otp_session_state()
-=======
-    if "otp_sig" not in session:
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
         return redirect("/login")
         
     error = None
-    notice = session.pop("otp_notice", None)
     if request.method == "POST":
         csrf_resp = require_csrf()
         if csrf_resp is not None:
-<<<<<<< HEAD
             return render_template("verify_otp.html", **get_otp_page_context(error="Security check failed. Please refresh and try again."))
 
         user_otp = re.sub(r"\D", "", request.form.get("otp", ""))
@@ -7523,75 +9816,11 @@ def verify_otp():
             error = "OTP has expired. Please try again."
         elif user_otp == session["otp"]:
             if "pending_user" in session:
-=======
-            # verify_otp has its own UI; show toast-like error.
-            return render_template(
-                "verify_otp.html",
-                error="Security check failed. Please refresh and try again.",
-                notice=notice,
-                dev_otp=session.get("otp_dev_code"),
-                target=session.get("otp_target"),
-            )
-
-        if rate_limit_exceeded(f"otp:{_client_ip()}:{session.get('otp_target')}", max_hits=10, window_seconds=5 * 60):
-            return render_template(
-                "verify_otp.html",
-                error="Too many OTP attempts. Please request a new OTP and try again.",
-                notice=notice,
-                dev_otp=session.get("otp_dev_code"),
-                target=session.get("otp_target"),
-            )
-
-        user_otp = str(request.form.get("otp") or "").strip()
-        if not user_otp.isdigit() or len(user_otp) != 6:
-            error = "Enter the 6-digit code."
-            return render_template(
-                "verify_otp.html",
-                target=session.get("otp_target"),
-                error=error,
-                notice=notice,
-                dev_otp=session.get("otp_dev_code"),
-            )
-
-        try:
-            attempts = int(session.get("otp_attempts") or 0)
-        except (TypeError, ValueError):
-            attempts = 0
-
-        if attempts >= 5:
-            clear_otp_session_state()
-            return render_template(
-                "verify_otp.html",
-                error="Too many failed attempts. Please request a new OTP.",
-                notice=None,
-                dev_otp=None,
-                target=None,
-            )
-
-        if datetime.now(timezone.utc).timestamp() > session.get("otp_expiry", 0):
-            clear_otp_session_state()
-            return render_template(
-                "verify_otp.html",
-                error="OTP has expired. Please request a new OTP.",
-                notice=None,
-                dev_otp=None,
-                target=None,
-            )
-
-        if verify_otp_signature(user_otp, session.get("otp_sig"), session.get("otp_target"), session.get("otp_type")):
-            otp_type = session["otp_type"]
-            
-            if otp_type == "register" and "pending_user" in session:
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                 data = session["pending_user"]
                 new_user = User( # type: ignore
                     name=data["name"],
                     email=data["email"],
-<<<<<<< HEAD
                     password=data.get("password_hash") or hash_password(data.get("password", "")),
-=======
-                    password=data.get("password_hash") or hash_password(data.get("password") or ""),
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                     location=data["location"],
                     crop_type=data["crop"],
                     phone=data["phone"],
@@ -7607,13 +9836,8 @@ def verify_otp():
                     referrer = User.query.filter_by(referral_code=new_user.referred_by).first()
                     if referrer:
                         # Referral rewards:
-<<<<<<< HEAD
                         # - Referrer wallet +₹20
                         # - New user wallet +₹10 (can be used for subscription discount)
-=======
-                        # - Referrer wallet +INR 20
-                        # - New user wallet +INR 10 (can be used for subscription discount)
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
                         if ReferralReward.query.filter_by(new_user_id=new_user.id).first() is None:
                             wallet_credit(referrer, 20, "referral_bonus", {"new_user_id": new_user.id})
                             wallet_credit(new_user, 10, "referral_signup_bonus", {"referrer_id": referrer.id})
@@ -7645,25 +9869,13 @@ def verify_otp():
                 session["user"] = new_user.name
                 return redirect("/dashboard")
         else:
-            session["otp_attempts"] = attempts + 1
             error = "Invalid OTP. Please check and try again."
             
-<<<<<<< HEAD
     return render_template("verify_otp.html", **get_otp_page_context(error=error))
-=======
-    return render_template(
-        "verify_otp.html",
-        target=session.get("otp_target"),
-        error=error,
-        notice=notice,
-        dev_otp=session.get("otp_dev_code"),
-    )
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.route("/resend-otp", methods=["POST"])
 def resend_otp():
-<<<<<<< HEAD
     if (
         "otp_target" not in session
         or session.get("otp_type") != "register"
@@ -7698,39 +9910,6 @@ def resend_otp():
         notice=build_otp_notice(email_sent, failure_reason),
     )
     return render_template("verify_otp.html", **get_otp_page_context())
-=======
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        session["otp_notice"] = "Security check failed. Please refresh and try again."
-        return redirect("/verify-otp")
-
-    otp_target = session.get("otp_target")
-    otp_type = session.get("otp_type") or "register"
-    if not otp_target or "otp_sig" not in session:
-        return redirect("/login")
-
-    if rate_limit_exceeded(f"otp_resend:{_client_ip()}:{otp_target}", max_hits=3, window_seconds=10 * 60):
-        session["otp_notice"] = "Too many resend requests. Please wait and try again."
-        return redirect("/verify-otp")
-
-    otp = generate_otp()
-    session["otp_sig"] = compute_otp_signature(otp, otp_target, otp_type)
-    session["otp_expiry"] = (datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp()
-    session["otp_attempts"] = 0
-    session.pop("otp_dev_code", None)
-
-    email_sent = send_otp_email(otp_target, otp)
-    if email_sent:
-        session["otp_notice"] = "A new verification code has been sent."
-    else:
-        if (os.getenv("FLASK_ENV") or "").strip().lower() != "production":
-            session["otp_dev_code"] = otp
-            session["otp_notice"] = "Email service is not configured. Use the on-screen development code to verify."
-        else:
-            session["otp_notice"] = "Email delivery failed. Please try again later."
-
-    return redirect("/verify-otp")
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.route("/api/mandi-rates")
@@ -7752,6 +9931,192 @@ def dashboard():
     return render_template("dashboard.html", user=user, dashboard=dashboard_data, carbon=carbon_impact)
 
 
+@app.route("/rent-a-tractor")
+def rent_a_tractor_page():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+    if "rent_tractor" in DISABLED_DASHBOARD_MODULES:
+        abort(404)
+    tractor_page = build_rent_tractor_page_context(user)
+    return render_template("rent_tractor.html", user=user, tractor_page=tractor_page)
+
+
+@app.route("/api/tractor-marketplace")
+def api_tractor_marketplace():
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    category = str(request.args.get("category") or "all").strip().lower()
+    if category not in {item["id"] for item in TRACTOR_SERVICE_CATEGORIES}:
+        category = "all"
+    sort_option = str(request.args.get("sort") or "nearest").strip().lower()
+    if sort_option not in {"nearest", "price", "rating"}:
+        sort_option = "nearest"
+
+    payload = build_tractor_marketplace_payload(
+        user,
+        category=category,
+        sort_option=sort_option,
+        service_date=request.args.get("service_date"),
+        lat=request.args.get("lat", type=float),
+        lng=request.args.get("lng", type=float),
+    )
+    return jsonify({"success": True, **payload})
+
+
+@app.route("/api/tractor-bookings", methods=["POST"])
+def api_tractor_bookings():
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    machine = get_tractor_machine_by_id(payload.get("machine_id"))
+    if machine is None:
+        return jsonify({"success": False, "error": "Machine not found."}), 404
+
+    booking_date = parse_booking_date_value(payload.get("service_date"))
+    slot_label = str(payload.get("slot_label") or "").strip()
+    valid_slot_labels = {item["label"] for item in get_tractor_slot_options() if item["date"] == booking_date.isoformat()}
+    if slot_label not in valid_slot_labels:
+        return jsonify({"success": False, "error": "Select a valid time slot."}), 400
+
+    existing_booking = TractorBooking.query.filter_by(
+        machine_id=machine["id"],
+        booking_date=booking_date,
+        slot_label=slot_label,
+    ).filter(TractorBooking.booking_status != "cancelled").first()
+    if existing_booking is not None:
+        return jsonify({"success": False, "error": "This slot was just booked. Please choose another slot."}), 409
+
+    try:
+        duration_hours = int(payload.get("duration_hours") or 1)
+    except (TypeError, ValueError):
+        duration_hours = 1
+    duration_hours = max(1, min(duration_hours, 12))
+
+    payment_mode = str(payload.get("payment_mode") or "pay_later").strip().lower()
+    if payment_mode not in {"pay_later", "online"}:
+        payment_mode = "pay_later"
+
+    try:
+        farm_lat = float(payload.get("farm_lat")) if payload.get("farm_lat") is not None else None
+    except (TypeError, ValueError):
+        farm_lat = None
+    try:
+        farm_lng = float(payload.get("farm_lng")) if payload.get("farm_lng") is not None else None
+    except (TypeError, ValueError):
+        farm_lng = None
+
+    total_amount_inr = int(machine["price_per_hour"]) * duration_hours
+    booking = TractorBooking(  # type: ignore
+        user_id=user.id,
+        machine_id=machine["id"],
+        machine_name=machine["name"],
+        category=machine["category"],
+        farm_location=(payload.get("farm_location") or user.location or "").strip(),
+        farm_lat=farm_lat,
+        farm_lng=farm_lng,
+        booking_date=booking_date,
+        slot_label=slot_label,
+        duration_hours=duration_hours,
+        price_per_hour=int(machine["price_per_hour"]),
+        total_amount_inr=total_amount_inr,
+        payment_mode=payment_mode,
+        payment_status="pending" if payment_mode == "online" else "cash_on_service",
+        booking_status="confirmed" if payment_mode == "pay_later" else "pending_payment",
+        notes=(payload.get("notes") or "").strip(),
+    )
+    db.session.add(booking)
+    db.session.commit()
+
+    payment_order = None
+    payment_note = ""
+    if payment_mode == "online":
+        razorpay_order, error = create_razorpay_order_amount_inr(
+            total_amount_inr,
+            receipt=f"tractor_{booking.id}",
+            notes={"booking_id": str(booking.id), "machine_id": machine["id"], "source": "tractor_service"},
+        )
+        if razorpay_order:
+            payment_order = {
+                "order_id": razorpay_order.get("id"),
+                "amount": razorpay_order.get("amount"),
+                "currency": razorpay_order.get("currency"),
+                "key_id": RAZORPAY_KEY_ID,
+            }
+            payment_note = "Online payment order created."
+        else:
+            payment_note = error or "Online payment gateway is not available right now."
+
+    return jsonify(
+        {
+            "success": True,
+            "message": f"{machine['name']} booked for {booking.booking_date.strftime('%d %b')} at {slot_label}.",
+            "booking": serialize_tractor_booking(booking),
+            "payment_order": payment_order,
+            "payment_note": payment_note,
+        }
+    )
+
+
+@app.route("/land-lease")
+def land_lease_page():
+    return render_village_module_page("land_lease")
+
+
+@app.route("/rural-services")
+def rural_services_page():
+    return render_village_module_page("rural_services")
+
+
+@app.route("/govt-schemes")
+def govt_schemes_page():
+    return render_village_module_page("govt_schemes")
+
+
+@app.route("/money-manager")
+def money_manager_page():
+    return render_village_module_page("money_manager")
+
+
+@app.route("/ai-crop-scan")
+def ai_crop_scan_page():
+    return render_village_module_page("ai_crop_scan")
+
+
+@app.route("/farming-solutions")
+def farming_solutions_page():
+    return render_village_module_page("farming_solutions")
+
+
+@app.route("/agri-market")
+def agri_market_page():
+    return render_village_module_page("agri_market")
+
+
+@app.route("/govt-buddy-ai")
+def govt_buddy_ai_page():
+    return render_village_module_page("govt_buddy_ai")
+
+
+@app.route("/my-wallet")
+def my_wallet_page():
+    return render_village_module_page("my_wallet")
+
+
+@app.route("/notifications")
+def notifications_page():
+    return render_village_module_page("notifications")
+
+
+@app.route("/upgrade-hub")
+def upgrade_hub_page():
+    return render_village_module_page("upgrade_hub")
+
+
 @app.route("/farms")
 def farms():
     user = get_current_user()
@@ -7768,10 +10133,6 @@ def add_farm():
     user = get_current_user()
     if not user:
         return redirect("/login")
-
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
 
     _, farms = ensure_user_farm_setup(user)
     name = (request.form.get("name") or "").strip() or build_default_farm_name(user, len(farms) + 1)
@@ -7812,10 +10173,6 @@ def set_primary_farm(farm_id):
     if not user:
         return redirect("/login")
 
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
-
     farm = Farm.query.filter_by(id=farm_id, user_id=user.id).first()
     if farm is None:
         remember_notice("farms_notice", "Farm not found.", tone="warning")
@@ -7838,10 +10195,6 @@ def delete_farm(farm_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
-
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
 
     farms = Farm.query.filter_by(user_id=user.id).order_by(Farm.created_at.asc()).all()
     farm = next((item for item in farms if item.id == farm_id), None)
@@ -7875,10 +10228,6 @@ def add_farm_task():
     if not user:
         return redirect("/login")
 
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
-
     title = (request.form.get("title") or "").strip()
     if not title:
         remember_notice("farms_notice", "Task title is required.", tone="warning")
@@ -7901,6 +10250,7 @@ def add_farm_task():
     )
     db.session.add(task)
     db.session.commit()
+    upsert_task_reminder_alert(task, force_notify=True)
 
     remember_notice("farms_notice", f"Task '{title}' added to your planner.")
     return redirect("/farms#task-planner")
@@ -7911,10 +10261,6 @@ def update_task_status(task_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
-
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
 
     task = FarmTask.query.filter_by(id=task_id, user_id=user.id).first()
     if task is None:
@@ -7928,6 +10274,10 @@ def update_task_status(task_id):
     task.status = new_status
     task.completed_at = datetime.now(timezone.utc) if new_status == "done" else None
     db.session.commit()
+    if new_status == "done":
+        deactivate_task_reminder_alert(task.id, user_id=user.id)
+    else:
+        upsert_task_reminder_alert(task, force_notify=False)
 
     remember_notice("farms_notice", f"Task '{task.title}' moved to {new_status.replace('_', ' ')}.")
     return redirect("/farms#task-planner")
@@ -7939,16 +10289,13 @@ def delete_task(task_id):
     if not user:
         return redirect("/login")
 
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
-
     task = FarmTask.query.filter_by(id=task_id, user_id=user.id).first()
     if task is None:
         remember_notice("farms_notice", "Task not found.", tone="warning")
         return redirect("/farms")
 
     deleted_title = task.title
+    deactivate_task_reminder_alert(task.id, user_id=user.id, commit=False)
     db.session.delete(task)
     db.session.commit()
     remember_notice("farms_notice", f"Task '{deleted_title}' deleted.")
@@ -7995,7 +10342,6 @@ def crop_library():
     return render_template("crop_library.html", user=user, crop_library=crop_library_page)
 
 
-<<<<<<< HEAD
 @app.route("/library")
 def library_home():
     user = get_current_user()
@@ -8078,7 +10424,7 @@ def library_tips():
     if not user:
         return redirect("/login")
 
-    crops = get_library_crop_options()
+    crops = get_library_tips_crop_options()
     active_crop = (request.args.get("crop") or "All").strip() or "All"
     if active_crop not in crops:
         active_crop = "All"
@@ -8113,8 +10459,6 @@ def library_alerts():
     )
 
 
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 @app.route("/crop/<crop_slug>")
 def crop_detail(crop_slug):
     user = get_current_user()
@@ -8129,190 +10473,7 @@ def crop_detail(crop_slug):
     return render_template("crop_detail.html", user=user, crop=crop, related_crops=related_crops)
 
 
-<<<<<<< HEAD
-=======
-@app.route("/library")
-def library_home():
-    user = get_current_user()
-    if not user:
-        return redirect("/login")
-
-    crops = load_crop_library()
-    diseases = load_disease_library()
-    tips_payload = load_cultivation_tips()
-    return render_template(
-        "library_home.html",
-        user=user,
-        crop_count=len(crops),
-        disease_count=len(diseases),
-        tip_task_count=len((tips_payload or {}).get("tasks") or []),
-        tip_stage_count=len((tips_payload or {}).get("stages") or []),
-    )
-
-
-@app.route("/library/crops")
-def library_crops():
-    return redirect("/crop-library")
-
-
-@app.route("/library/diseases")
-def library_diseases():
-    user = get_current_user()
-    if not user:
-        return redirect("/login")
-
-    crop_filter = (request.args.get("crop") or "All").strip()
-    query = (request.args.get("q") or "").strip().lower()
-    kind = (request.args.get("type") or "all").strip().lower()
-
-    all_items = load_disease_library()
-    items = list(all_items)
-    if crop_filter and crop_filter != "All":
-        items = [item for item in items if crop_filter in (item.get("crops") or [])]
-    if kind in {"insect", "virus", "fungus", "bacteria", "disease", "pest"}:
-        items = [item for item in items if str(item.get("type") or "").strip().lower() == kind]
-    if query:
-        def _matches(item):
-            hay = " ".join(
-                [
-                    str(item.get("name") or ""),
-                    str(item.get("type") or ""),
-                    " ".join(item.get("crops") or []),
-                    " ".join(item.get("tags") or []),
-                ]
-            ).lower()
-            return query in hay
-        items = [item for item in items if _matches(item)]
-
-    no_results = False
-    suggested_items = []
-    if not items and (query or kind != "all" or (crop_filter and crop_filter != "All")):
-        no_results = True
-        # Provide a helpful fallback so the page never looks empty.
-        suggested_items = all_items[:12]
-
-    # Group by stage for the Plantix-like sections.
-    stage_order = ["seedling", "vegetative", "flowering", "harvesting", "post_harvest"]
-    stage_labels = {
-        "seedling": "Seedling Stage",
-        "vegetative": "Vegetative Stage",
-        "flowering": "Flowering Stage",
-        "harvesting": "Harvesting Stage",
-        "post_harvest": "Post Harvest",
-    }
-    stage_sections = []
-    for stage_key in stage_order:
-        stage_items = [item for item in items if stage_key in (item.get("stages") or [])]
-        if stage_items:
-            stage_sections.append({"key": stage_key, "label": stage_labels.get(stage_key, stage_key.title()), "items": stage_items[:10]})
-
-    return render_template(
-        "library_diseases.html",
-        user=user,
-        crops=build_library_crop_options(user),
-        active_crop=crop_filter if crop_filter else "All",
-        query=query,
-        active_type=kind,
-        stage_sections=stage_sections,
-        items=items,
-        no_results=no_results,
-        suggested_items=suggested_items,
-        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
-    )
-
-
-@app.route("/library/disease/<disease_slug>")
-def library_disease_detail(disease_slug):
-    user = get_current_user()
-    if not user:
-        return redirect("/login")
-
-    entry = get_disease_library_entry(disease_slug)
-    if entry is None:
-        abort(404)
-
-    recommended = resolve_store_recommendation(
-        disease_name=entry["name"],
-        cause=entry.get("cause"),
-        chemical_solution=entry.get("solution"),
-        crop_name=(entry.get("crops") or [""])[0],
-    )
-    recommended_payload = serialize_store_product(recommended) if recommended is not None else None
-
-    last_diag = session.get("last_library_diagnosis") if isinstance(session.get("last_library_diagnosis"), dict) else {}
-    if last_diag.get("slug") != entry["slug"]:
-        last_diag = {}
-
-    return render_template(
-        "library_disease_detail.html",
-        user=user,
-        disease=entry,
-        recommended_product=recommended_payload,
-        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
-        last_diagnosis=last_diag,
-    )
-
-
-@app.route("/library/tips")
-def library_tips():
-    user = get_current_user()
-    if not user:
-        return redirect("/login")
-
-    crop_filter = (request.args.get("crop") or "All").strip()
-    payload = load_cultivation_tips()
-    return render_template(
-        "library_tips.html",
-        user=user,
-        crops=build_library_crop_options(user),
-        active_crop=crop_filter if crop_filter else "All",
-        tips=payload,
-    )
-
-
-@app.route("/library/alerts")
-def library_alerts():
-    user = get_current_user()
-    if not user:
-        return redirect("/login")
-
-    crop_filter = (request.args.get("crop") or "All").strip()
-    items = load_disease_library()
-    if crop_filter and crop_filter != "All":
-        items = [item for item in items if crop_filter in (item.get("crops") or [])]
-
-    # Mock risk: stable by user id + crop to keep it consistent per user.
-    rng = random.Random(str(user.id) + "|" + crop_filter)
-    picks = items[:]
-    rng.shuffle(picks)
-    picks = picks[:6]
-
-    alerts = []
-    for idx, item in enumerate(picks):
-        alerts.append(
-            {
-                "severity": "high" if idx < 2 else "medium" if idx < 4 else "low",
-                "crop": (item.get("crops") or ["Crop"])[0] if item.get("crops") else "Crop",
-                "name": item.get("name") or "",
-                "type": item.get("type") or "",
-                "slug": item.get("slug") or "",
-                "image": item.get("image") or "",
-            }
-        )
-
-    return render_template(
-        "library_alerts.html",
-        user=user,
-        crops=build_library_crop_options(user),
-        active_crop=crop_filter if crop_filter else "All",
-        alerts=alerts,
-        fallback_image=DISEASE_LIBRARY_DEFAULT_IMAGES["disease"],
-    )
-
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 @app.route("/farm-twin")
-@require_plan("premium")
 def farm_twin():
     user = get_current_user()
     if not user:
@@ -8384,19 +10545,42 @@ def market_product_detail(product_slug):
     )
 
 
+@app.route("/market/recommendation/<product_slug>", methods=["GET"])
+def market_recommendation_detail(product_slug):
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    asset_name = (request.args.get("asset") or product_slug).strip()
+    disease_name = (request.args.get("disease") or "").strip()
+    crop_name = (request.args.get("crop") or user.crop_type or "Crop").strip() or "Crop"
+    disease_entry = find_disease_dataset_entry(disease_name) or {
+        "name": disease_name or format_product_asset_name(asset_name),
+        "etiology": build_fallback_etiology({"disease": disease_name, "crop": crop_name}),
+        "symptoms": [],
+        "solution": {"organic": [], "chemical": []},
+        "prevention": [],
+    }
+    product_data = build_virtual_store_product(
+        asset_name,
+        disease_entry,
+        {"disease": disease_name or disease_entry.get("name"), "crop": crop_name},
+    )
+    related_products = build_store_page_context(search_query=product_data["name"]).get("products", [])[:4]
+    return render_template(
+        "market_product_detail.html",
+        user=user,
+        product=product_data,
+        related_products=related_products,
+    )
+
+
 @app.route("/api/store/checkout", methods=["POST"])
 def store_checkout():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
-<<<<<<< HEAD
-=======
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     product = get_store_product_by_id(payload.get("product_id"))
     if product is None:
@@ -8473,13 +10657,6 @@ def store_payment_success():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
-<<<<<<< HEAD
-=======
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     product = get_store_product_by_id(payload.get("product_id"))
     if product is None:
@@ -8514,17 +10691,6 @@ def store_payment_success():
     razorpay_signature = str(payload.get("razorpay_signature") or "")
     signature_verified = verify_razorpay_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
 
-<<<<<<< HEAD
-=======
-    is_demo = str(payload.get("checkout_mode") or order_record.checkout_mode or "demo").strip().lower() == "demo"
-    if not is_demo and not signature_verified:
-        order_record.status = "failed"
-        notes.update({"verified": False, "failure": "signature_failed"})
-        set_order_notes(order_record, notes)
-        db.session.commit()
-        return jsonify({"success": False, "error": "Payment verification failed."}), 400
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     order_record.status = "paid"
     order_record.checkout_mode = str(payload.get("checkout_mode") or order_record.checkout_mode or "demo")
     order_record.source = str(payload.get("source") or order_record.source or "store")
@@ -8558,7 +10724,6 @@ def store_payment_success():
     )
 
 
-<<<<<<< HEAD
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if is_admin_authenticated():
@@ -8861,37 +11026,6 @@ def admin_delete_mapping(mapping_id):
     db.session.delete(mapping)
     db.session.commit()
     return redirect("/admin/mappings")
-=======
-from routes.admin_routes import register_admin_routes
-
-register_admin_routes(
-    app,
-    deps={
-        "db": db,
-        "AdminUser": AdminUser,
-        "StoreProduct": StoreProduct,
-        "StoreOrder": StoreOrder,
-        "DiseaseProductMapping": DiseaseProductMapping,
-        "ADMIN_EMAIL": ADMIN_EMAIL,
-        "STORE_CATEGORY_ORDER": STORE_CATEGORY_ORDER,
-        "FULFILLMENT_STATUS_ORDER": FULFILLMENT_STATUS_ORDER,
-        "is_admin_authenticated": is_admin_authenticated,
-        "admin_required": admin_required,
-        "require_csrf": require_csrf,
-        "rate_limit_exceeded": rate_limit_exceeded,
-        "_client_ip": _client_ip,
-        "check_admin_password": check_admin_password,
-        "get_fulfillment_status": get_fulfillment_status,
-        "set_fulfillment_status": set_fulfillment_status,
-        "normalize_disease_key": normalize_disease_key,
-        "slugify_crop_name": slugify_crop_name,
-        "estimate_store_mrp": estimate_store_mrp,
-        "compute_store_discount": compute_store_discount,
-        "save_product_image_upload": save_product_image_upload,
-        "default_store_seller": default_store_seller,
-    },
-)
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
 
 @app.route("/predict-disease", methods=["POST"])
@@ -8905,11 +11039,6 @@ def predict_disease():
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
 
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        # Return JSON because this endpoint is always called via fetch().
-        return jsonify({"success": False, "error": "Security check failed. Please refresh and try again."}), 400
-
     uploaded_file = request.files.get("crop_image")
     if not uploaded_file or not uploaded_file.filename:
         return jsonify({"error": "Upload a crop leaf image before starting analysis."}), 400
@@ -8918,10 +11047,9 @@ def predict_disease():
     if suffix and suffix not in ALLOWED_IMAGE_SUFFIXES:
         return jsonify({"error": "Please upload a PNG, JPG, JPEG, or WEBP image."}), 400
 
-    try:
-        image_bytes = read_upload_bytes(uploaded_file, MAX_DISEASE_IMAGE_BYTES, label="Image")
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+    image_bytes = uploaded_file.read()
+    if not image_bytes:
+        return jsonify({"error": "Uploaded image is empty."}), 400
 
     try:
         image = Image.open(io.BytesIO(image_bytes))
@@ -8931,97 +11059,26 @@ def predict_disease():
 
     weather = fetch_weather_bundle(user.location or "Bhubaneswar")
     preview_url = save_uploaded_leaf_image(image, uploaded_file.filename)
-    crop_key = normalize_crop_key(user.crop_type or "generic")
+    leaf_validation = evaluate_leaf_upload(image)
+    if not bool(leaf_validation.get("is_probable_leaf")):
+        return jsonify(build_invalid_leaf_upload_response(user.crop_type or "Crop", preview_url, leaf_validation))
 
-    def build_library_context(payload):
-        disease_name = str(payload.get("disease") or "").strip()
-        crop_name = str(payload.get("crop") or user.crop_type or crop_key.title()).strip()
-        if not disease_name:
-            return None
+    filename_diagnosis = build_filename_dataset_diagnosis(uploaded_file.filename, user.crop_type or "Crop")
+    if filename_diagnosis is not None:
+        save_scan_history(user, filename_diagnosis)
+        return jsonify(attach_store_recommendation(build_scan_response_payload(filename_diagnosis, preview_url), filename_diagnosis.get("best_product", "")))
 
-        if normalize_disease_key(disease_name) in {"healthy", "no disease", "no-disease"}:
-            payload["library_url"] = "/library/tips"
-            session["last_library_diagnosis"] = {
-                "slug": "healthy",
-                "confidence": int(payload.get("confidence") or 0),
-                "risk_level": str(payload.get("risk_level") or ""),
-                "note": "No major pest or disease detected. Keep monitoring regularly.",
-                "image_url": preview_url,
-            }
-            return None
+    reference_diagnosis = build_reference_image_diagnosis(image, user.crop_type or "Crop", weather)
+    if reference_diagnosis is not None and int(reference_diagnosis.get("confidence") or 0) >= 66:
+        reference_diagnosis["explanation_hinglish"] = "Diagnosis generated from uploaded leaf pattern and dataset reference images."
+        save_scan_history(user, reference_diagnosis)
+        return jsonify(attach_store_recommendation(build_scan_response_payload(reference_diagnosis, preview_url), reference_diagnosis.get("best_product", "")))
 
-        entry = get_best_disease_library_entry(disease_name, crop_name)
-        slug = slugify_crop_name(disease_name)
-        payload["library_url"] = (
-            f"/library/disease/{entry['slug']}" if entry is not None else f"/library/diseases?q={quote(disease_name)}"
-        )
-        session["last_library_diagnosis"] = {
-            "slug": entry["slug"] if entry is not None else slug,
-            "confidence": int(payload.get("confidence") or 0),
-            "risk_level": str(payload.get("risk_level") or ""),
-            "note": "Nearby crop conditions suggest this issue should be checked quickly in the field.",
-            "image_url": preview_url,
-        }
-        return entry
-    
-    # Integrate PyTorch model + disease_knowledge as primary detection
-    class_index, conf_float, class_name, confidence_pct = predict_with_pytorch(image)
-<<<<<<< HEAD
-    if class_name is not None and conf_float is not None:
-=======
-    model_label = str(class_name or "").strip()
-    if model_label and conf_float is not None and float(conf_float) >= 0.46 and "plantvillage" not in model_label.lower():
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
-        disease_info = get_disease_info(class_index, conf_float)
-        crop_display = model_label.split("___")[0] if "___" in model_label else (user.crop_type or crop_key.title())
-        crop_display = crop_display.replace("_", " ").strip() or (user.crop_type or crop_key.title())
-        library_entry = get_best_disease_library_entry(disease_info["disease"], crop_display)
-        prevention_tips = list((library_entry or {}).get("prevention") or [])
-        if not prevention_tips:
-            prevention_tips = unique_crop_list(
-                [
-                    *([str(tip).strip() for tip in disease_info.get("prevention_tips", []) if str(tip).strip()] if isinstance(disease_info.get("prevention_tips"), list) else []),
-                    str(disease_info.get("recommendation") or "").strip(),
-                ]
-            )[:3]
-
-        new_history = DiseaseHistory(
-            user_id=user.id,
-            crop_type=crop_display,
-            detected_disease=disease_info["disease"],
-            confidence=confidence_pct,
-        )
-        db.session.add(new_history)
-        db.session.commit()
-
-        response_payload = {
-            "success": True,
-            "disease": disease_info["disease"],
-            "confidence": confidence_pct,
-<<<<<<< HEAD
-            "cause": disease_info["cause"],
-            "symptoms": disease_info.get("symptoms", ""),
-            "organic_solution": disease_info.get("recommendation", ""),
-            "chemical_solution": disease_info["solution"],
-            "prevention": [disease_info.get("recommendation", "")],
-=======
-            "cause": (library_entry or {}).get("cause") or disease_info["cause"],
-            "symptoms": summarize_disease_symptoms(library_entry, disease_info.get("symptoms") or disease_info.get("recommendation", disease_info["cause"])),
-            "organic_solution": disease_info.get("organic_solution") or derive_organic_solution(disease_info["disease"], library_entry, crop_display),
-            "chemical_solution": (library_entry or {}).get("solution") or disease_info["solution"],
-            "prevention": prevention_tips,
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
-            "explanation_hinglish": disease_info["explanation_hinglish"],
-            "diagnostic_reason": f"PyTorch model detected {model_label} ({confidence_pct}%)",
-            "risk_level": "Low" if int(confidence_pct) > 85 else "Medium" if int(confidence_pct) > 70 else "High",
-            "best_product": disease_info.get("best_product", ""),
-            "product_link": disease_info.get("product_link", ""),
-            "image_url": preview_url,
-<<<<<<< HEAD
-            "crop": crop_display,
-            "analysis_source": "Vision model",
-        }
-        return jsonify(attach_store_recommendation(response_payload, disease_info.get("best_product", "")))
+    kaggle_diagnosis = build_kaggle_dataset_diagnosis(image, user.crop_type or "Crop", weather)
+    if kaggle_diagnosis is not None and int(kaggle_diagnosis.get("confidence") or 0) >= 58:
+        kaggle_diagnosis.setdefault("explanation_hinglish", "Diagnosis generated from Kaggle/PlantVillage disease references.")
+        save_scan_history(user, kaggle_diagnosis)
+        return jsonify(attach_store_recommendation(build_scan_response_payload(kaggle_diagnosis, preview_url), kaggle_diagnosis.get("best_product", "")))
     
     crop_input = (user.crop_type or "generic").lower().strip()
     if crop_input in ["paddy", "peddy", "dhan", "paddi"]:
@@ -9030,13 +11087,6 @@ def predict_disease():
         crop_key = "maize"
     else:
         crop_key = crop_input
-=======
-            "crop": crop_display
-        }
-        build_library_context(response_payload)
-
-        return jsonify(attach_store_recommendation(response_payload, disease_info.get("best_product", "")))
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 
     # Advanced Prompt for Expert Analysis
     prompt = f"""
@@ -9065,7 +11115,16 @@ def predict_disease():
     
     diagnosis = {}
     success = False
+    groq_used = False
+    groq_diagnosis = ask_groq_vision_diagnosis(image_bytes, uploaded_file.filename, user.crop_type or "Crop", weather)
+    if groq_diagnosis is not None:
+        diagnosis = groq_diagnosis
+        success = True
+        groq_used = True
+
     try:
+        if success:
+            raise StopIteration("Groq diagnosis already available.")
         if not GEMINI_API_KEY:
             raise ValueError("Gemini API key is not configured.")
 
@@ -9086,111 +11145,45 @@ def predict_disease():
                 continue
         if not success:
              raise ValueError("All models failed")
+    except StopIteration:
+        pass
     except Exception as e:
         print(f"AI Detection failed: {e}")
-<<<<<<< HEAD
-        library = CROP_DISEASE_LIBRARY.get(crop_key, CROP_DISEASE_LIBRARY.get("generic", []))
-        if library:
-            # Diverse fallback: Use a deterministic index based on the image size & content hash
-            import hashlib
-            img_hash = int(hashlib.md5(image_bytes).hexdigest(), 16)
-            idx = img_hash % len(library)
-            fallback_entry = library[idx]
-            
-            diagnosis = {
-                "disease": fallback_entry["name"],
-                "confidence": 65, # Higher confidence for "detected" fallback
-                "symptoms": "Visible spots and pattern stress observed on leaf.",
-                "cause": fallback_entry["cause"],
-                "organic_solution": "Apply organic neem oil spray.",
-                "chemical_solution": fallback_entry["solution"],
-                "prevention": fallback_entry["prevention_tips"],
-                "explanation_hinglish": f"Ye scan aapke crop '{crop_key}' ke liye '{fallback_entry['name']}' ki sambhavna dikha raha hai.",
-                "diagnostic_reason": "Pattern recognition fallback (Visual Analysis).",
-                "risk_level": "Medium",
-                "crop": crop_key.capitalize()
-            }
-=======
         features, signals, base_confidence = extract_leaf_features(image, weather)
-        seed_value = int(sha1(image_bytes[:2048]).hexdigest(), 16) % 65537
-        fallback_entry, fallback_crop_display, confidence = select_visual_disease_entry(
-            user.crop_type or crop_key,
+        seed_value = int(sha1(image_bytes[:512]).hexdigest(), 16) % 65537
+        best_entry, crop_display, confidence = select_visual_disease_entry(
+            user.crop_type,
             features,
             weather,
             signals,
             seed=seed_value,
         )
-        library_entry = get_best_disease_library_entry(fallback_entry["name"], fallback_crop_display)
 
         diagnosis = {
-            "disease": fallback_entry["name"],
-            "confidence": max(int(confidence), int(base_confidence)),
-            "symptoms": summarize_disease_symptoms(library_entry, "Visible lesion and stress patterns detected on the leaf."),
-            "cause": (library_entry or {}).get("cause") or fallback_entry["cause"],
-            "organic_solution": derive_organic_solution(fallback_entry["name"], library_entry, fallback_crop_display),
-            "chemical_solution": (library_entry or {}).get("solution") or fallback_entry["solution"],
-            "prevention": list((library_entry or {}).get("prevention") or fallback_entry["prevention_tips"]),
-            "explanation_hinglish": f"Ye scan {fallback_crop_display} mein '{fallback_entry['name']}' jaisa stress pattern dikha raha hai. Field me same symptoms compare karke jaldi action lo.",
-            "diagnostic_reason": "Visual symptom scoring used leaf color, lesion pattern, humidity context, and crop-specific disease profiles.",
-            "risk_level": "Low" if int(confidence) >= 88 else "Medium" if int(confidence) >= 72 else "High",
-            "crop": fallback_crop_display,
+            "disease": best_entry["name"],
+            "confidence": confidence or base_confidence,
+            "symptoms": "; ".join(best_entry.get("symptoms", [])) or "Visible spots and stress markers observed on leaf.",
+            "cause": best_entry["cause"],
+            "organic_solution": best_entry["solution"],
+            "chemical_solution": best_entry["solution"],
+            "prevention": best_entry["prevention_tips"],
+            "explanation_hinglish": "Detailed diagnosis generated using visual fallback analysis.",
+            "diagnostic_reason": "Visual feature analysis matched the uploaded leaf against disease patterns.",
+            "risk_level": "Low" if int(confidence) > 85 else "Medium" if int(confidence) > 70 else "High",
+            "crop": crop_display,
         }
 
-    diagnosis_crop = str(diagnosis.get("crop") or user.crop_type or crop_key.title()).strip() or (user.crop_type or "Crop")
-    diagnosis_entry = get_best_disease_library_entry(diagnosis.get("disease"), diagnosis_crop)
-    diagnosis["crop"] = diagnosis_crop
-    diagnosis["symptoms"] = summarize_disease_symptoms(diagnosis_entry, diagnosis.get("symptoms"))
-    diagnosis["cause"] = str(diagnosis.get("cause") or (diagnosis_entry or {}).get("cause") or "").strip()
-    diagnosis["chemical_solution"] = str(
-        diagnosis.get("chemical_solution") or (diagnosis_entry or {}).get("solution") or "Consult a local expert for a confirmed spray schedule."
-    ).strip()
-    diagnosis["organic_solution"] = str(
-        diagnosis.get("organic_solution") or derive_organic_solution(diagnosis.get("disease"), diagnosis_entry, diagnosis_crop)
-    ).strip()
-    prevention_items = diagnosis.get("prevention", [])
-    if not isinstance(prevention_items, list):
-        prevention_items = [prevention_items]
-    diagnosis["prevention"] = unique_crop_list(
-        [
-            *[str(item).strip() for item in prevention_items if str(item).strip()],
-            *([str(item).strip() for item in (diagnosis_entry or {}).get("prevention", []) if str(item).strip()] if diagnosis_entry else []),
-        ]
-    )[:4]
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
+    dataset_entry = find_disease_dataset_entry(diagnosis.get("disease"))
+    allow_non_dataset_result = bool(diagnosis.get("allow_non_dataset_result"))
+    if dataset_entry is None and not allow_non_dataset_result:
+        return jsonify(build_no_close_match_response(user.crop_type or "Crop", preview_url))
 
-    new_history = DiseaseHistory( # type: ignore
-        user_id=user.id,
-        crop_type=diagnosis.get("crop", user.crop_type or "Crop"),  # type: ignore
-        detected_disease=diagnosis.get("disease", "Unknown"),  # type: ignore
-        confidence=int(diagnosis.get("confidence", 80)),  # type: ignore
-    )
-    db.session.add(new_history)
-    db.session.commit()
+    if dataset_entry is not None:
+        diagnosis["disease"] = dataset_entry["name"]
 
-    response_payload = {
-        "success": True,
-        "disease": diagnosis.get("disease"),
-        "confidence": diagnosis.get("confidence"),
-        "cause": diagnosis.get("cause"),
-        "symptoms": diagnosis.get("symptoms"),
-        "organic_solution": diagnosis.get("organic_solution"),
-        "chemical_solution": diagnosis.get("chemical_solution"),
-        "prevention": diagnosis.get("prevention", []),
-        "explanation_hinglish": diagnosis.get("explanation_hinglish"),
-        "diagnostic_reason": diagnosis.get("diagnostic_reason", "Visual cues identified."),
-        "risk_level": diagnosis.get("risk_level"),
-        "image_url": preview_url,
-<<<<<<< HEAD
-        "crop": diagnosis.get("crop", user.crop_type or "Crop"),
-        "analysis_source": "Expert AI" if success else "Visual fallback",
-    }
-    return jsonify(attach_store_recommendation(response_payload))
-=======
-        "crop": diagnosis.get("crop", user.crop_type or "Crop")
-    }
-    build_library_context(response_payload)
-    return jsonify(attach_store_recommendation(response_payload, diagnosis.get("best_product", "")))
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
+    diagnosis["analysis_source"] = diagnosis.get("analysis_source") or ("Groq vision" if groq_used else "Expert AI" if success else "Visual fallback")
+    save_scan_history(user, diagnosis)
+    return jsonify(attach_store_recommendation(build_scan_response_payload(diagnosis, preview_url), diagnosis.get("best_product", "")))
 
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -9203,10 +11196,6 @@ def profile():
     success = None
 
     if request.method == "POST":
-        csrf_resp = require_csrf()
-        if csrf_resp is not None:
-            return csrf_resp
-
         form_type = request.form.get("form_type", "")
 
         if form_type == "user_info":
@@ -9230,10 +11219,11 @@ def profile():
             # Handle photo upload
             photo_file = request.files.get("profile_photo")
             if not error and photo_file and photo_file.filename:
-                try:
+                ext = Path(photo_file.filename).suffix.lower()
+                if ext in ALLOWED_IMAGE_SUFFIXES:
                     user.profile_photo = save_profile_photo_upload(photo_file, f"profile_{user.id}")
-                except ValueError as exc:
-                    error = str(exc)
+                else:
+                    error = "Only PNG, JPG, JPEG, or WEBP images are allowed."
 
             # Password change
             if not error and (new_pw or confirm_pw or current_pw):
@@ -9304,21 +11294,23 @@ def get_farm_details():
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
     primary_farm, _ = ensure_user_farm_setup(user)
-    weather = fetch_weather_bundle(user.location or "Bhubaneswar")
+    map_location = (primary_farm.location if primary_farm and primary_farm.location else user.location) or "Bhubaneswar"
+    weather = fetch_weather_bundle(map_location)
     soil = build_soil_profile(user, weather)
     crop_health = build_crop_health(user, weather, soil)
+    map_center = resolve_dashboard_map_center(map_location, weather)
     
     # Safe data parsing
     health_score = int(crop_health.get('score', 80))
     soil_ph = float(soil.get('ph', 6.5))
     soil_n = int(soil.get('nitrogen', 50))
-    lat = float(weather.get('lat', 20.3))
-    lon = float(weather.get('lon', 85.8))
+    lat = float(map_center["lat"])
+    lon = float(map_center["lng"])
     
     fields = [
         {
             "id": 1,
-            "name": f"{user.crop_type or 'Rice'} Field - North",
+            "name": f"{(primary_farm.name if primary_farm else (user.crop_type or 'Farm'))} - North",
             "health": f"{health_score}%",
             "soil": f"pH {soil_ph}, N {soil_n}%",
             "alerts": "No critical alerts" if health_score > 70 else "Low nitrogen detected",
@@ -9326,7 +11318,7 @@ def get_farm_details():
         },
         {
             "id": 2,
-            "name": f"{user.crop_type or 'Rice'} Field - South",
+            "name": f"{(primary_farm.name if primary_farm else (user.crop_type or 'Farm'))} - South",
             "health": f"{max(0, health_score - 5)}%",
             "soil": f"pH {round(soil_ph + 0.2, 1)}, N {max(0, soil_n - 4)}%",
             "alerts": "Check for moisture stress",
@@ -9363,10 +11355,6 @@ def settings_page():
     success = None
 
     if request.method == "POST":
-        csrf_resp = require_csrf()
-        if csrf_resp is not None:
-            return csrf_resp
-
         preferences.crop_alerts = request.form.get("crop_alerts") == "on"
         preferences.disease_alerts = request.form.get("disease_alerts") == "on"
         preferences.weather_alerts = request.form.get("weather_alerts") == "on"
@@ -9422,49 +11410,74 @@ def alerts_page():
     if not user:
         return redirect("/login")
 
-    weather = fetch_weather_bundle(user.location or "Bhubaneswar")
-    soil = build_soil_profile(user, weather)
-    crop_health = build_crop_health(user, weather, soil)
-    recommendations = build_recommendations(user, weather, soil, crop_health)
-
-    alert_cards: list[dict] = []
-
-    if float(weather.get("temp", 0)) >= 33:  # type: ignore
-        alert_cards.append({
-            "severity": "heat",
-            "title": "Heatwave Warning",
-            "detail": f"High temperatures over the next three days. Plan irrigation adjustments.",
-            "time_ago": "1d ago",
-        })
-
-    alert_cards.append({
-        "severity": "rain",
-        "title": "Rainfall Alert",
-        "detail": "Heavy rainfall expected tomorrow. Check for waterlogging risks.",
-        "time_ago": "2d ago",
-    })
-
-    alert_cards.append({
-        "severity": "disease",
-        "title": "Disease Detected",
-        "detail": f"Blight detected in your {user.crop_type or 'crop'} field. Inspect crops for affected plants.",
-        "time_ago": "4d ago",
-    })
-
-    history_items = [
-        {"severity": "heat", "title": "Heatwave Warning", "time_ago": "1 day ago"},
-        {"severity": "disease", "title": f"Blight detected in {user.crop_type or 'Crop'} Field", "time_ago": "1 day ago"},
-        {"severity": "rain", "title": "Heavy Rainfall Expected", "time_ago": "2 days ago"},
-        {"severity": "soil", "title": "Low Nitrogen in Rice Field 2", "time_ago": "1 week ago"},
-    ]
+    alert_context = sync_user_alerts(user)
+    recommendations = build_recommendations(
+        user,
+        alert_context["weather"],
+        alert_context["soil"],
+        alert_context["crop_health"],
+    )
+    active_alerts = alert_context["active_alerts"]
+    history_alerts = alert_context["history_alerts"]
+    preferences = alert_context["preferences"]
+    mobile_delivery_ready = bool(
+        getattr(preferences, "sms_alerts", False)
+        and (TWILIO_SMS_FROM or TWILIO_WHATSAPP_FROM)
+        and TWILIO_ACCOUNT_SID
+        and TWILIO_AUTH_TOKEN
+        and (getattr(preferences, "alert_phone", "") or getattr(user, "phone", ""))
+    )
+    email_delivery_ready = bool(
+        getattr(preferences, "email_alerts", False)
+        and SMTP_EMAIL
+        and SMTP_PASSWORD
+        and (getattr(preferences, "alert_email", "") or getattr(user, "email", ""))
+    )
 
     alerts_data = {
-        "alert_cards": list(alert_cards[:3]),  # type: ignore
-        "recommendations": recommendations[:2],  # type: ignore
-        "history": history_items,
+        "alert_cards": [serialize_alert_record(item) for item in active_alerts],
+        "recommendations": recommendations[:3],  # type: ignore
+        "history": [serialize_alert_record(item) for item in history_alerts[:6]],
+        "history_chart": build_alert_history_chart(history_alerts, days=7),
+        "unread_count": sum(1 for item in active_alerts if not bool(getattr(item, "is_read", False))),
+        "delivery_status": {
+            "email_ready": email_delivery_ready,
+            "mobile_ready": mobile_delivery_ready,
+            "mobile_label": "WhatsApp" if TWILIO_USE_WHATSAPP else "SMS",
+        },
     }
 
     return render_template("alerts.html", user=user, alerts_page=alerts_data)
+
+
+@app.route("/alerts/mark-all-read", methods=["POST"])
+def alerts_mark_all_read():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    csrf_resp = require_csrf()
+    if csrf_resp is not None:
+        return csrf_resp
+
+    AlertRecord.query.filter_by(user_id=user.id, is_active=True, is_read=False).update({"is_read": True})
+    db.session.commit()
+    return redirect("/alerts")
+
+
+@app.route("/alerts/<int:alert_id>/open")
+def alerts_open(alert_id):
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    alert = AlertRecord.query.filter_by(id=alert_id, user_id=user.id).first()
+    if alert is None:
+        return redirect("/alerts")
+
+    alert.is_read = True
+    db.session.commit()
+    return redirect(alert.action_url or "/alerts")
 
 
 @app.route("/api/ai-chat", methods=["POST"])
@@ -9479,6 +11492,11 @@ def ai_chat():
         return jsonify({"success": False, "error": "No query provided"}), 400
 
     history = sanitize_ai_chat_history(payload.get("history"))
+    context_query = build_ai_chat_context_query(query, history)
+    dataset_reply = lookup_ai_crop_doctor_local_qa(context_query)
+    if dataset_reply:
+        return jsonify({"success": True, "response": dataset_reply, "provider": "local_knowledge"})
+
     fallback_reply = build_kisan_dost_reply(user, query, history=history)
     groq_reply = ask_groq_ai_crop_doctor(user, query, history)
     if groq_reply:
@@ -9580,10 +11598,6 @@ def community_post():
     user = get_current_user()
     if not user:
         return redirect("/login")
-
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
     
     title = request.form.get("title")
     content = request.form.get("content")
@@ -9602,10 +11616,6 @@ def community_comment(post_id):
     user = get_current_user()
     if not user:
         return redirect("/login")
-
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
     
     content = request.form.get("content")
     if content:
@@ -9632,10 +11642,6 @@ def tool_advisor():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
-
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
     
     data = request.json
     if not data:
@@ -9672,10 +11678,6 @@ def predict_yield():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
-
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
     
     data = request.json
     if not data:
@@ -9753,20 +11755,11 @@ def subscription_plans():
     if not user:
         return redirect("/login")
     ensure_user_subscription_state(user, commit=True)
-<<<<<<< HEAD
-=======
-    expired = bool(request.args.get("expired")) or bool(request.args.get("required"))
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     return render_template(
         "subscriptions.html",
         user=user,
         plans=SUBSCRIPTION_PLANS,
         trial_active=is_trial_active(user),
-<<<<<<< HEAD
-=======
-        expired=expired,
-        trial_days=SUBSCRIPTION_TRIAL_DAYS,
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     )
 
 
@@ -9826,13 +11819,6 @@ def api_subscription_create_order():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
-<<<<<<< HEAD
-=======
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan"))
     if plan == "free":
@@ -9913,13 +11899,6 @@ def api_subscription_verify_payment():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
-<<<<<<< HEAD
-=======
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     try:
         payment_id = int(payload.get("payment_id") or 0)
@@ -9996,13 +11975,6 @@ def api_apply_wallet():
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
 
-<<<<<<< HEAD
-=======
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan"))
     if plan == "free":
@@ -10077,13 +12049,6 @@ def upgrade_to_pro():
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "error": "Unauthorized"}), 401
-<<<<<<< HEAD
-=======
-
-    csrf_resp = require_csrf()
-    if csrf_resp is not None:
-        return csrf_resp
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
     
     payload = request.get_json(silent=True) or {}
     plan = normalize_plan_name(payload.get("plan") or "pro")
@@ -10147,77 +12112,6 @@ with app.app_context():
     seeded_mappings = seed_disease_product_mappings()
     if seeded_mappings:
         print(f"[STORE] Seeded or refreshed {seeded_mappings} disease-product mappings.")
-
-    # Seed a DB-backed admin user (keeps env defaults working too).
-    # Requested default: admin123@gmail.com / 123 (override via ADMIN_EMAIL/ADMIN_PASSWORD env vars).
-    try:
-        _admin_email = (ADMIN_EMAIL or "").strip().lower()
-        _admin_pw = (ADMIN_PASSWORD or "").strip()
-        if _admin_email and _admin_pw:
-            _existing_admin = AdminUser.query.filter_by(email=_admin_email).first()  # type: ignore
-            if _existing_admin is None:
-                db.session.add(
-                    AdminUser(  # type: ignore
-                        email=_admin_email,
-                        password_hash=hash_password(_admin_pw),
-                        role="admin",
-                    )
-                )
-                db.session.commit()
-            else:
-                # Upgrade legacy/plain stored password to hash if needed.
-                if not is_password_hash(_existing_admin.password_hash or ""):
-                    _existing_admin.password_hash = hash_password(_admin_pw)
-                    db.session.commit()
-    except Exception:
-        db.session.rollback()
-
-    # --- Auto-migrate: add missing columns to existing SQLite tables ---
-    import sqlite3 as _sqlite3
-    _db_path = os.path.join(app.instance_path, "database.db")
-    print(f"[MIGRATION] Looking for database at: {_db_path}")
-    if os.path.exists(_db_path):
-        _conn = _sqlite3.connect(_db_path)
-        _cur = _conn.cursor()
-        _cur.execute("PRAGMA table_info(user)")
-        _existing_cols = {row[1] for row in _cur.fetchall()}
-        print(f"[MIGRATION] Existing columns: {_existing_cols}")
-        _new_columns = {
-            "is_pro": "BOOLEAN DEFAULT 0",
-            "plan": "VARCHAR(16) DEFAULT 'free'",
-            "trial_start_date": "DATETIME",
-            "subscription_start_date": "DATETIME",
-            "subscription_end_date": "DATETIME",
-            "referral_code": "VARCHAR(20)",
-            "referred_by": "VARCHAR(20)",
-            "loyalty_points": "INTEGER DEFAULT 0",
-            "wallet_balance": "INTEGER DEFAULT 0",
-        }
-        for col_name, col_type in _new_columns.items():
-            if col_name not in _existing_cols:
-                try:
-                    _cur.execute(f"ALTER TABLE user ADD COLUMN {col_name} {col_type}")
-                    print(f"[MIGRATION] Added column '{col_name}' to user table.")
-                except Exception as e:
-                    print(f"[MIGRATION] Skipping '{col_name}': {e}")
-        _cur.execute("PRAGMA table_info(store_product)")
-        _store_product_cols = {row[1] for row in _cur.fetchall()}
-        if "stock" not in _store_product_cols:
-            try:
-                _cur.execute("ALTER TABLE store_product ADD COLUMN stock INTEGER DEFAULT 0")
-                print("[MIGRATION] Added column 'stock' to store_product table.")
-            except Exception as e:
-                print(f"[MIGRATION] Skipping 'stock' on store_product: {e}")
-
-        _conn.commit()
-        _conn.close()
-        print("[MIGRATION] Database migration check complete.")
-    else:
-        print(f"[MIGRATION] Database file not found at {_db_path}, skipping migration.")
-
-    seeded_products = seed_store_products()
-    if seeded_products:
-        print(f"[STORE] Seeded or refreshed {seeded_products} store products.")
 
 
 if __name__ == "__main__":

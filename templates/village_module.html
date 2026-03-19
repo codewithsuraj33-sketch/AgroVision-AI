@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ module.title }} - AgroVision AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .village-module-page {
+      display: grid;
+      gap: 22px;
+      padding-bottom: 36px;
+    }
+
+    .village-module-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.95fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .village-module-copy {
+      border-radius: 28px;
+      padding: 28px;
+      background:
+        radial-gradient(circle at top right, rgba(45, 216, 255, 0.22), transparent 34%),
+        linear-gradient(145deg, rgba(4, 18, 71, 0.96), rgba(13, 43, 122, 0.94));
+      border: 1px solid rgba(125, 255, 46, 0.14);
+      box-shadow: 0 26px 52px rgba(0, 8, 38, 0.28);
+      color: #f5fbff;
+    }
+
+    .village-module-copy h1 {
+      margin: 10px 0 12px;
+      font-size: clamp(2rem, 3vw, 3rem);
+      letter-spacing: -0.04em;
+      line-height: 1.02;
+    }
+
+    .village-module-copy p {
+      margin: 0;
+      max-width: 58ch;
+      color: rgba(235, 247, 255, 0.88);
+      line-height: 1.65;
+      font-size: 1rem;
+    }
+
+    .village-module-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(125, 255, 46, 0.12);
+      border: 1px solid rgba(125, 255, 46, 0.24);
+      color: #95ff63;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .village-module-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .village-module-stat {
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      min-height: 108px;
+    }
+
+    .village-module-stat strong {
+      display: block;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.25;
+    }
+
+    .village-module-stat span {
+      display: block;
+      margin-top: 8px;
+      font-size: 0.86rem;
+      color: rgba(219, 234, 254, 0.82);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .village-module-panel {
+      border-radius: 28px;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(9, 30, 66, 0.08);
+      box-shadow: 0 20px 40px rgba(9, 30, 66, 0.12);
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .village-module-panel h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: #062143;
+      letter-spacing: -0.03em;
+    }
+
+    .village-module-panel p {
+      margin: 0;
+      line-height: 1.65;
+      color: #365071;
+    }
+
+    .village-module-actions {
+      display: grid;
+      gap: 12px;
+    }
+
+    .village-module-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(8, 47, 138, 0.94), rgba(37, 99, 235, 0.9));
+      color: #f8fbff;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.22);
+    }
+
+    .village-module-action i {
+      font-size: 0.9rem;
+    }
+
+    .village-module-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .village-module-card {
+      border-radius: 24px;
+      padding: 22px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(9, 30, 66, 0.08);
+      box-shadow: 0 18px 38px rgba(9, 30, 66, 0.1);
+      display: grid;
+      gap: 12px;
+      min-height: 230px;
+    }
+
+    .village-module-card-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(125, 255, 46, 0.22), rgba(45, 216, 255, 0.22));
+      color: #0b3b9c;
+      font-size: 1.15rem;
+    }
+
+    .village-module-card h3 {
+      margin: 0;
+      color: #061f43;
+      font-size: 1.12rem;
+      letter-spacing: -0.02em;
+    }
+
+    .village-module-card p {
+      margin: 0;
+      color: #47617c;
+      line-height: 1.66;
+    }
+
+    .village-module-feed {
+      border-radius: 28px;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(9, 30, 66, 0.08);
+      box-shadow: 0 18px 38px rgba(9, 30, 66, 0.1);
+      display: grid;
+      gap: 16px;
+    }
+
+    .village-module-feed-head h2 {
+      margin: 0;
+      color: #062143;
+      font-size: 1.2rem;
+      letter-spacing: -0.03em;
+    }
+
+    .village-module-feed-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .village-module-feed-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(243, 248, 255, 0.9), rgba(232, 241, 252, 0.86));
+      border: 1px solid rgba(37, 99, 235, 0.08);
+      align-items: start;
+    }
+
+    .village-module-feed-copy strong {
+      display: block;
+      color: #072249;
+      font-size: 0.98rem;
+      line-height: 1.4;
+    }
+
+    .village-module-feed-copy p {
+      margin: 8px 0 0;
+      color: #49647f;
+      line-height: 1.6;
+    }
+
+    .village-module-feed-copy span {
+      display: inline-block;
+      margin-top: 8px;
+      color: #68809b;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .village-module-feed-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.84rem;
+      white-space: nowrap;
+      min-width: 88px;
+    }
+
+    .village-module-feed-badge.is-positive {
+      background: rgba(125, 255, 46, 0.16);
+      color: #16803a;
+    }
+
+    .village-module-feed-badge.is-neutral {
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+    }
+
+    @media (max-width: 1200px) {
+      .village-module-hero,
+      .village-module-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .village-module-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .village-module-copy,
+      .village-module-panel,
+      .village-module-card,
+      .village-module-feed {
+        padding: 20px;
+        border-radius: 22px;
+      }
+
+      .village-module-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .village-module-feed-item {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-shell">
+    <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+      <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+    </button>
+
+    <aside class="dashboard-sidebar">
+      {% set active_page = module.active_page %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main village-module-page">
+      <div class="language-switcher">
+        <div id="google_translate_element"></div>
+      </div>
+
+      <header class="village-module-hero">
+        <div class="village-module-copy">
+          <span class="village-module-badge"><i class="fas fa-bolt"></i>{{ module.badge }}</span>
+          <h1>{{ module.title }}</h1>
+          <p>{{ module.description }}</p>
+
+          <div class="village-module-stats">
+            {% for stat in module.stats %}
+            <div class="village-module-stat">
+              <strong>{{ stat.value }}</strong>
+              <span>{{ stat.label }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <aside class="village-module-panel">
+          <h2>{{ module.panel_title }}</h2>
+          <p>{{ module.panel_text }}</p>
+          <div class="village-module-actions">
+            {% for action in module.actions %}
+            <a class="village-module-action" href="{{ action.href }}">
+              <span>{{ action.label }}</span>
+              <i class="fas fa-arrow-right"></i>
+            </a>
+            {% endfor %}
+          </div>
+        </aside>
+      </header>
+
+      <section class="village-module-grid">
+        {% for card in module.cards %}
+        <article class="village-module-card">
+          <span class="village-module-card-icon">
+            <i class="fas {{ card.icon }}"></i>
+          </span>
+          <h3>{{ card.title }}</h3>
+          <p>{{ card.detail }}</p>
+        </article>
+        {% endfor %}
+      </section>
+
+      {% if module.feed_entries %}
+      <section class="village-module-feed">
+        <div class="village-module-feed-head">
+          <h2>{{ module.feed_title }}</h2>
+        </div>
+        <div class="village-module-feed-list">
+          {% for item in module.feed_entries %}
+          <article class="village-module-feed-item">
+            <div class="village-module-feed-copy">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.detail }}</p>
+              <span>{{ item.meta }}</span>
+            </div>
+            {% if item.badge %}
+            <span class="village-module-feed-badge {% if item.badge_tone == 'positive' %}is-positive{% else %}is-neutral{% endif %}">{{ item.badge }}</span>
+            {% endif %}
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

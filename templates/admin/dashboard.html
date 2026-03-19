@@ -1,7 +1,6 @@
 {% extends "admin/base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-<<<<<<< HEAD
   {% set audit = audit if audit is defined else {
     'mapping_count': 0,
     'unmapped_count': 0,
@@ -11,8 +10,6 @@
     'missing_content': [],
     'recommendation_review': []
   } %}
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
   <section class="admin-page-head">
     <h1>Dashboard</h1>
     <p>Overview of store activity.</p>
@@ -42,7 +39,6 @@
     <a class="admin-quick-link" href="/admin/orders">View Orders</a>
     <a class="admin-quick-link" href="/admin/mappings">AI Disease Mapping</a>
   </section>
-<<<<<<< HEAD
 
   <section class="admin-panel">
     <h2 class="admin-panel-title">Data Quality Audit</h2>
@@ -131,7 +127,5 @@
       </table>
     </div>
   </section>
-=======
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
 {% endblock %}
 

@@ -93,23 +93,6 @@
             <small>{{ dashboard.crop_health.label }} for {{ dashboard.crop_health.crop_name }}</small>
           </div>
         </div>
-        <div class="dashboard-hero-media" aria-hidden="true">
-          <span class="dashboard-hero-badge">Live AI Field View</span>
-          <span class="dashboard-hero-orb"></span>
-          <span class="dashboard-hero-cloud dashboard-hero-cloud-one"></span>
-          <span class="dashboard-hero-cloud dashboard-hero-cloud-two"></span>
-          <span class="dashboard-hero-stars"></span>
-          <div class="dashboard-hero-landscape">
-            <span class="dashboard-hero-hill dashboard-hero-hill-back"></span>
-            <span class="dashboard-hero-hill dashboard-hero-hill-mid"></span>
-            <span class="dashboard-hero-hill dashboard-hero-hill-front"></span>
-          </div>
-          <div class="dashboard-hero-panel">
-            <strong>Field Outlook</strong>
-            <span>{{ dashboard.weather.description }}</span>
-            <small>{{ dashboard.crop_health.label }} for {{ dashboard.crop_health.crop_name }}</small>
-          </div>
-        </div>
       </header>
 
       <section class="dashboard-content-area">
@@ -555,13 +538,17 @@
       
       // Map Restoration
       var mapEl = document.getElementById('dash-leaflet-map');
-      if (mapEl) {
-        var lat = parseFloat("{{ dashboard.lat|default(20.3) }}");
-        var lng = parseFloat("{{ dashboard.lon|default(85.8) }}");
-        var map = L.map('dash-leaflet-map').setView([lat, lng], 14);
+      if (mapEl && window.L) {
+        var lat = Number({{ dashboard.lat|default(20.3)|tojson }});
+        var lng = Number({{ dashboard.lon|default(85.8)|tojson }});
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          lat = 20.2961;
+          lng = 85.8245;
+        }
+        var map = L.map('dash-leaflet-map', { zoomControl: true }).setView([lat, lng], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
             maxZoom: 19,
-            attribution: 'Â© OpenStreetMap contributors'
+            attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
         
         // Fetch real farm fields from our API
@@ -569,8 +556,14 @@
           .then(res => res.json())
           .then(data => {
             if (data.success && data.fields && data.fields.length > 0) {
+              var bounds = [];
               data.fields.forEach(field => {
-                const marker = L.marker(field.coords).addTo(map);
+                if (!Array.isArray(field.coords) || field.coords.length < 2) return;
+                var markerLat = Number(field.coords[0]);
+                var markerLng = Number(field.coords[1]);
+                if (!Number.isFinite(markerLat) || !Number.isFinite(markerLng)) return;
+                bounds.push([markerLat, markerLng]);
+                const marker = L.marker([markerLat, markerLng]).addTo(map);
                 marker.bindPopup(`
                   <div class="map-popup-content">
                     <h4>${field.name}</h4>
@@ -580,8 +573,13 @@
                   </div>
                 `);
               });
-              // Center on first field
-              map.setView(data.fields[0].coords, 15);
+              if (bounds.length > 1) {
+                map.fitBounds(bounds, { padding: [24, 24] });
+              } else if (bounds.length === 1) {
+                map.setView(bounds[0], 15);
+              } else {
+                L.marker([lat, lng]).addTo(map).bindPopup('Primary Farm Location');
+              }
             } else {
               L.marker([lat, lng]).addTo(map).bindPopup('Primary Farm Location');
             }
@@ -592,19 +590,11 @@
           });
 
         setTimeout(() => map.invalidateSize(), 400);
-      }
-
-<<<<<<< HEAD
-=======
-      // Voice FAB & Bubble
-      const voiceBtn = document.getElementById('voiceBtn');
-      const voiceBubble = document.getElementById('voiceBubble');
-      if (voiceBtn && voiceBubble) {
-        voiceBtn.addEventListener('click', () => {
-          voiceBubble.style.display = (voiceBubble.style.display === 'flex') ? 'none' : 'flex';
+        window.addEventListener('resize', function () {
+          map.invalidateSize();
         });
       }
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
+
     });
 
     // Mandi update (Mock for now)
@@ -640,25 +630,6 @@
     });
   </script>
   
-<<<<<<< HEAD
-=======
-  <!-- Voice Assistant UI -->
-  <div class="voice-assistant-fab" id="voiceBtn" title="Ask Kisan Dost">
-    <i class="fas fa-microphone"></i>
-  </div>
-  <div class="voice-assistant-bubble" id="voiceBubble" style="display:none;">
-    <div class="bubble-header">
-      <span><i class="fas fa-robot"></i> Kisan Dost</span>
-      <i class="fas fa-times" onclick="document.getElementById('voiceBubble').style.display='none'" style="cursor:pointer;"></i>
-    </div>
-    <div class="bubble-content" id="voiceText">Namaste! Main aapka Kisan Dost hoon. Kaise madad kar sakta hoon?</div>
-    <div class="bubble-actions">
-      <input type="text" placeholder="Sawal yahan likhein..." style="flex:1; padding:8px; border-radius:8px; border:1px solid #ccc;">
-      <button class="bubble-send" style="padding: 8px 12px;"><i class="fas fa-paper-plane"></i></button>
-    </div>
-  </div>
-
->>>>>>> 46a09c90cfcc0ec9f84d5761ca933d6cc76fa057
   <!-- Google Translate -->
   <script>
     function googleTranslateElementInit() {
