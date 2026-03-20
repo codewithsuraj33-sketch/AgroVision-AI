@@ -27,5 +27,4 @@ jobs:
           python -m py_compile app.py
       - name: Tests
         run: |
-          pytest -q
-
+          python -m pytest tests test_ai_crop_doctor_local_qa.py -q

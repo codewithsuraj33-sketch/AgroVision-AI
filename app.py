@@ -563,7 +563,11 @@ else:
     except OSError:
         app.secret_key = uuid.uuid4().hex
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+database_url = (os.getenv("DATABASE_URL") or "").strip()
+if database_url.startswith("postgres://"):
+    database_url = "postgresql://" + database_url[len("postgres://"):]
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -2972,11 +2976,16 @@ def lookup_ai_crop_doctor_disease_dataset_answer(query_text, language="Hinglish"
     if not best_name_hit and (best_overlap < 3 or best_score < 7.0):
         return None
 
+    pathogen = str((best_entry.get("etiology") or {}).get("pathogen") or "").strip()
+    cause_text = pathogen
+    if pathogen and not any(token in pathogen.lower() for token in ("fung", "bacteria", "viral", "virus")):
+        cause_text = f"Fungal infection caused by {pathogen}"
+
     answer = {
         "disease": best_entry.get("name"),
         "confidence_hint": best_entry.get("confidence"),
         "symptoms": best_entry.get("symptoms", []),
-        "cause": str((best_entry.get("etiology") or {}).get("pathogen") or "").strip(),
+        "cause": cause_text,
         "solution": best_entry.get("solution", {}),
         "prevention": best_entry.get("prevention", []),
         "products": best_entry.get("products", []),
@@ -3069,6 +3078,7 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
         signature_tokens = set()
         score = 0.0
         phrase_match = False
+        pattern_phrase_match = False
         keyword_hits = 0
         normalized_tag = normalize_ai_crop_doctor_match_text(entry.get("tag"))
 
@@ -3076,10 +3086,12 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
             if normalized_query == normalized_tag or normalized_query.replace(" ", "") == normalized_tag.replace(" ", ""):
                 score += 16
                 phrase_match = True
+                pattern_phrase_match = True
                 keyword_hits += 1
             elif normalized_tag in normalized_query or normalized_query in normalized_tag:
                 score += 6
                 phrase_match = True
+                pattern_phrase_match = True
 
         for pattern in entry.get("patterns", []):
             normalized_pattern = normalize_ai_crop_doctor_match_text(pattern)
@@ -3090,9 +3102,11 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
             if normalized_query == normalized_pattern:
                 score += 14
                 phrase_match = True
+                pattern_phrase_match = True
             elif normalized_pattern in normalized_query or normalized_query in normalized_pattern:
                 score += 7
                 phrase_match = True
+                pattern_phrase_match = True
             overlap = len(query_tokens & pattern_tokens)
             if overlap:
                 score += min(5, overlap * 1.5)
@@ -3119,6 +3133,8 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
         strong_signature_tokens = signature_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
         strong_overlap = len(strong_query_tokens & strong_signature_tokens)
         if not phrase_match and strong_overlap == 0:
+            continue
+        if entry.get("category") == "advanced_faq" and not pattern_phrase_match and strong_overlap < 2:
             continue
 
         score += strong_overlap * 3
@@ -3162,11 +3178,20 @@ def lookup_ai_crop_doctor_local_qa(query_text):
     if is_ai_chat_greeting_query(query_text):
         return build_ai_chat_greeting_reply(language=detect_ai_chat_language(query_text))
 
+    language = detect_ai_chat_language(query_text)
+    if query_tokens & AI_CROP_DOCTOR_SYMPTOM_CUES:
+        dataset_answer = lookup_ai_crop_doctor_disease_dataset_answer(query_text, language=language)
+        if dataset_answer:
+            return dataset_answer
+        symptom_rule = match_disease_symptom_rule(normalized_query, query_text)
+        formatted_answer = format_ai_crop_doctor_symptom_rule_answer(symptom_rule, language=language)
+        if formatted_answer:
+            return formatted_answer
+
     structured_answer = lookup_ai_crop_doctor_chat_knowledge(query_text)
     if structured_answer:
         return structured_answer
 
-    language = detect_ai_chat_language(query_text)
     best_entry = None
     best_score = 0
     best_strong_overlap = 0
@@ -3230,15 +3255,6 @@ def lookup_ai_crop_doctor_local_qa(query_text):
 
     if best_entry and best_score >= 7 and (best_phrase_match or best_strong_overlap >= 2):
         return get_ai_crop_doctor_local_answer(best_entry, language=language)
-
-    if query_tokens & AI_CROP_DOCTOR_SYMPTOM_CUES:
-        dataset_answer = lookup_ai_crop_doctor_disease_dataset_answer(query_text, language=language)
-        if dataset_answer:
-            return dataset_answer
-        symptom_rule = match_disease_symptom_rule(normalized_query, query_text)
-        formatted_answer = format_ai_crop_doctor_symptom_rule_answer(symptom_rule, language=language)
-        if formatted_answer:
-            return formatted_answer
 
     return None
 
@@ -14064,4 +14080,4 @@ with app.app_context():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8000)
+    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
