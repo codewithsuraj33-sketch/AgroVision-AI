@@ -1,0 +1,482 @@
+[
+  {
+    "id": 1,
+    "name": "Soil Test Kit",
+    "price": 499,
+    "category": "Tools",
+    "image": "/static/products/soil-test-kit.jpg",
+    "description": "Test soil nutrients and pH level.",
+    "rating": 4.5,
+    "seller": "AgroShield Labs",
+    "unit": "500 ml",
+    "tags": [
+      "fungicide",
+      "leaf blight",
+      "disease control"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Drip Pipes",
+    "price": 900,
+    "category": "Tools",
+    "image": "/static/products/drip-pipes.jpg",
+    "description": "Efficient irrigation pipes.",
+    "rating": 4.4,
+    "seller": "GreenLeaf Care",
+    "unit": "250 ml",
+    "tags": [
+      "organic",
+      "pest control",
+      "neem"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Water Pump",
+    "price": 2500,
+    "category": "Tools",
+    "image": "/static/products/water-pump.jpg",
+    "description": "High pressure water pump.",
+    "rating": 4.6,
+    "seller": "CropSecure Solutions",
+    "unit": "1 liter",
+    "tags": [
+      "insect control",
+      "field spray",
+      "protection"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Seed Drill Machine",
+    "price": 1800,
+    "category": "Tools",
+    "image": "/static/products/seed-drill.jpg",
+    "description": "Easy seed planting tool.",
+    "rating": 4.3,
+    "seller": "BioFarm Guard",
+    "unit": "400 ml",
+    "tags": [
+      "bio pesticide",
+      "insects",
+      "safe spray"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Weeder Tool",
+    "price": 700,
+    "category": "Tools",
+    "image": "/static/products/weeder.jpg",
+    "description": "Remove weeds efficiently.",
+    "rating": 4.2,
+    "seller": "PlantCare Plus",
+    "unit": "300 ml",
+    "tags": [
+      "leaf care",
+      "preventive spray",
+      "disease shield"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Pruning Scissors",
+    "price": 350,
+    "category": "Tools",
+    "image": "/static/products/pruning-scissors.jpg",
+    "description": "Cut plants easily.",
+    "rating": 4.4,
+    "seller": "EcoFarm Organics",
+    "unit": "Combo pack",
+    "tags": [
+      "kit",
+      "organic pest control",
+      "farm care"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Wheelbarrow",
+    "price": 3000,
+    "category": "Tools",
+    "image": "/static/products/wheelbarrow.jpg",
+    "description": "Carry heavy loads.",
+    "rating": 4.5,
+    "seller": "SoilSpring Nutrients",
+    "unit": "5 kg",
+    "tags": [
+      "soil fertility",
+      "organic fertilizer",
+      "crop nutrition"
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Gloves",
+    "price": 150,
+    "category": "Tools",
+    "image": "/static/products/gloves.jpg",
+    "description": "Protect hands while farming.",
+    "rating": 4.1,
+    "seller": "AgroBlend Inputs",
+    "unit": "5 kg",
+    "tags": [
+      "npk",
+      "balanced feed",
+      "macro nutrients"
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Neem Oil",
+    "price": 250,
+    "category": "Pesticides",
+    "image": "/static/products/neem-oil.jpg",
+    "description": "Organic pest control.",
+    "rating": 4.6,
+    "seller": "GrowthMax Agro",
+    "unit": "2 kg",
+    "tags": [
+      "nitrogen",
+      "growth booster",
+      "vegetative growth"
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Bio Pesticide",
+    "price": 320,
+    "category": "Pesticides",
+    "image": "/static/products/bio-pesticide.jpg",
+    "description": "Eco-friendly pest solution.",
+    "rating": 4.3,
+    "seller": "EcoSoil Works",
+    "unit": "10 kg",
+    "tags": [
+      "compost",
+      "soil enhancer",
+      "organic matter"
+    ]
+  },
+  {
+    "id": 11,
+    "name": "Pesticide Spray",
+    "price": 280,
+    "category": "Pesticides",
+    "image": "/static/products/pesticide.jpg",
+    "description": "Controls harmful insects.",
+    "rating": 4.2,
+    "seller": "BioRoot Inputs",
+    "unit": "3 kg",
+    "tags": [
+      "bio fertilizer",
+      "eco-friendly",
+      "microbial support"
+    ]
+  },
+  {
+    "id": 12,
+    "name": "Sprayer Machine",
+    "price": 550,
+    "category": "Pesticides",
+    "image": "/static/products/sprayer.jpg",
+    "description": "Spray pesticides easily.",
+    "rating": 4.4,
+    "seller": "HarvestPrime",
+    "unit": "2 kg",
+    "tags": [
+      "potassium",
+      "crop quality",
+      "fruiting support"
+    ]
+  },
+  {
+    "id": 13,
+    "name": "NPK Fertilizer",
+    "price": 350,
+    "category": "Fertilizers",
+    "image": "/static/products/npk.jpg",
+    "description": "Balanced nutrients.",
+    "rating": 4.5,
+    "seller": "HarvestGen Seeds",
+    "unit": "1 kg",
+    "tags": [
+      "rice",
+      "hybrid",
+      "high yield"
+    ]
+  },
+  {
+    "id": 14,
+    "name": "Vermicompost",
+    "price": 220,
+    "category": "Fertilizers",
+    "image": "/static/products/vermicompost.jpg",
+    "description": "Organic compost fertilizer.",
+    "rating": 4.6,
+    "seller": "GoldenGrain Seeds",
+    "unit": "1 kg",
+    "tags": [
+      "wheat",
+      "premium",
+      "seed pack"
+    ]
+  },
+  {
+    "id": 15,
+    "name": "Growth Booster",
+    "price": 300,
+    "category": "Fertilizers",
+    "image": "/static/products/growth-booster.jpg",
+    "description": "Boost plant growth.",
+    "rating": 4.4,
+    "seller": "VeggieNext Seeds",
+    "unit": "100 g",
+    "tags": [
+      "tomato",
+      "vegetable seeds",
+      "fast growth"
+    ]
+  },
+  {
+    "id": 16,
+    "name": "Cocopeat",
+    "price": 180,
+    "category": "Fertilizers",
+    "image": "/static/products/cocopeat.jpg",
+    "description": "Improves soil structure.",
+    "rating": 4.3,
+    "seller": "FieldRise Seeds",
+    "unit": "500 g",
+    "tags": [
+      "corn",
+      "maize",
+      "healthy crop"
+    ]
+  },
+  {
+    "id": 17,
+    "name": "Rice Seeds",
+    "price": 180,
+    "category": "Seeds",
+    "image": "/static/products/rice-seeds.jpg",
+    "description": "High yield seeds.",
+    "rating": 4.6,
+    "seller": "KitchenGarden Hub",
+    "unit": "Combo pack",
+    "tags": [
+      "vegetable mix",
+      "seed combo",
+      "garden"
+    ]
+  },
+  {
+    "id": 18,
+    "name": "Seedling Tray",
+    "price": 120,
+    "category": "Seeds",
+    "image": "/static/products/seedling-tray.jpg",
+    "description": "Grow seedlings easily.",
+    "rating": 4.2,
+    "seller": "PureHarvest Seeds",
+    "unit": "Starter kit",
+    "tags": [
+      "organic seeds",
+      "kit",
+      "eco farming"
+    ]
+  },
+  {
+    "id": 19,
+    "name": "Greenhouse Sheet",
+    "price": 800,
+    "category": "Tools",
+    "image": "/static/products/greenhouse-sheet.jpg",
+    "description": "Protect crops from weather.",
+    "rating": 4.3,
+    "seller": "FieldSense Tools",
+    "unit": "1 unit",
+    "tags": [
+      "sensor",
+      "soil moisture",
+      "smart farming"
+    ]
+  },
+  {
+    "id": 20,
+    "name": "Shade Net",
+    "price": 600,
+    "category": "Tools",
+    "image": "/static/products/shade-net.jpg",
+    "description": "Protect crops from sunlight.",
+    "rating": 4.2,
+    "seller": "AquaFarm Tech",
+    "unit": "1 kit",
+    "tags": [
+      "irrigation",
+      "automation",
+      "water saving"
+    ]
+  },
+  {
+    "id": 21,
+    "name": "Plant Cover",
+    "price": 350,
+    "category": "Tools",
+    "image": "/static/products/plant-cover.jpg",
+    "description": "Protect plants from pests.",
+    "rating": 4.3,
+    "seller": "FieldCraft Tools",
+    "unit": "1 unit",
+    "tags": [
+      "seeder",
+      "manual tool",
+      "planting"
+    ]
+  },
+  {
+    "id": 22,
+    "name": "Hydroponic Kit",
+    "price": 2200,
+    "category": "Tools",
+    "image": "/static/products/hydroponic-kit.jpg",
+    "description": "Soil-less farming system.",
+    "rating": 4.7,
+    "seller": "AgroSpray Equipments",
+    "unit": "16 liter",
+    "tags": [
+      "sprayer",
+      "farm tool",
+      "pesticide application"
+    ]
+  },
+  {
+    "id": 23,
+    "name": "Grow Light",
+    "price": 1500,
+    "category": "Tools",
+    "image": "/static/products/grow-light.jpg",
+    "description": "Indoor plant lighting.",
+    "rating": 4.5,
+    "seller": "AquaFarm Tech",
+    "unit": "30 m roll",
+    "tags": [
+      "drip",
+      "irrigation",
+      "water efficiency"
+    ]
+  },
+  {
+    "id": 24,
+    "name": "Compost Bin",
+    "price": 900,
+    "category": "Tools",
+    "image": "/static/products/compost-bin.jpg",
+    "description": "Make compost easily.",
+    "rating": 4.4,
+    "seller": "ClimateCrop Systems",
+    "unit": "1 unit",
+    "tags": [
+      "weather",
+      "sensor",
+      "climate tracking"
+    ]
+  },
+  {
+    "id": 25,
+    "name": "Hose Pipe",
+    "price": 400,
+    "category": "Tools",
+    "image": "/static/products/hose-pipe.jpg",
+    "description": "Water plants easily.",
+    "rating": 4.3,
+    "seller": "EcoGrow Organics",
+    "unit": "500 ml",
+    "tags": [
+      "growth booster",
+      "organic",
+      "plant vigor"
+    ]
+  },
+  {
+    "id": 26,
+    "name": "Bio Compost Pack",
+    "price": 220,
+    "category": "Organic",
+    "image": "/static/products/compost_pack.jpg",
+    "description": "Improves soil quality.",
+    "rating": 4.2,
+    "seller": "EarthRich Organics",
+    "unit": "8 kg",
+    "tags": [
+      "compost",
+      "bio pack",
+      "soil quality"
+    ]
+  },
+  {
+    "id": 27,
+    "name": "Organic Pest Spray",
+    "price": 260,
+    "category": "Organic",
+    "image": "/static/products/organic_spray.jpg",
+    "description": "Chemical-free pest control.",
+    "rating": 4.4,
+    "seller": "EcoGrow Organics",
+    "unit": "300 ml",
+    "tags": [
+      "organic spray",
+      "pest control",
+      "chemical free"
+    ]
+  },
+  {
+    "id": 28,
+    "name": "Soil Health Booster",
+    "price": 300,
+    "category": "Organic",
+    "image": "/static/products/soil_booster.jpg",
+    "description": "Enhances soil nutrients.",
+    "rating": 4.5,
+    "seller": "EarthRich Organics",
+    "unit": "2 kg",
+    "tags": [
+      "soil health",
+      "booster",
+      "organic nutrients"
+    ]
+  },
+  {
+    "id": 29,
+    "name": "Eco Farming Kit",
+    "price": 850,
+    "category": "Organic",
+    "image": "/static/products/eco_kit.jpg",
+    "description": "Complete organic farming kit.",
+    "rating": 4.7,
+    "seller": "EcoGrow Organics",
+    "unit": "Combo kit",
+    "tags": [
+      "eco farming",
+      "organic kit",
+      "full package"
+    ]
+  },
+  {
+    "id": 30,
+    "name": "Natural Plant Care Kit",
+    "price": 600,
+    "category": "Organic",
+    "image": "/static/products/plant_care.jpg",
+    "description": "All-in-one plant care solution.",
+    "rating": 4.6,
+    "seller": "PureLeaf Naturals",
+    "unit": "Care kit",
+    "tags": [
+      "plant care",
+      "natural",
+      "all in one"
+    ]
+  }
+]

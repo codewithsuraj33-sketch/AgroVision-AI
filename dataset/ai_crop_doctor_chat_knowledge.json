@@ -1,0 +1,626 @@
+{
+  "version": "2.1",
+  "language_support": ["english", "hindi", "hinglish"],
+  "matching_config": {
+    "use_keywords": true,
+    "use_patterns": true,
+    "use_fuzzy_match": true,
+    "min_confidence": 0.5
+  },
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": ["hello", "hi", "namaste", "help karo", "madad karo", "doctor", "ai doctor"],
+      "responses": [
+        "Namaste! Main AI Crop Doctor hoon. Aap apni problem batayein ya photo upload karein.",
+        "Hello! Aap symptoms describe karein ya leaf ki image upload karein."
+      ]
+    },
+    {
+      "tag": "leaf_blight",
+      "patterns": ["leaf pe brown spots aa rahe hain", "patta pe daag hai", "leaf me black spots", "brown marks on leaves"],
+      "keywords": ["brown spots", "leaf spots", "yellow halo", "leaf drying", "black spots", "patta pe daag", "brown daag", "spots on leaves"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Leaf Blight",
+        "confidence_hint": "Medium to High",
+        "symptoms": ["Brown ya black spots", "Yellow halo around spots", "Leaf drying / burning"],
+        "cause": "Fungal infection (Alternaria)",
+        "solution": {
+          "organic": ["Neem oil spray (5ml/L)", "Trichoderma soil treatment"],
+          "chemical": ["Mancozeb 2g/L", "Copper Oxychloride 2.5g/L", "Propiconazole 1ml/L"]
+        },
+        "products": [{"id": "mancozeb"}, {"id": "copper_oxychloride"}, {"id": "propiconazole"}],
+        "follow_up": ["Kya spots circular hain", "Leaf ke niche fungus dikh raha hai"]
+      }
+    },
+    {
+      "tag": "early_blight",
+      "patterns": ["target spots dikh rahe hain", "ring spots aa rahe hain"],
+      "keywords": ["target spots", "ring spots", "target pattern spots"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Early Blight",
+        "symptoms": ["Target pattern spots", "Brown lesion rings", "Leaf drying"],
+        "cause": "Alternaria solani",
+        "solution": {
+          "organic": ["Compost extract", "Neem oil support spray"],
+          "chemical": ["Chlorothalonil", "Mancozeb 2g/L"]
+        },
+        "products": [{"id": "chlorothalonil"}, {"id": "mancozeb"}]
+      }
+    },
+    {
+      "tag": "powdery_mildew",
+      "patterns": ["leaf pe safed powder hai", "white powder on leaves", "powder jaisa kuch aa gaya", "bhai mere paudhe pe safed safed powder aa gaya hai kya karu"],
+      "keywords": ["white powder", "powder on leaves", "white layer", "leaf pe safed powder", "powder jaisa", "white spots", "safed daag"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Powdery Mildew",
+        "confidence_hint": "High",
+        "symptoms": ["White powder on leaves", "Leaf curl", "Slow growth"],
+        "cause": "Fungal infection",
+        "solution": {
+          "organic": ["Milk spray (1:10)", "Neem oil spray"],
+          "chemical": ["Sulfur fungicide", "Hexaconazole"]
+        },
+        "products": [{"id": "sulfur_fungicide"}, {"id": "hexaconazole"}],
+        "follow_up": ["Kya powder rub karne par hat raha hai", "Leaf curl bhi ho raha hai"]
+      }
+    },
+    {
+      "tag": "bacterial_spot",
+      "patterns": ["small wet spots aa rahe hain", "yellow halo ke saath pani jaisa spots"],
+      "keywords": ["small spots", "yellow spots", "wet spots", "yellow halo", "water soaked spots"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Bacterial Spot",
+        "symptoms": ["Chhote pani jaisa spots", "Yellow halo", "Leaf damage"],
+        "cause": "Bacteria",
+        "solution": {
+          "organic": ["Copper spray", "Crop rotation"],
+          "chemical": ["Copper fungicide", "Streptomycin"]
+        },
+        "products": [{"id": "copper_fungicide"}, {"id": "streptomycin"}]
+      }
+    },
+    {
+      "tag": "aphids",
+      "patterns": ["leaf pe insects hai", "chhote keede lag gaye", "patta chipchipa hai", "chhote chhote insects leaf ke niche hai"],
+      "keywords": ["small insects", "sticky leaves", "black insects", "sap sucking", "chipchipa patta", "chhote keede", "leaf sticky", "tiny bugs"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Aphids Attack",
+        "confidence_hint": "High",
+        "symptoms": ["Sticky leaves", "Small insects cluster", "Growth slow"],
+        "cause": "Sap sucking insects",
+        "solution": {
+          "organic": ["Neem oil spray", "Soap water spray"],
+          "chemical": ["Imidacloprid", "Thiamethoxam"]
+        },
+        "products": [{"id": "neem_oil"}, {"id": "imidacloprid"}]
+      }
+    },
+    {
+      "tag": "leaf_curl",
+      "patterns": ["leaf curl ho raha hai", "patta mur raha hai", "leaves twisted hai"],
+      "keywords": ["leaf curl", "twisted leaves", "leaf folding", "leaf curl virus"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Leaf Curl",
+        "symptoms": ["Curling leaves", "Twisted growth", "Weak new leaves"],
+        "cause": "Virus + whitefly pressure",
+        "solution": {
+          "organic": ["Neem oil spray"],
+          "chemical": ["Imidacloprid"]
+        },
+        "products": [{"id": "imidacloprid"}]
+      }
+    },
+    {
+      "tag": "root_rot",
+      "patterns": ["root black ho gaya", "plant gir raha hai", "soil wet hai aur plant weak hai", "plant mar raha hai"],
+      "keywords": ["root black", "plant dying", "root smell", "plant gir raha", "soil wet", "overwatering", "jad kala ho gaya"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Root Rot",
+        "confidence_hint": "High",
+        "symptoms": ["Black roots", "Bad smell", "Plant wilting"],
+        "cause": "Overwatering + fungus",
+        "solution": {
+          "organic": ["Soil dry rakhein", "Neem cake use karein"],
+          "chemical": ["Carbendazim", "Metalaxyl"]
+        },
+        "products": [{"id": "carbendazim"}, {"id": "metalaxyl"}],
+        "follow_up": ["Soil wet hai ya dry", "Root me smell aa raha hai"]
+      }
+    },
+    {
+      "tag": "stem_borer",
+      "patterns": ["hole in stem hai", "plant hollow lag raha hai"],
+      "keywords": ["hole in stem", "plant hollow", "stem holes"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Stem Borer",
+        "symptoms": ["Stem holes", "Dead heart symptoms", "Hollow stem"],
+        "cause": "Insect attack",
+        "solution": {
+          "organic": ["Light traps"],
+          "chemical": ["Chlorpyrifos"]
+        },
+        "products": [{"id": "chlorpyrifos"}]
+      }
+    },
+    {
+      "tag": "thrips",
+      "patterns": ["leaf pe silver lines hai", "silver marks on leaf", "leaf me lines aa gayi"],
+      "keywords": ["silver lines", "tiny insects", "silver streaks", "thrips"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Thrips",
+        "symptoms": ["Silver streaks", "Leaf scarring", "Tiny insects"],
+        "cause": "Thrips insect attack",
+        "solution": {
+          "organic": ["Blue sticky traps"],
+          "chemical": ["Spinosad"]
+        },
+        "products": [{"id": "spinosad"}]
+      }
+    },
+    {
+      "tag": "whitefly",
+      "patterns": ["white insects leaf pe hai", "small white flies dikh rahe hain"],
+      "keywords": ["white insects", "flies", "whitefly", "white bugs"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Whitefly",
+        "symptoms": ["White insects", "Honeydew", "Leaf stress"],
+        "cause": "Sap sucking insect",
+        "solution": {
+          "organic": ["Sticky traps"],
+          "chemical": ["Imidacloprid"]
+        },
+        "products": [{"id": "imidacloprid"}]
+      }
+    },
+    {
+      "tag": "fall_armyworm",
+      "patterns": ["leaf me holes ho rahe hain", "patta kha gaya hai", "leaf eaten lag raha hai"],
+      "keywords": ["leaf eaten", "worms", "holes", "caterpillar", "fall armyworm"],
+      "confidence_threshold": 0.6,
+      "responses": {
+        "disease": "Fall Armyworm / Caterpillar Attack",
+        "symptoms": ["Leaf damage", "Holes in leaves", "Chewed whorl"],
+        "cause": "Caterpillar feeding",
+        "solution": {
+          "organic": ["Neem oil", "Hand picking in early stage"],
+          "chemical": ["Emamectin benzoate"]
+        },
+        "products": [{"id": "emamectin"}]
+      }
+    },
+    {
+      "tag": "nutrient_deficiency",
+      "patterns": ["leaf yellow ho raha hai", "patta peela ho gaya", "growth slow hai", "mere plant pe kuch bhi nahi hai phir bhi growth slow hai"],
+      "keywords": ["yellow leaves", "slow growth", "pale leaves", "growth slow", "patta peela", "nutrition problem"],
+      "confidence_threshold": 0.5,
+      "responses": {
+        "disease": "Nutrient Deficiency",
+        "confidence_hint": "Medium",
+        "symptoms": ["Yellow leaves", "Weak growth", "Small leaves"],
+        "cause": "Lack of NPK nutrients",
+        "solution": {
+          "organic": ["Compost use karein", "Vermicompost"],
+          "chemical": ["NPK fertilizer"]
+        },
+        "products": [{"id": "npk_fertilizer"}],
+        "follow_up": ["Leaf pura yellow hai ya sirf edges", "Growth slow kab se hai"]
+      }
+    },
+    {
+      "tag": "overwatering",
+      "patterns": ["soil wet hai plant gir raha hai", "zyada pani ho gaya", "plant droop kar raha hai"],
+      "keywords": ["overwatering", "wet soil", "leaf drooping"],
+      "confidence_threshold": 0.5,
+      "responses": {
+        "disease": "Overwatering Issue",
+        "symptoms": ["Droopy leaves", "Wet soil", "Weak roots"],
+        "cause": "Too much water",
+        "solution": {
+          "organic": ["Reduce watering", "Soil dry hone dein"],
+          "chemical": []
+        }
+      }
+    },
+    {
+      "tag": "underwatering",
+      "patterns": ["leaf dry ho raha hai", "plant sukh raha hai", "water kam diya hai"],
+      "keywords": ["dry leaves", "wilting", "underwatering"],
+      "confidence_threshold": 0.5,
+      "responses": {
+        "disease": "Underwatering",
+        "symptoms": ["Dry leaves", "Wilting", "Low vigor"],
+        "cause": "Low water",
+        "solution": {
+          "organic": ["Increase irrigation", "Soil moisture check karein"],
+          "chemical": []
+        }
+      }
+    },
+    {
+      "tag": "general_help",
+      "patterns": ["meri crop mar rahi hai", "kya karu", "problem samajh nahi aa rahi", "mujhe nahi pata kya problem hai"],
+      "responses": [
+        "Aap symptoms batayein ya photo upload karein, main help karunga.",
+        "Leaf color, spots, insects, ya soil condition ka detail dein."
+      ]
+    },
+    {
+      "tag": "fallback",
+      "patterns": [],
+      "responses": [
+        "Mujhe exact samajh nahi aaya. Aap symptoms detail me batayein ya image upload karein.",
+        "Please thoda aur detail dein, jaise spots, color change, insects, ya watering condition."
+      ]
+    }
+  ],
+  "faq": [
+    {
+      "tag": "best_fungicide",
+      "question": "Best fungicide kaunsa hai?",
+      "patterns": ["kaunsa fungicide best hai", "best dawa kya hai fungus ke liye"],
+      "keywords": ["best fungicide", "fungicide", "dawa"],
+      "answer": {
+        "problem": "Fungicide Selection",
+        "solution": ["Common options: Mancozeb, Copper Oxychloride, Propiconazole"],
+        "recommendation": "Disease identify karke hi fungicide choose karein"
+      }
+    },
+    {
+      "tag": "organic_treatment",
+      "question": "Organic treatment kya hota hai?",
+      "patterns": ["neem oil effective hai", "organic treatment ka matlab kya hai"],
+      "keywords": ["organic treatment", "neem oil", "organic"],
+      "answer": {
+        "problem": "Organic Treatment",
+        "solution": ["Neem oil", "Compost", "Bio-fertilizer", "Milk spray where relevant"],
+        "recommendation": "Organic treatment safe hota hai but thoda slow kaam karta hai"
+      }
+    },
+    {
+      "tag": "chemical_safety",
+      "question": "Chemical treatment safe hai kya?",
+      "keywords": ["chemical treatment", "safe spray", "chemical safe"],
+      "answer": {
+        "problem": "Chemical Use Safety",
+        "message": "Haan, agar recommended dosage, crop label, aur timing follow karein to chemical treatment safe hota hai. Overuse se crop damage aur residue risk badh sakta hai."
+      }
+    },
+    {
+      "tag": "fungal_solution",
+      "question": "Agar fungal infection hai to kya solution hoga?",
+      "keywords": ["fungal infection", "fungal solution", "fungus treatment"],
+      "answer": {
+        "problem": "Fungal Infection",
+        "solution": {
+          "organic": ["Neem oil spray", "Air circulation improve karein"],
+          "chemical": ["Mancozeb", "Copper Oxychloride", "Propiconazole"]
+        },
+        "recommendation": "Leaf wetness aur overwatering avoid karein"
+      }
+    },
+    {
+      "tag": "virus_no_cure",
+      "question": "Virus disease ka cure kya hota hai?",
+      "keywords": ["virus disease", "virus cure", "leaf curl virus"],
+      "answer": {
+        "problem": "Virus Disease",
+        "message": "Virus ka direct cure usually nahi hota. Infected plant isolate karein, vector pests control karein, aur healthy plants ko protect karein."
+      }
+    },
+    {
+      "tag": "ai_explanation",
+      "question": "Tum disease kaise detect karte ho?",
+      "keywords": ["ai detect", "kaise detect", "ai crop doctor kaise kaam karta hai"],
+      "answer": {
+        "problem": "AI Detection Logic",
+        "message": "System image analysis, symptom matching, local knowledge dataset, aur fallback AI reasoning ka use karta hai. Final advice ke saath field verification bhi recommend kiya jata hai."
+      }
+    },
+    {
+      "tag": "accuracy_info",
+      "question": "Tum kitne accurate ho?",
+      "keywords": ["accurate", "ai accurate", "trust ai"],
+      "answer": {
+        "problem": "AI Accuracy",
+        "message": "AI strong guidance de sakta hai, lekin 100% guarantee nahi hoti. Final decision se pehle field verification aur symptom confirmation best rehta hai."
+      }
+    },
+    {
+      "tag": "fallback_response",
+      "question": "Agar galat prediction ho gaya to kya hoga?",
+      "keywords": ["galat prediction", "wrong answer", "false prediction"],
+      "answer": {
+        "problem": "Fallback Safety",
+        "message": "Low-confidence ya unclear case me system safer fallback deta hai, extra detail maangta hai, ya photo retake bolta hai. Isse random disease batane ka risk kam hota hai."
+      }
+    },
+    {
+      "tag": "organic_vs_chemical",
+      "question": "Neem oil better hai ya chemical spray?",
+      "patterns": ["organic better hai ya chemical", "natural vs chemical farming"],
+      "keywords": ["organic", "chemical", "neem oil"],
+      "answer": {
+        "problem": "Organic vs Chemical",
+        "comparison": {
+          "organic": "Safe but slow",
+          "chemical": "Fast but careful use required"
+        },
+        "recommendation": "Integrated approach best hai"
+      }
+    },
+    {
+      "tag": "last_solution",
+      "question": "Agar sab fail ho jaye to kya karu?",
+      "keywords": ["sab fail", "last solution", "kuch samajh nahi aa raha"],
+      "answer": {
+        "problem": "Escalation Step",
+        "solution": ["Clear close-up image upload karein", "Field scout note banayein", "Nearby agriculture expert ya lab se verify karein"],
+        "recommendation": "Blind spray avoid karein jab tak issue confirm na ho"
+      }
+    },
+    {
+      "tag": "project_uniqueness",
+      "question": "Tumhara system kaise different hai dusre apps se?",
+      "keywords": ["different", "unique", "dusre apps se"],
+      "answer": {
+        "problem": "Project Uniqueness",
+        "message": "Yeh system sirf generic chatbot nahi hai. Isme image diagnosis, symptom-based chat doctor, product mapping, farm workflow guidance, aur safer fallback logic ek hi platform me diya gaya hai."
+      }
+    },
+    {
+      "tag": "impact_answer",
+      "question": "Real farmers ko isse kya benefit milega?",
+      "keywords": ["farmer benefit", "real farmers", "benefit"],
+      "answer": {
+        "problem": "Farmer Impact",
+        "impact": ["Early disease detection", "Wrong spray cost kam", "Faster decision making", "Simple Hinglish guidance"]
+      }
+    },
+    {
+      "tag": "scalability_answer",
+      "question": "Tumhara AI scalable hai kya?",
+      "keywords": ["scalable", "scale", "scalability"],
+      "answer": {
+        "problem": "Scalability",
+        "message": "Haan, dataset-based matching aur modular AI fallback ki wajah se is system ko naye crops, new FAQs, aur regional language support ke saath scale kiya ja sakta hai."
+      }
+    },
+    {
+      "tag": "multi_problem_help",
+      "question": "Leaf yellow hai, insects bhi hai aur growth slow hai",
+      "keywords": ["multiple problem", "yellow and insects", "growth slow"],
+      "answer": {
+        "message": "Aapke crop me multiple issues ho sakte hain. Ek ek symptom batayein ya image upload karein, taaki main priority issue identify kar sakun."
+      }
+    }
+  ],
+  "daily_questions": [
+    {
+      "tag": "daily_work",
+      "question": "Aaj mujhe kya kaam karna chahiye farm me?",
+      "answer": "Weather check karein, irrigation status dekhein, aur crops ka visual inspection karein. Agar disease ya pest dikhe to turant targeted action lein."
+    },
+    {
+      "tag": "morning_routine",
+      "question": "Subah ka best farming routine kya hai?",
+      "answer": "Subah sabse pehle crops inspect karein, soil moisture check karein, aur irrigation ya spray planning banayein."
+    },
+    {
+      "tag": "evening_checks",
+      "question": "Shaam ko farm me kya check karna chahiye?",
+      "answer": "Shaam ko pest activity, leaf condition, aur next day ke irrigation ya labour plan ko review karein."
+    },
+    {
+      "tag": "irrigation_timing",
+      "question": "Irrigation kab karna best hota hai?",
+      "answer": "Subah jaldi ya shaam ko irrigation karna best hota hai taki water loss kam ho aur plant stress control me rahe."
+    },
+    {
+      "tag": "spray_timing",
+      "question": "Pesticide spray kab karein?",
+      "answer": "Subah ya shaam jab sunlight kam ho tab spray karein. Hawa ya barish ke time spray avoid karein."
+    },
+    {
+      "tag": "rain_warning",
+      "question": "Kal barish hone wali hai, kya spray karna chahiye?",
+      "answer": "Barish expected ho to pesticide ya fungicide spray avoid karein. Drainage system aur field runoff zaroor check karein."
+    },
+    {
+      "tag": "heatwave_issue",
+      "question": "Garmi bahut hai, crop kaise bachayein?",
+      "answer": "Mulching karein, evening irrigation rakhein, aur afternoon me field stress badhane wale operations avoid karein."
+    },
+    {
+      "tag": "soil_moisture_check",
+      "question": "Soil moisture kaise check karein?",
+      "answer": "Haath se soil dabakar, meter se, ya sensor ke through moisture level check kar sakte hain."
+    },
+    {
+      "tag": "yield_increase",
+      "question": "Yield kaise increase karein?",
+      "answer": "Good seeds, balanced fertilizer, timely irrigation, aur early disease control ka combination yield badhata hai."
+    }
+  ],
+  "advanced_faq": [
+    {
+      "tag": "carbon_sequestration",
+      "patterns": ["carbon sequestration kya hai", "soil me carbon kaise store hota hai", "carbon farming kya hota hai"],
+      "keywords": ["carbon", "soil carbon", "climate"],
+      "answer": {
+        "definition": "Carbon ko soil ya plants me store karna",
+        "benefit": "Soil fertility improve hoti hai aur climate risk kam hota hai",
+        "example": "Cover crops aur organic farming se carbon storage improve hota hai"
+      }
+    },
+    {
+      "tag": "soil_health",
+      "patterns": ["soil health kya hai", "mitti ki health kyu important hai", "soil improve kaise kare"],
+      "keywords": ["soil", "mitti", "fertility"],
+      "answer": {
+        "definition": "Healthy soil crop growth ko support karti hai",
+        "solution": ["Compost use karein", "Crop rotation karein"],
+        "benefit": "Better yield aur stronger plants"
+      }
+    },
+    {
+      "tag": "crop_stress",
+      "patterns": ["crop stress kya hai", "plant stress kaise pata chale", "plant weak kyu ho raha hai"],
+      "keywords": ["stress", "plant weak"],
+      "answer": {
+        "definition": "Plant ka unhealthy condition",
+        "solution": ["Proper irrigation", "Balanced fertilizer", "Heat aur water stress monitor karein"]
+      }
+    },
+    {
+      "tag": "evapotranspiration",
+      "patterns": ["evapotranspiration kya hai", "water loss kaise hota hai", "pani kyu kam ho jata hai"],
+      "keywords": ["water loss", "evaporation"],
+      "answer": {
+        "definition": "Water loss through evaporation plus plant transpiration",
+        "benefit": "Irrigation planning me help karta hai"
+      }
+    },
+    {
+      "tag": "irrigation_basics",
+      "patterns": ["irrigation kya hai", "sinchai kya hai", "what is irrigation"],
+      "keywords": ["irrigation basics", "irrigation meaning", "sinchai meaning"],
+      "answer": {
+        "definition": "Irrigation ya sinchai ka matlab crop ko planned tarike se paani dena hota hai",
+        "benefit": "Root zone me required moisture maintain rehta hai aur crop stress control me rehta hai"
+      }
+    },
+    {
+      "tag": "predictive_irrigation",
+      "patterns": ["predictive irrigation kya hai", "ai irrigation kaise karta hai"],
+      "keywords": ["irrigation ai", "predictive irrigation"],
+      "answer": {
+        "definition": "AI decide karta hai kab pani dena hai",
+        "benefit": "Water saving aur better growth"
+      }
+    },
+    {
+      "tag": "fertilizer_basics",
+      "patterns": ["fertilizer kya hai", "khad kya hai", "what is fertilizer"],
+      "keywords": ["fertilizer basics", "fertilizer meaning", "khad meaning"],
+      "answer": {
+        "definition": "Fertilizer ya khad wo input hota hai jo crop ko zaruri nutrients deta hai",
+        "benefit": "Sahi dose me use karne se growth, yield, aur nutrient balance improve hota hai"
+      }
+    },
+    {
+      "tag": "smart_fertilizer",
+      "patterns": ["smart fertilizer kya hai", "ai fertilizer kaise suggest karta hai"],
+      "keywords": ["fertilizer ai", "smart fertilizer"],
+      "answer": {
+        "definition": "AI crop stage aur condition ke basis par fertilizer suggest karta hai",
+        "benefit": "Cost kam aur efficiency better"
+      }
+    },
+    {
+      "tag": "digital_agriculture",
+      "patterns": ["digital agriculture kya hai", "smart farming kya hai"],
+      "keywords": ["digital farming", "smart farming"],
+      "answer": {
+        "definition": "Technology ka use farming improve karne ke liye",
+        "example": "AI disease detection, IoT sensors, smart irrigation"
+      }
+    },
+    {
+      "tag": "ai_explainability",
+      "patterns": ["ai explainability kya hai", "ai decision kaise samjhe"],
+      "keywords": ["ai explain", "explainability"],
+      "answer": {
+        "definition": "AI decision ko samajhna",
+        "benefit": "Trust increase hota hai aur wrong action ka risk kam hota hai"
+      }
+    }
+  ],
+  "judge_questions": [
+    {
+      "category": "basic",
+      "question": "Mere plant ke leaves pe brown spots aa rahe hain, kya problem hai?",
+      "expected_intent": "leaf_blight"
+    },
+    {
+      "category": "basic",
+      "question": "White powder jaisa kuch leaf pe dikh raha hai",
+      "expected_intent": "powdery_mildew"
+    },
+    {
+      "category": "basic",
+      "question": "Leaf yellow ho raha hai, kya karu?",
+      "expected_intent": "nutrient_deficiency"
+    },
+    {
+      "category": "pest",
+      "question": "Chhote chhote insects leaf ke niche hai",
+      "expected_intent": "aphids"
+    },
+    {
+      "category": "advanced",
+      "question": "Leaf pe brown spots hai aur yellow ring bhi hai, kya disease hai?",
+      "expected_intent": "leaf_blight"
+    },
+    {
+      "category": "real_world",
+      "question": "Kal barish hone wali hai, kya spray karna chahiye?",
+      "expected_intent": "avoid_spray"
+    },
+    {
+      "category": "real_world",
+      "question": "Garmi bahut hai, crop kaise bachayein?",
+      "expected_intent": "heat_protection"
+    },
+    {
+      "category": "real_world",
+      "question": "Irrigation kab karna best hota hai?",
+      "expected_intent": "irrigation_timing"
+    },
+    {
+      "category": "ai_test",
+      "question": "Tum disease kaise detect karte ho?",
+      "expected_intent": "ai_explanation"
+    },
+    {
+      "category": "ai_test",
+      "question": "Tum kitne accurate ho?",
+      "expected_intent": "accuracy_info"
+    },
+    {
+      "category": "ai_test",
+      "question": "Agar galat prediction ho gaya to kya hoga?",
+      "expected_intent": "fallback_response"
+    },
+    {
+      "category": "comparison",
+      "question": "Neem oil better hai ya chemical spray?",
+      "expected_intent": "comparison_answer"
+    },
+    {
+      "category": "judge_special",
+      "question": "Tumhara system kaise different hai dusre apps se?",
+      "expected_intent": "project_uniqueness"
+    },
+    {
+      "category": "judge_special",
+      "question": "Real farmers ko isse kya benefit milega?",
+      "expected_intent": "impact_answer"
+    },
+    {
+      "category": "judge_special",
+      "question": "Tumhara AI scalable hai kya?",
+      "expected_intent": "scalability_answer"
+    }
+  ]
+}

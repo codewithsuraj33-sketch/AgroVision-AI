@@ -1,0 +1,278 @@
+[
+  {
+    "question": "Beej kya hai",
+    "category": "planning",
+    "keywords": ["seed kya hai", "beej kya hai", "beej kiya hai", "seed meaning", "what is seed"],
+    "answer": "Beej nayi fasal ka starting planting material hota hai. Healthy aur certified beej use karoge to germination, uniform growth, aur disease tolerance zyada better milti hai."
+  },
+  {
+    "question": "Fertilizer kya hai",
+    "category": "nutrition",
+    "keywords": ["fertilizer kya hai", "fertilizer kiya hai", "fertiliser kya hai", "khad kya hai", "what is fertilizer"],
+    "answer": "Fertilizer ya khad wo input hota hai jo crop ko zaruri nutrients, jaise nitrogen, phosphorus, aur potash deta hai. Sahi fertilizer crop stage aur soil test ke hisab se choose karna best rehta hai."
+  },
+  {
+    "question": "Irrigation kya hai",
+    "category": "irrigation",
+    "keywords": ["irrigation kya hai", "irrigasion kiya hai", "irrigation kiya hai", "sinchai kya hai", "what is irrigation"],
+    "answer": "Irrigation ya sinchai ka matlab crop ko planned tarike se paani dena hota hai. Iska goal root zone me required moisture maintain rakhna hota hai bina waterlogging ke."
+  },
+  {
+    "question": "Mere leaf yellow ho rahe hai",
+    "category": "symptom",
+    "keywords": ["yellow leaf", "pila patta", "leaf yellow", "yellowing leaves", "nitrogen deficiency", "chlorosis"],
+    "answer": "Agar patte yellow ho rahe hain to nitrogen ya micronutrient deficiency, ya kabhi kabhi root stress ho sakta hai. Waterlogging check karo, halka balanced NPK ya recommended foliar nutrient do, aur agar veins green rahen to zinc ya iron deficiency bhi inspect karo."
+  },
+  {
+    "question": "Leaf pe brown spots aa gaye",
+    "category": "symptom",
+    "keywords": ["brown spots", "bhure daag", "leaf spot", "fungal spots", "patte par brown daag"],
+    "answer": "Brown spots aksar fungal leaf spot ya blight ka sign hote hain. Infected leaves ko alag karo, upar se paani dena avoid karo, aur labelled fungicide ko crop ke hisab se use karo."
+  },
+  {
+    "question": "Leaf curl ho raha hai",
+    "category": "symptom",
+    "keywords": ["leaf curl", "patta mur raha", "patta murjha curl", "virus curl", "whitefly curl", "thrips curl"],
+    "answer": "Leaf curl me whitefly, thrips ya virus ka role ho sakta hai. Neeche ki side pests check karo, neem oil ya recommended insecticide use karo, aur heavily infected plants ko alag rakhna better hota hai."
+  },
+  {
+    "question": "Plant suk raha hai",
+    "category": "symptom",
+    "keywords": ["plant dry", "plant sukha", "wilting plant", "murjha raha plant", "plant wilt"],
+    "answer": "Plant sukhna sirf paani ki kami nahi hoti; root damage, wilt disease ya heat stress bhi reason ho sakta hai. Mitti ki moisture, root zone aur stem base check karo, phir hi irrigation ya treatment decide karo."
+  },
+  {
+    "question": "Plant grow nahi kar raha",
+    "category": "growth",
+    "keywords": ["slow growth", "stunted growth", "plant weak growth", "growth ruk gaya", "plant development slow"],
+    "answer": "Slow growth me poor soil fertility, root stress, low sunlight ya wrong irrigation schedule ho sakta hai. Compost, balanced fertilizer aur proper drainage ke saath crop stage ke hisab se nutrition plan rakho."
+  },
+  {
+    "question": "Pest aa gaya hai",
+    "category": "pest",
+    "keywords": ["pest", "keeda", "insect attack", "aphid", "whitefly", "thrips", "sucking pest"],
+    "answer": "Pest aane par pehle ye dekho ki sucking pest hai ya chewing pest, kyunki treatment alag hota hai. Neem oil, sticky traps aur threshold-based spray se start karo; bina identification ke heavy chemical spray avoid karo."
+  },
+  {
+    "question": "White powder leaf pe hai",
+    "category": "symptom",
+    "keywords": ["white powder", "safed powder", "powdery mildew", "powder on leaf", "leaf white layer"],
+    "answer": "Patte par white powder jaisa layer powdery mildew ho sakta hai. Air circulation improve karo, zyada humidity avoid karo, aur sulfur based ya crop-labelled fungicide spray timely karo."
+  },
+  {
+    "question": "Leaf me holes hai",
+    "category": "symptom",
+    "keywords": ["leaf holes", "patte me ched", "chewing pest", "caterpillar damage", "beetle damage"],
+    "answer": "Leaf holes zyadatar caterpillar, beetle ya chewing insect ke attack me dikhte hain. Early morning inspection karo, egg clusters hatao, aur zarurat ho to recommended insecticide ya bio-control use karo."
+  },
+  {
+    "question": "Root black ho raha hai",
+    "category": "symptom",
+    "keywords": ["root black", "jad kaali", "black root", "root rot", "root dark", "waterlogging root"],
+    "answer": "Root black ya soft ho raha ho to root rot ya waterlogging ka risk hota hai. Drainage improve karo, extra irrigation rok do, aur soil-borne disease management ke liye field sanitation rakho."
+  },
+  {
+    "question": "Soil dry hai",
+    "category": "irrigation",
+    "keywords": ["dry soil", "mitti sukhi", "soil moisture low", "dry root zone", "pani kam"],
+    "answer": "Mitti dry ho to ekdum flood irrigation dene ke bajay measured watering karo taaki root shock na aaye. Mulch use karoge to moisture zyada der tak hold rahega."
+  },
+  {
+    "question": "Kitna pani dena chahiye",
+    "category": "irrigation",
+    "keywords": ["how much water", "kitna pani", "irrigation amount", "watering schedule", "sinchai kitni"],
+    "answer": "Paani ki matra crop, soil type aur growth stage par depend karti hai. Sandy soil me thoda-thoda frequent paani do, aur heavy soil me interval badha kar moisture check ke saath irrigation karo."
+  },
+  {
+    "question": "Zyada pani dene se kya hota hai",
+    "category": "irrigation",
+    "keywords": ["overwatering", "too much water", "zyada pani", "waterlogging", "extra irrigation"],
+    "answer": "Zyada paani se root zone me oxygen kam ho jati hai, jisse root rot, yellowing aur fungal problem badh sakti hai. Field me pani ruk raha ho to drainage aur irrigation interval dono improve karo."
+  },
+  {
+    "question": "Kam pani dene se kya hota hai",
+    "category": "irrigation",
+    "keywords": ["low water", "kam pani", "underwatering", "water stress", "moisture stress"],
+    "answer": "Kam paani se plant stress me chala jata hai, leaves droop kar sakte hain aur growth ya flowering slow ho sakti hai. Moisture ko regular interval par monitor karke hi next irrigation do."
+  },
+  {
+    "question": "Irrigation system kaunsa best hai",
+    "category": "irrigation",
+    "keywords": ["best irrigation", "drip irrigation", "sprinkler", "irrigation system", "sinchai system"],
+    "answer": "Drip irrigation sabse efficient hota hai jab water saving aur targeted root watering chahiye ho. Sprinkler broad coverage ke liye useful hai, lekin disease-prone crops me leaf wetness ka dhyan rakho."
+  },
+  {
+    "question": "Best fertilizer kya hai",
+    "category": "nutrition",
+    "keywords": ["best fertilizer", "kaunsa fertilizer", "npk", "balanced fertilizer", "khad kaunsi"],
+    "answer": "Sabse best fertilizer wahi hota hai jo soil test aur crop stage ke hisab se fit baithe. Generic taur par balanced NPK useful hota hai, lekin blind urea ya random mix dena har field me sahi nahi hota."
+  },
+  {
+    "question": "Fertilizer kab dale",
+    "category": "nutrition",
+    "keywords": ["fertilizer timing", "khad kab dale", "top dressing", "basal dose", "nutrient timing"],
+    "answer": "Fertilizer ko sowing ke time basal dose aur baad me crop stage ke hisab se split dose me dena better hota hai. Ek hi baar zyada quantity dene se nutrient loss aur plant burn dono ho sakte hain."
+  },
+  {
+    "question": "Fertilizer zyada dal diya",
+    "category": "nutrition",
+    "keywords": ["extra fertilizer", "too much fertilizer", "khad zyada", "over fertilized", "fertilizer overdose"],
+    "answer": "Agar fertilizer zyada pad gaya hai to turant aur fertilizer mat do aur light irrigation se excess salts ko dilute karne ki koshish karo. Leaf burn ya wilting dikh rahi ho to dose record check karo aur next application delay karo."
+  },
+  {
+    "question": "Plant jal gaya hai",
+    "category": "symptom",
+    "keywords": ["leaf burn", "plant burn", "jal gaya", "fertilizer burn", "heat burn"],
+    "answer": "Plant burn fertilizer overdose, strong spray concentration ya heat stress se ho sakta hai. Spray concentration review karo, midday application avoid karo, aur affected plants ko recovery ke liye gentle irrigation do."
+  },
+  {
+    "question": "Organic farming kaise kare",
+    "category": "practice",
+    "keywords": ["organic farming", "jaivik kheti", "organic crop", "compost farming", "bio fertilizer"],
+    "answer": "Organic farming ke liye compost, well-decomposed manure, neem-based pest control aur crop rotation ka combo use karo. Certification ya market target ho to input record maintain karna bhi important hota hai."
+  },
+  {
+    "question": "Soil kaise improve kare",
+    "category": "soil",
+    "keywords": ["improve soil", "soil health", "mitti sudhar", "organic matter", "soil fertility"],
+    "answer": "Soil improve karne ke liye compost, crop residue management, green manure aur rotation ka use karo. Sirf chemical input par depend karne ke bajay organic matter badhane par focus rakho."
+  },
+  {
+    "question": "Soil test kaise kare",
+    "category": "soil",
+    "keywords": ["soil test", "mitti test", "sample collection", "soil lab", "soil testing kit"],
+    "answer": "Soil test ke liye field ke alag-alag points se sample lo, mix karo aur clean sample lab ya kit me bhejo. Report ke bina fertilizer plan banana aksar wasteful hota hai."
+  },
+  {
+    "question": "pH kaise check kare",
+    "category": "soil",
+    "keywords": ["check ph", "soil ph", "ph meter", "mitti ka ph", "acidic alkaline soil"],
+    "answer": "pH meter ya reliable soil testing kit se pH check kar sakte ho. pH bahut low ya high ho to nutrient uptake disturb hota hai, isliye fertilizer recommendation bhi pH ke saath dekhni chahiye."
+  },
+  {
+    "question": "Seed kab lagaye",
+    "category": "timing",
+    "keywords": ["seed sowing", "beej kab", "sowing time", "season wise planting", "seed timing"],
+    "answer": "Beej lagane ka sahi time crop, region aur weather forecast par depend karta hai. Late sowing se pest, heat ya yield loss ka risk badh sakta hai, isliye local season window follow karo."
+  },
+  {
+    "question": "Pesticide kab use kare",
+    "category": "pest",
+    "keywords": ["pesticide timing", "spray kab", "dawai kab use", "pest control timing", "insecticide kab"],
+    "answer": "Pesticide tab use karo jab pest threshold cross ho ya infestation clearly confirm ho. Subah ya shaam spray karo, label dose follow karo, aur hawa ya barish ke time spray mat karo."
+  },
+  {
+    "question": "Rice me kaunsi bimari hoti hai",
+    "category": "crop_disease",
+    "keywords": ["rice disease", "paddy disease", "blast", "leaf blight rice", "dhan bimari"],
+    "answer": "Rice me blast, bacterial leaf blight aur sheath blight common problems hoti hain. Exact disease symptom, weather aur crop stage dekhkar hi spray choose karna chahiye."
+  },
+  {
+    "question": "Tomato me disease",
+    "category": "crop_disease",
+    "keywords": ["tomato disease", "early blight", "late blight", "tomato leaf curl", "tomato infection"],
+    "answer": "Tomato me early blight, late blight, leaf curl virus aur leaf mold common hote hain. Spots, curl aur underside growth jaise symptoms dekhkar diagnosis karna zyada accurate rehta hai."
+  },
+  {
+    "question": "Wheat me problem",
+    "category": "crop_disease",
+    "keywords": ["wheat disease", "gehun problem", "rust disease", "yellow rust", "leaf rust"],
+    "answer": "Wheat me yellow rust, leaf rust aur kabhi nutrient deficiency common dikh sakti hai. Orange ya yellow pustules hon to rust suspect karo; warna nutrient pattern bhi inspect karo."
+  },
+  {
+    "question": "Leaf ka color change ho raha hai",
+    "category": "symptom",
+    "keywords": ["leaf color change", "patta color change", "discoloration", "leaf pale", "patta feeka"],
+    "answer": "Leaf color change deficiency, water stress ya disease tino ki wajah se ho sakta hai. Pattern dekho: pura patta yellow hai, veins green hain, ya sirf edges burn ho rahe hain; isi se next diagnosis clear hota hai."
+  },
+  {
+    "question": "Plant weak hai",
+    "category": "growth",
+    "keywords": ["plant weak", "weak crop", "kamzor plant", "low vigor", "poor plant health"],
+    "answer": "Weak plant me nutrition, root health, sunlight aur pest pressure sab check karna chahiye. Sirf fertilizer badhane ke bajay overall field condition dekhna zyada useful hota hai."
+  },
+  {
+    "question": "Crop yield kaise badhaye",
+    "category": "yield",
+    "keywords": ["increase yield", "yield improve", "upaj badhaye", "production increase", "yield boost"],
+    "answer": "Yield badhane ke liye seed quality, balanced nutrition, timely irrigation aur early pest scouting sab saath me kaam karte hain. Ek hi factor improve karke maximum output nahi milta."
+  },
+  {
+    "question": "Best pesticide kya hai",
+    "category": "pest",
+    "keywords": ["best pesticide", "kaunsa pesticide", "safe pesticide", "neem oil", "pest medicine"],
+    "answer": "Best pesticide pest ke type par depend karta hai; har pest ke liye same product sahi nahi hota. Mild infestation me neem oil ya bio option se start karo, aur heavy case me crop-labelled pesticide choose karo."
+  },
+  {
+    "question": "Chemical fertilizer safe hai",
+    "category": "nutrition",
+    "keywords": ["chemical fertilizer safe", "chemical khad", "fertilizer safety", "chemical input", "safe fertilizer use"],
+    "answer": "Chemical fertilizer controlled dose me safe hota hai, lekin overuse se soil imbalance, salt stress aur lodging ka risk badhta hai. Soil test aur split dose follow karna best rehta hai."
+  },
+  {
+    "question": "Crop disease kaise detect kare",
+    "category": "diagnosis",
+    "keywords": ["detect disease", "crop disease identify", "symptom check", "leaf diagnosis", "ai disease detection"],
+    "answer": "Disease detect karne ke liye symptom pattern, leaf side, stem impact aur recent weather sab dekhna chahiye. Photo-based AI detection helpful hai, lekin exact spray se pehle symptom confirm karna aur bhi zaruri hai."
+  },
+  {
+    "question": "Kaunsa crop ugaye",
+    "category": "planning",
+    "keywords": ["best crop", "kaunsa crop", "which crop to grow", "crop selection", "climate soil crop"],
+    "answer": "Crop selection climate, water availability, soil type aur market demand ke combination par hona chahiye. Sirf mandi rate dekhkar crop choose karne se production risk badh sakta hai."
+  },
+  {
+    "question": "Best seeds kaunse hai",
+    "category": "planning",
+    "keywords": ["best seeds", "hybrid seeds", "improved variety", "quality seed", "certified seed"],
+    "answer": "Best seed wahi hai jo certified ho, local climate me perform karta ho aur disease tolerance rakhta ho. Har jagah hybrid hi best ho yeh zaruri nahi; kabhi resilient variety zyada useful hoti hai."
+  },
+  {
+    "question": "Farm management kaise kare",
+    "category": "planning",
+    "keywords": ["farm management", "field planning", "kheti management", "record keeping", "crop planning"],
+    "answer": "Farm management me irrigation, fertilizer, spray aur labour ka simple record rakhna bahut useful hota hai. Planned schedule aur field observation se cost control aur timely action dono improve hote hain."
+  },
+  {
+    "question": "Weather ka impact kya hai",
+    "category": "weather",
+    "keywords": ["weather impact", "barish impact", "temperature effect", "humidity effect", "climate effect on crop"],
+    "answer": "Weather ka direct effect germination, flowering, pest pressure aur disease spread par padta hai. High humidity fungal disease badhati hai aur heat stress se pollination aur growth dono affect ho sakte hain."
+  },
+  {
+    "question": "Farming me profit kaise badhaye",
+    "category": "planning",
+    "keywords": ["increase farming profit", "profit in farming", "cost reduce", "farm income", "margin improve"],
+    "answer": "Profit badhane ke liye sirf yield nahi, input cost aur selling timing bhi optimize karna padta hai. Seed, fertilizer aur spray ko need-based rakho aur mandi trend dekhkar sale plan karo."
+  },
+  {
+    "question": "Modern farming kya hai",
+    "category": "technology",
+    "keywords": ["modern farming", "advanced farming", "technology farming", "digital agriculture", "smart agriculture basics"],
+    "answer": "Modern farming ka matlab data, machines, sensors aur better planning ke saath kheti karna hai. Isme productivity ke saath resource saving par bhi focus hota hai."
+  },
+  {
+    "question": "Greenhouse kya hai",
+    "category": "technology",
+    "keywords": ["greenhouse", "polyhouse", "controlled environment farming", "protected cultivation", "greenhouse farming"],
+    "answer": "Greenhouse ya protected cultivation me temperature, humidity aur crop environment ko better control kiya ja sakta hai. High value vegetables aur nursery plants ke liye yeh useful hota hai."
+  },
+  {
+    "question": "Hydroponics kya hai",
+    "category": "technology",
+    "keywords": ["hydroponics", "soil less farming", "water farming", "nutrient solution farming", "soilless cultivation"],
+    "answer": "Hydroponics me crop ko soil ke bina nutrient solution me grow kiya jata hai. Isme management accurate hona chahiye, kyunki pH aur nutrient balance ka control bahut important hota hai."
+  },
+  {
+    "question": "Kheti me AI ka use",
+    "category": "technology",
+    "keywords": ["ai in farming", "kheti me ai", "ai agriculture", "prediction in farming", "crop analytics"],
+    "answer": "AI weather risk, crop health, pest alert aur input planning me help karta hai. Sahi data ke saath AI farmer ko faster aur better decision support de sakta hai."
+  },
+  {
+    "question": "Smart farming kya hai",
+    "category": "technology",
+    "keywords": ["smart farming", "iot farming", "sensor farming", "precision farming", "digital farm"],
+    "answer": "Smart farming me AI, IoT sensors, automation aur data-based decisions ka use hota hai. Iska goal paani, fertilizer aur labour ko optimize karke better output lena hai."
+  }
+]

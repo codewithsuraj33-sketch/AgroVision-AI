@@ -1,0 +1,106 @@
+{
+  "tasks": [
+    {
+      "key": "monitoring",
+      "label": "Monitoring",
+      "icon": "fa-binoculars",
+      "summary": "Scout fields frequently for pests, diseases, and deficiencies.",
+      "detail": "Walk through your field in a zigzag pattern and check upper and lower leaf surfaces. Note early spots, curling, chewing damage, and unusual discoloration. Early detection saves cost and yield."
+    },
+    {
+      "key": "site_selection",
+      "label": "Site Selection",
+      "icon": "fa-location-dot",
+      "summary": "Choose a field with good drainage and sunlight.",
+      "detail": "Avoid low-lying patches that remain waterlogged. Prefer a site with good airflow and access to irrigation. Rotate away from last season's host crops to reduce disease carryover."
+    },
+    {
+      "key": "field_preparation",
+      "label": "Field Preparation",
+      "icon": "fa-tractor",
+      "summary": "Prepare soil and beds for uniform stand.",
+      "detail": "Incorporate compost, correct pH if needed, and create level beds. Break clods and remove old crop residue to reduce pest shelter. Align rows for irrigation efficiency."
+    },
+    {
+      "key": "weeding",
+      "label": "Weeding",
+      "icon": "fa-seedling",
+      "summary": "Keep weeds low to reduce competition and pest hosts.",
+      "detail": "Weed during early crop stage to protect yield potential. Weeds can harbor pests and diseases. Combine manual weeding with mulching where possible."
+    },
+    {
+      "key": "irrigation",
+      "label": "Irrigation",
+      "icon": "fa-droplet",
+      "summary": "Irrigate on schedule, avoid leaf wetness at night.",
+      "detail": "Prefer drip or morning irrigation to reduce humidity stress and fungal risk. Avoid overwatering. Check soil moisture before each cycle."
+    },
+    {
+      "key": "fertilization",
+      "label": "Fertilization",
+      "icon": "fa-flask",
+      "summary": "Apply balanced nutrients as per stage.",
+      "detail": "Base dose on soil test. Split nitrogen where needed to avoid excess vegetative growth (which increases disease risk). Ensure potassium for stronger plant defense."
+    },
+    {
+      "key": "preventive",
+      "label": "Preventive Measure",
+      "icon": "fa-shield",
+      "summary": "Prevent before cure with hygiene and scouting.",
+      "detail": "Sanitize tools, remove infected leaves, and avoid moving diseased debris across fields. Keep spacing for airflow. Use resistant varieties whenever possible."
+    }
+  ],
+  "stages": [
+    {
+      "key": "seedling",
+      "label": "Seedling Stage",
+      "icon": "fa-leaf",
+      "items": [
+        "Maintain gentle irrigation and avoid waterlogging.",
+        "Scout for early chewing pests and damping-off symptoms.",
+        "Use clean trays and healthy seedlings for transplant."
+      ]
+    },
+    {
+      "key": "vegetative",
+      "label": "Vegetative Stage",
+      "icon": "fa-tree",
+      "items": [
+        "Keep weeds under control to reduce competition.",
+        "Monitor leaf color for nitrogen deficiency/excess.",
+        "Improve airflow by maintaining spacing and pruning where applicable."
+      ]
+    },
+    {
+      "key": "flowering",
+      "label": "Flowering Stage",
+      "icon": "fa-spa",
+      "items": [
+        "Avoid moisture stress to improve flower retention.",
+        "Increase scouting frequency for pests and fungal outbreaks.",
+        "Follow label instructions for any spray near flowering."
+      ]
+    },
+    {
+      "key": "harvesting",
+      "label": "Harvesting Stage",
+      "icon": "fa-basket-shopping",
+      "items": [
+        "Harvest at correct maturity for best quality.",
+        "Avoid bruising and keep produce shaded after harvest.",
+        "Separate damaged produce to reduce rot spread."
+      ]
+    },
+    {
+      "key": "post_harvest",
+      "label": "Post Harvest",
+      "icon": "fa-box",
+      "items": [
+        "Clean tools and storage surfaces.",
+        "Store produce in cool, dry, ventilated conditions.",
+        "Plan crop rotation and residue management for next season."
+      ]
+    }
+  ]
+}
+

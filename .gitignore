@@ -6,7 +6,10 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
-dataset/
+dataset/*
+!dataset/*.json
+!dataset/*.txt
+dataset/PlantVillage/
 static/uploads/
 instance/
 *.db

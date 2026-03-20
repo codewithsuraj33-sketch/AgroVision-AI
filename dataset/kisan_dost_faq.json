@@ -1,0 +1,116 @@
+[
+  {
+    "topic": "rice_irrigation",
+    "crops": ["rice", "paddy", "dhan"],
+    "keywords": ["rice irrigation", "paddy water", "standing water", "sinchai", "paani"],
+    "answer": "Paddy me har stage par same paani level mat rakho. Tillering aur panicle stage par moisture maintain rakho, lekin unnecessary standing water se nutrient loss aur methane dono badh sakte hain."
+  },
+  {
+    "topic": "wheat_irrigation",
+    "crops": ["wheat", "gehun"],
+    "keywords": ["wheat irrigation", "gehun paani", "crown root initiation", "sinchai"],
+    "answer": "Gehun ke liye sabse critical irrigation stages CRI, booting, aur grain filling hoti hain. Agar paani limited ho to CRI stage ko sabse pehle priority do."
+  },
+  {
+    "topic": "maize_irrigation",
+    "crops": ["maize", "corn", "makka"],
+    "keywords": ["maize irrigation", "corn water", "makka paani", "tasseling"],
+    "answer": "Maize me tasseling aur silking stage par moisture stress yield ko direct hit karta hai. In stages par field ko bilkul dry mat hone do."
+  },
+  {
+    "topic": "soil_ph",
+    "crops": [],
+    "keywords": ["soil ph", "mitti ph", "acidic soil", "alkaline soil"],
+    "answer": "Ideal pH crop aur soil type par depend karta hai, lekin 6.0 se 7.0 range zyada crops ke liye safe hoti hai. Acidic soil me lime aur alkaline soil me organic matter useful hota hai."
+  },
+  {
+    "topic": "nitrogen_management",
+    "crops": [],
+    "keywords": ["nitrogen", "urea", "khad", "fertilizer", "n management"],
+    "answer": "Nitrogen ko ek hi baar dene ke bajay split doses me dena better hota hai. Isse crop uptake improve hota hai aur losses kam hote hain."
+  },
+  {
+    "topic": "heat_stress",
+    "crops": [],
+    "keywords": ["heat stress", "garmi", "high temperature", "leaf curl due to heat"],
+    "answer": "High temperature me subah ya shaam irrigation aur foliar spray planning better rehti hai. Midday operations kam rakho aur mulch use karke evaporation control karo."
+  },
+  {
+    "topic": "heavy_rain",
+    "crops": [],
+    "keywords": ["heavy rain", "barish", "waterlogging", "drainage"],
+    "answer": "Heavy rain forecast ho to sabse pehle drainage channels clear rakho. Waterlogging se root oxygen kam hoti hai aur disease risk badhta hai."
+  },
+  {
+    "topic": "late_blight",
+    "crops": ["potato", "tomato"],
+    "keywords": ["late blight", "brown black lesions", "fungal blight", "patte par daag"],
+    "answer": "Late blight cool aur humid condition me fast spread karta hai. Infected leaves remove karo, field ventilation improve karo, aur labelled fungicide schedule follow karo."
+  },
+  {
+    "topic": "leaf_mold",
+    "crops": ["tomato"],
+    "keywords": ["leaf mold", "tomato leaf mold", "yellow patches", "olive mold"],
+    "answer": "Tomato leaf mold zyada humidity aur poor airflow me aata hai. Canopy ko open rakho, lower leaves inspect karo, aur overhead irrigation avoid karo."
+  },
+  {
+    "topic": "yellow_leaf_curl",
+    "crops": ["tomato"],
+    "keywords": ["yellow leaf curl", "ylcv", "curl virus", "whitefly"],
+    "answer": "Tomato yellow leaf curl virus me whitefly control sabse important hota hai. Symptomatic plants ko early isolate karo aur vector pressure ko trap ya spray se manage karo."
+  },
+  {
+    "topic": "rust_management",
+    "crops": ["wheat", "maize"],
+    "keywords": ["rust", "yellow rust", "leaf rust", "orange pustules"],
+    "answer": "Rust symptoms dikhte hi upper canopy scouting badhao. Resistant variety, timely fungicide, aur excess late nitrogen avoid karna useful hota hai."
+  },
+  {
+    "topic": "crop_rotation",
+    "crops": [],
+    "keywords": ["crop rotation", "same crop", "soil fatigue", "rotation"],
+    "answer": "Ek hi field me same crop repeat karne se pest, disease aur nutrient imbalance badhta hai. Rotation me legume ya alternate family ka crop add karna soil health ko support karta hai."
+  },
+  {
+    "topic": "compost",
+    "crops": [],
+    "keywords": ["compost", "organic matter", "gobar", "farm yard manure"],
+    "answer": "Achha decomposed compost soil structure aur water holding improve karta hai. Fresh undecomposed manure ko direct root zone me avoid karo."
+  },
+  {
+    "topic": "mulching",
+    "crops": [],
+    "keywords": ["mulch", "mulching", "soil cover", "evaporation"],
+    "answer": "Mulching se moisture conserve hota hai, weed pressure kam hota hai, aur soil temperature stable rehta hai. Vegetable aur fruit crops me ye kaafi effective hota hai."
+  },
+  {
+    "topic": "mandi_timing",
+    "crops": [],
+    "keywords": ["best time to sell", "mandi timing", "market trend", "sell crop"],
+    "answer": "Mandi me bechne se pehle 2-3 din ka price trend compare karo. Subah ke arrivals aur local demand pattern dekhkar sale decision lena better hota hai."
+  },
+  {
+    "topic": "harvest_readiness",
+    "crops": [],
+    "keywords": ["harvest", "upaj", "ready to cut", "maturity"],
+    "answer": "Harvest ka decision sirf calendar se mat lo; grain hardness, crop color, moisture level aur weather window ko saath me dekho. Wet harvest se storage loss badh sakta hai."
+  },
+  {
+    "topic": "pest_management",
+    "crops": [],
+    "keywords": ["pest", "keeda", "aphid", "whitefly", "thrips"],
+    "answer": "Pest control me pehle scouting, sticky traps, aur threshold-based spray use karo. Har symptom par direct heavy spray karna long term me resistance badha sakta hai."
+  },
+  {
+    "topic": "seed_treatment",
+    "crops": [],
+    "keywords": ["seed treatment", "beej treatment", "fungicide seed", "starting disease"],
+    "answer": "Beej treatment se initial fungal aur soil-borne disease risk kam hota hai. Clean seed aur recommended treatment combination early crop stand ko strong banata hai."
+  },
+  {
+    "topic": "micronutrients",
+    "crops": [],
+    "keywords": ["zinc", "boron", "micronutrient", "yellowing", "deficiency"],
+    "answer": "Micronutrient deficiency me symptom-based diagnosis zaruri hota hai, kyunki zinc, boron aur iron ke symptoms alag hote hain. Random mix spray karne ke bajay deficiency confirm karke input do."
+  }
+]

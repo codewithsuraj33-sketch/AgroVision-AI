@@ -1,0 +1,65 @@
+{
+  "yellow": {
+    "issue": "Nutrient Deficiency or Yellow leaves",
+    "cause": "Lack of nutrients or infection",
+    "solution": "Apply nitrogen fertilizer",
+    "prevention": "Regular soil testing",
+    "products": ["npk.jpg"]
+  },
+  "brown spots": {
+    "issue": "Fungal disease",
+    "cause": "High humidity",
+    "solution": "Use fungicide spray",
+    "prevention": "Avoid water on leaves",
+    "products": ["fungicide.jpg"]
+  },
+  "white powder": {
+    "issue": "Powdery Mildew",
+    "cause": "Fungal infection",
+    "solution": "Apply Sulfur fungicide",
+    "prevention": "Improve air circulation",
+    "products": ["fungicide.jpg"]
+  },
+  "leaf curl": {
+    "issue": "Viral infection or pest attack",
+    "cause": "Whiteflies",
+    "solution": "Use neem oil spray",
+    "prevention": "Control insects early",
+    "products": ["neem_oil.jpg"]
+  },
+  "dry soil": {
+    "issue": "Water stress",
+    "cause": "Lack of irrigation",
+    "solution": "Increase watering",
+    "prevention": "Use drip irrigation",
+    "products": ["irrigation.jpg"]
+  },
+  "slow growth": {
+    "issue": "Nutrient deficiency",
+    "cause": "Poor soil fertility",
+    "solution": "Apply compost or fertilizer",
+    "prevention": "Use organic manure",
+    "products": ["fertilizer.jpg"]
+  },
+  "pest": {
+    "issue": "Insect attack",
+    "cause": "Uncontrolled pests",
+    "solution": "Use pesticide or neem oil",
+    "prevention": "Regular monitoring",
+    "products": ["neem_oil.jpg"]
+  },
+  "root rot": {
+    "issue": "Overwatering disease",
+    "cause": "Waterlogging",
+    "solution": "Improve drainage",
+    "prevention": "Avoid excess watering",
+    "products": ["soil_booster.jpg"]
+  },
+  "leaf holes": {
+    "issue": "Insect damage",
+    "cause": "Caterpillars or beetles",
+    "solution": "Use insecticide spray",
+    "prevention": "Check leaves regularly",
+    "products": ["pesticide.jpg"]
+  }
+}

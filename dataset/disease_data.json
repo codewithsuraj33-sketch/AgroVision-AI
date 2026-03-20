@@ -1,0 +1,1634 @@
+{
+  "Leaf Blight": {
+    "name": "Leaf Blight",
+    "confidence": "65%",
+    "etiology": {
+      "pathogen": "Alternaria solani / Helminthosporium spp.",
+      "environment": "High humidity (>80%), temperature 20-30 C",
+      "transmission": "Airborne spores and water splashes"
+    },
+    "symptoms": [
+      "Brown circular spots",
+      "Yellow halo around spots",
+      "Leaf drying and drop"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray (0.5%)",
+        "Trichoderma viride"
+      ],
+      "chemical": [
+        "Copper Oxychloride (2.5g-3g/L)",
+        "Mancozeb (2g/L)",
+        "Propiconazole (1ml/L)"
+      ]
+    },
+    "products": [
+      "copper_oxychloride.jpg",
+      "mancozeb.jpg",
+      "propiconazole.jpg",
+      "neem_oil.jpg"
+    ],
+    "prevention": [
+      "Avoid overwatering",
+      "Ensure proper airflow",
+      "Remove infected leaves"
+    ]
+  },
+  "Early Blight": {
+    "name": "Early Blight",
+    "confidence": "70%",
+    "etiology": {
+      "pathogen": "Alternaria solani",
+      "environment": "Warm and humid",
+      "transmission": "Airborne spores"
+    },
+    "symptoms": [
+      "Target-like rings",
+      "Yellowing leaves",
+      "Leaf drying"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Mancozeb (2g/L)",
+        "Chlorothalonil (2g/L)"
+      ]
+    },
+    "products": [
+      "mancozeb.jpg",
+      "chlorothalonil.jpg",
+      "neem_oil.jpg"
+    ],
+    "prevention": [
+      "Crop rotation",
+      "Remove debris",
+      "Use resistant seeds"
+    ]
+  },
+  "Late Blight": {
+    "name": "Late Blight",
+    "confidence": "75%",
+    "etiology": {
+      "pathogen": "Phytophthora infestans",
+      "environment": "Cool and humid",
+      "transmission": "Wind and rain splash"
+    },
+    "symptoms": [
+      "Dark water spots",
+      "White fungal growth",
+      "Rapid spread"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Metalaxyl (2g/L)",
+        "Mancozeb (2g/L)"
+      ]
+    },
+    "products": [
+      "metalaxyl.jpg",
+      "mancozeb.jpg"
+    ],
+    "prevention": [
+      "Avoid water stagnation",
+      "Maintain spacing"
+    ]
+  },
+  "Powdery Mildew": {
+    "name": "Powdery Mildew",
+    "confidence": "80%",
+    "etiology": {
+      "pathogen": "Erysiphe spp.",
+      "environment": "Dry and warm",
+      "transmission": "Airborne"
+    },
+    "symptoms": [
+      "White powder layer",
+      "Leaf curl",
+      "Slow growth"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Sulfur (2g/L)"
+      ]
+    },
+    "products": [
+      "sulfur.jpg",
+      "neem_oil.jpg"
+    ],
+    "prevention": [
+      "Maintain spacing",
+      "Avoid excess nitrogen"
+    ]
+  },
+  "Downy Mildew": {
+    "name": "Downy Mildew",
+    "confidence": "72%",
+    "etiology": {
+      "pathogen": "Peronospora spp.",
+      "environment": "Cool and wet",
+      "transmission": "Water splash"
+    },
+    "symptoms": [
+      "Yellow patches",
+      "Gray underside fuzz",
+      "Leaf drop"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Metalaxyl (2g/L)"
+      ]
+    },
+    "products": [
+      "metalaxyl.jpg"
+    ],
+    "prevention": [
+      "Air circulation",
+      "Avoid overwatering"
+    ]
+  },
+  "Leaf Spot": {
+    "name": "Leaf Spot",
+    "confidence": "68%",
+    "etiology": {
+      "pathogen": "Alternaria / Septoria",
+      "environment": "Moist",
+      "transmission": "Water splash"
+    },
+    "symptoms": [
+      "Brown spots",
+      "Leaf yellowing",
+      "Leaf drop"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Chlorothalonil (2g/L)"
+      ]
+    },
+    "products": [
+      "chlorothalonil.jpg"
+    ],
+    "prevention": [
+      "Avoid wet leaves",
+      "Use clean tools"
+    ]
+  },
+  "Aphids": {
+    "name": "Aphids",
+    "confidence": "80%",
+    "etiology": {
+      "pathogen": "Aphid insects",
+      "environment": "Warm and dry",
+      "transmission": "Rapid reproduction and plant contact"
+    },
+    "symptoms": [
+      "Sticky leaves",
+      "Leaf curling",
+      "Small green/black insects"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray",
+        "Soap water spray"
+      ],
+      "chemical": [
+        "Imidacloprid (0.5ml/L)"
+      ]
+    },
+    "products": [
+      "imidacloprid.jpg",
+      "neem_oil.jpg"
+    ],
+    "prevention": [
+      "Regular inspection",
+      "Use sticky traps"
+    ]
+  },
+  "Whitefly": {
+    "name": "Whitefly",
+    "confidence": "85%",
+    "etiology": {
+      "pathogen": "Insect pest",
+      "environment": "Warm climate",
+      "transmission": "Airborne movement"
+    },
+    "symptoms": [
+      "White insects under leaves",
+      "Leaf yellowing",
+      "Sticky honeydew"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray",
+        "Soap water spray"
+      ],
+      "chemical": [
+        "Imidacloprid (0.5ml/L)",
+        "Acetamiprid (0.3g/L)"
+      ]
+    },
+    "products": [
+      "neem_oil.jpg",
+      "imidacloprid.jpg"
+    ],
+    "prevention": [
+      "Use yellow traps",
+      "Maintain field hygiene"
+    ]
+  },
+  "Thrips": {
+    "name": "Thrips",
+    "confidence": "85%",
+    "etiology": {
+      "pathogen": "Thrips tabaci",
+      "environment": "Dry hot",
+      "transmission": "Airborne insects"
+    },
+    "symptoms": [
+      "Silvery patches",
+      "Leaf curling",
+      "Reduced growth"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Spinosad (0.3ml/L)",
+        "Fipronil (1ml/L)"
+      ]
+    },
+    "products": [
+      "spinosad.jpg",
+      "neem_oil.jpg"
+    ],
+    "prevention": [
+      "Maintain moisture",
+      "Use sticky traps"
+    ]
+  },
+  "Stem Borer": {
+    "name": "Stem Borer",
+    "confidence": "80%",
+    "etiology": {
+      "pathogen": "Scirpophaga incertulas",
+      "environment": "Warm humid",
+      "transmission": "Larvae inside stem"
+    },
+    "symptoms": [
+      "Dead heart",
+      "White ear head",
+      "Stem damage"
+    ],
+    "solution": {
+      "organic": [
+        "Pheromone traps"
+      ],
+      "chemical": [
+        "Cartap Hydrochloride (2g/L)",
+        "Fipronil (1ml/L)"
+      ]
+    },
+    "products": [
+      "cartap.jpg",
+      "fipronil.jpg"
+    ],
+    "prevention": [
+      "Use resistant varieties",
+      "Destroy infected plants"
+    ]
+  },
+  "Fall Armyworm": {
+    "name": "Fall Armyworm",
+    "confidence": "85%",
+    "etiology": {
+      "pathogen": "Spodoptera frugiperda",
+      "environment": "Warm humid",
+      "transmission": "Larvae spread"
+    },
+    "symptoms": [
+      "Holes in leaves",
+      "Leaf skeleton",
+      "Frass present"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray",
+        "Handpicking larvae"
+      ],
+      "chemical": [
+        "Chlorantraniliprole (0.4ml/L)",
+        "Spinosad (0.3ml/L)"
+      ]
+    },
+    "products": [
+      "spinosad.jpg",
+      "larvicide_spray.jpg"
+    ],
+    "prevention": [
+      "Early monitoring",
+      "Use pheromone traps"
+    ]
+  },
+  "Mosaic Virus": {
+    "name": "Mosaic Virus",
+    "confidence": "70%",
+    "etiology": {
+      "pathogen": "Virus",
+      "environment": "Warm",
+      "transmission": "Aphids"
+    },
+    "symptoms": [
+      "Patchy leaves",
+      "Distorted growth",
+      "Stunted plant"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "No direct cure"
+      ]
+    },
+    "products": [
+      "neem_oil.jpg"
+    ],
+    "prevention": [
+      "Remove infected plants",
+      "Control insects"
+    ]
+  },
+  "Leaf Curl Virus": {
+    "name": "Leaf Curl Virus",
+    "confidence": "72%",
+    "etiology": {
+      "pathogen": "Virus",
+      "environment": "Warm",
+      "transmission": "Whiteflies"
+    },
+    "symptoms": [
+      "Leaf curl",
+      "Yellowing",
+      "Low yield"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Imidacloprid"
+      ]
+    },
+    "products": [
+      "imidacloprid.jpg"
+    ],
+    "prevention": [
+      "Control whiteflies",
+      "Remove infected plants"
+    ]
+  },
+  "Damping Off": {
+    "name": "Damping Off",
+    "confidence": "74%",
+    "etiology": {
+      "pathogen": "Pythium / Rhizoctonia",
+      "environment": "Wet soil",
+      "transmission": "Soil"
+    },
+    "symptoms": [
+      "Seedling collapse",
+      "Rotting stem"
+    ],
+    "solution": {
+      "organic": [
+        "Soil solarization"
+      ],
+      "chemical": [
+        "Captan (2g/kg seed)"
+      ]
+    },
+    "products": [
+      "captan.jpg"
+    ],
+    "prevention": [
+      "Use sterile soil",
+      "Avoid overwatering"
+    ]
+  },
+  "Gray Leaf Spot": {
+    "name": "Gray Leaf Spot",
+    "confidence": "76%",
+    "etiology": {
+      "pathogen": "Cercospora spp.",
+      "environment": "Humid",
+      "transmission": "Spores"
+    },
+    "symptoms": [
+      "Gray spots",
+      "Leaf drying"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Azoxystrobin"
+      ]
+    },
+    "products": [
+      "azoxystrobin.jpg"
+    ],
+    "prevention": [
+      "Proper spacing"
+    ]
+  },
+  "Northern Leaf Blight": {
+    "name": "Northern Leaf Blight",
+    "confidence": "75%",
+    "etiology": {
+      "pathogen": "Exserohilum turcicum",
+      "environment": "Cool humid",
+      "transmission": "Air"
+    },
+    "symptoms": [
+      "Long lesions"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Propiconazole"
+      ]
+    },
+    "products": [
+      "propiconazole.jpg"
+    ],
+    "prevention": [
+      "Crop rotation"
+    ]
+  },
+  "Brown Spot": {
+    "name": "Brown Spot",
+    "confidence": "73%",
+    "etiology": {
+      "pathogen": "Bipolaris oryzae",
+      "environment": "Humidity",
+      "transmission": "Spores"
+    },
+    "symptoms": [
+      "Brown lesions"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Mancozeb"
+      ]
+    },
+    "products": [
+      "mancozeb.jpg"
+    ],
+    "prevention": [
+      "Balanced fertilizer"
+    ]
+  },
+  "Bacterial Blight": {
+    "name": "Bacterial Blight",
+    "confidence": "77%",
+    "etiology": {
+      "pathogen": "Xanthomonas oryzae",
+      "environment": "Wet",
+      "transmission": "Water"
+    },
+    "symptoms": [
+      "Yellow streaks"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Copper spray"
+      ]
+    },
+    "products": [
+      "copper.jpg"
+    ],
+    "prevention": [
+      "Use clean water"
+    ]
+  },
+  "Black Rot": {
+    "name": "Black Rot",
+    "confidence": "74%",
+    "etiology": {
+      "pathogen": "Xanthomonas campestris",
+      "environment": "Warm",
+      "transmission": "Seeds"
+    },
+    "symptoms": [
+      "Black veins"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Copper fungicide"
+      ]
+    },
+    "products": [
+      "copper.jpg"
+    ],
+    "prevention": [
+      "Use clean seeds"
+    ]
+  },
+  "Bacterial Spot": {
+    "name": "Bacterial Spot",
+    "confidence": "76%",
+    "etiology": {
+      "pathogen": "Xanthomonas spp.",
+      "environment": "Warm and wet with frequent splash spread",
+      "transmission": "Rain splash, tools, and infected seedlings"
+    },
+    "symptoms": [
+      "Small dark water-soaked spots",
+      "Yellow halo around lesions",
+      "Rough spotting on leaves and fruit"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray",
+        "Sanitation and dry-canopy management"
+      ],
+      "chemical": [
+        "Copper Oxychloride (2.5g/L)",
+        "Kocide 2000"
+      ]
+    },
+    "products": [
+      "copper_oxychloride.jpg"
+    ],
+    "prevention": [
+      "Avoid overhead irrigation",
+      "Sanitize pruning tools",
+      "Remove infected leaves early"
+    ]
+  },
+  "Leaf Mold": {
+    "name": "Leaf Mold",
+    "confidence": "74%",
+    "etiology": {
+      "pathogen": "Cladosporium fulvum",
+      "environment": "High humidity and poor airflow",
+      "transmission": "Airborne spores in dense canopy"
+    },
+    "symptoms": [
+      "Yellow patches on upper leaf surface",
+      "Olive-gray mold on leaf underside",
+      "Progressive leaf drying"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray",
+        "Canopy ventilation improvement"
+      ],
+      "chemical": [
+        "Chlorothalonil (2g/L)",
+        "Azoxystrobin (1ml/L)"
+      ]
+    },
+    "products": [
+      "chlorothalonil.jpg",
+      "azoxystrobin.jpg"
+    ],
+    "prevention": [
+      "Improve greenhouse or field airflow",
+      "Avoid late-day leaf wetness",
+      "Remove infected foliage quickly"
+    ]
+  },
+  "Target Spot": {
+    "name": "Target Spot",
+    "confidence": "74%",
+    "etiology": {
+      "pathogen": "Corynespora cassiicola",
+      "environment": "Warm wet canopy",
+      "transmission": "Spores spread by wind and splash water"
+    },
+    "symptoms": [
+      "Brown circular lesions",
+      "Concentric ring pattern",
+      "Yellowing around affected tissue"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Azoxystrobin (1ml/L)",
+        "Chlorothalonil (2g/L)"
+      ]
+    },
+    "products": [
+      "azoxystrobin.jpg",
+      "chlorothalonil.jpg"
+    ],
+    "prevention": [
+      "Maintain good canopy airflow",
+      "Avoid overhead irrigation",
+      "Remove infected lower leaves"
+    ]
+  },
+  "Rice Blast": {
+    "name": "Rice Blast",
+    "confidence": "79%",
+    "etiology": {
+      "pathogen": "Magnaporthe oryzae",
+      "environment": "Humid weather with long leaf wetness",
+      "transmission": "Airborne spores and infected residue"
+    },
+    "symptoms": [
+      "Diamond-shaped lesions",
+      "Gray center with brown border",
+      "Rapid lesion spread after humidity"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray",
+        "Balanced nitrogen management"
+      ],
+      "chemical": [
+        "Tricyclazole 75 WP"
+      ]
+    },
+    "products": [
+      "tricyclazole.jpg"
+    ],
+    "prevention": [
+      "Avoid excess nitrogen",
+      "Use resistant paddy varieties",
+      "Scout fields after rain and cloudy weather"
+    ]
+  },
+  "Leaf Rust": {
+    "name": "Leaf Rust",
+    "confidence": "77%",
+    "etiology": {
+      "pathogen": "Puccinia triticina",
+      "environment": "Humid weather with repeated dew formation",
+      "transmission": "Airborne rust spores"
+    },
+    "symptoms": [
+      "Orange-brown pustules",
+      "Rust dust on leaf surface",
+      "Premature leaf drying"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Propiconazole (1ml/L)",
+        "Sulfur (2g/L)"
+      ]
+    },
+    "products": [
+      "propiconazole.jpg",
+      "sulfur.jpg"
+    ],
+    "prevention": [
+      "Use resistant wheat varieties",
+      "Scout field edges early",
+      "Avoid late excess nitrogen"
+    ]
+  },
+  "Yellow Rust": {
+    "name": "Yellow Rust",
+    "confidence": "78%",
+    "etiology": {
+      "pathogen": "Puccinia striiformis",
+      "environment": "Cool and humid weather",
+      "transmission": "Wind-borne spores"
+    },
+    "symptoms": [
+      "Yellow stripe-like pustules",
+      "Parallel streaks on leaves",
+      "Fast spread in cool mornings"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Propiconazole (1ml/L)",
+        "Sulfur (2g/L)"
+      ]
+    },
+    "products": [
+      "propiconazole.jpg",
+      "sulfur.jpg"
+    ],
+    "prevention": [
+      "Use rust-tolerant varieties",
+      "Avoid delayed spraying after first symptoms",
+      "Monitor cool humid weather closely"
+    ]
+  },
+  "Common Rust": {
+    "name": "Common Rust",
+    "confidence": "74%",
+    "etiology": {
+      "pathogen": "Puccinia sorghi",
+      "environment": "Humid nights with mild daytime temperature",
+      "transmission": "Wind-borne spores"
+    },
+    "symptoms": [
+      "Brown rust pustules",
+      "Leaf surface speckling",
+      "Reduced green leaf area"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Propiconazole (1ml/L)"
+      ]
+    },
+    "products": [
+      "propiconazole.jpg"
+    ],
+    "prevention": [
+      "Choose resistant hybrids",
+      "Inspect upper leaves regularly",
+      "Respond early after dew-heavy mornings"
+    ]
+  },
+  "Wilt Disease": {
+    "name": "Wilt Disease",
+    "confidence": "78%",
+    "etiology": {
+      "pathogen": "Fusarium spp.",
+      "environment": "Soil",
+      "transmission": "Soil-borne"
+    },
+    "symptoms": [
+      "Sudden wilting"
+    ],
+    "solution": {
+      "organic": [
+        "Compost treatment"
+      ],
+      "chemical": [
+        "Carbendazim"
+      ]
+    },
+    "products": [
+      "carbendazim.jpg"
+    ],
+    "prevention": [
+      "Soil treatment"
+    ]
+  },
+  "Healthy": {
+    "name": "Healthy Crop",
+    "confidence": "95%",
+    "etiology": {
+      "pathogen": "None",
+      "environment": "Healthy conditions",
+      "transmission": "None"
+    },
+    "symptoms": [
+      "Green leaves",
+      "Normal growth"
+    ],
+    "solution": {
+      "organic": [
+        "Maintain care"
+      ],
+      "chemical": [
+        "No treatment needed"
+      ]
+    },
+    "products": [
+      "fertilizer.jpg"
+    ],
+    "prevention": [
+      "Regular monitoring",
+      "Balanced nutrients"
+    ]
+  },
+  "Bell Bacterial Spot": {
+    "name": "Bell Bacterial Spot",
+    "confidence": "70%",
+    "etiology": {
+      "pathogen": "Xanthomonas campestris",
+      "environment": "Warm (25-30 C), high humidity",
+      "transmission": "Water splash, infected seeds"
+    },
+    "symptoms": [
+      "Small water-soaked spots",
+      "Dark lesions with yellow halo",
+      "Leaf drop"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray",
+        "Copper Soap"
+      ],
+      "chemical": [
+        "Copper Oxychloride (2.5g/L)",
+        "Streptomycin (0.5g/L)"
+      ]
+    },
+    "products": [
+      "copper_oxychloride.jpg",
+      "bactericide_spray.jpg"
+    ],
+    "prevention": [
+      "Use disease-free seeds",
+      "Avoid overhead irrigation"
+    ]
+  },
+  "Tomato Mosaic Virus": {
+    "name": "Tomato Mosaic Virus",
+    "confidence": "75%",
+    "etiology": {
+      "pathogen": "Tomato mosaic virus (ToMV)",
+      "environment": "Moderate temperature",
+      "transmission": "Contaminated tools, human contact"
+    },
+    "symptoms": [
+      "Mosaic pattern on leaves",
+      "Leaf distortion",
+      "Reduced yield"
+    ],
+    "solution": {
+      "organic": [
+        "Remove infected plants",
+        "Use resistant varieties"
+      ],
+      "chemical": [
+        "No direct chemical cure"
+      ]
+    },
+    "products": [
+      "virus_resistant_seeds.jpg",
+      "plant_immunity_booster.jpg"
+    ],
+    "prevention": [
+      "Sanitize tools",
+      "Avoid touching infected plants"
+    ]
+  },
+  "Tomato Yellow Leaf Curl Virus": {
+    "name": "Tomato Yellow Leaf Curl Virus",
+    "confidence": "80%",
+    "etiology": {
+      "pathogen": "Begomovirus",
+      "environment": "Hot climate",
+      "transmission": "Whitefly"
+    },
+    "symptoms": [
+      "Yellowing leaves",
+      "Upward leaf curling",
+      "Stunted growth"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray",
+        "Yellow sticky traps"
+      ],
+      "chemical": [
+        "Imidacloprid (0.5ml/L)",
+        "Thiamethoxam (0.3g/L)"
+      ]
+    },
+    "products": [
+      "imidacloprid.jpg",
+      "sticky_trap.jpg"
+    ],
+    "prevention": [
+      "Control whiteflies",
+      "Use resistant seeds"
+    ]
+  },
+  "Rice Hispa": {
+    "name": "Rice Hispa",
+    "confidence": "75%",
+    "etiology": {
+      "pathogen": "Dicladispa armigera",
+      "environment": "Humid fields",
+      "transmission": "Adult beetles"
+    },
+    "symptoms": [
+      "White streaks on leaves",
+      "Leaf drying",
+      "Reduced photosynthesis"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Chlorpyrifos (2ml/L)",
+        "Quinalphos (2ml/L)"
+      ]
+    },
+    "products": [
+      "chlorpyrifos.jpg",
+      "insecticide_spray.jpg"
+    ],
+    "prevention": [
+      "Avoid dense planting",
+      "Regular inspection"
+    ]
+  },
+  "Rust Leaf Spot": {
+    "name": "Rust Leaf Spot",
+    "confidence": "70%",
+    "etiology": {
+      "pathogen": "Fungal infection",
+      "environment": "High humidity",
+      "transmission": "Airborne spores"
+    },
+    "symptoms": [
+      "Rust-colored spots",
+      "Leaf drying",
+      "Spots spread rapidly"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Mancozeb (2g/L)",
+        "Propiconazole (1ml/L)"
+      ]
+    },
+    "products": [
+      "mancozeb.jpg",
+      "propiconazole.jpg"
+    ],
+    "prevention": [
+      "Avoid overcrowding",
+      "Proper air circulation"
+    ]
+  },
+  "Banana Panama Disease": {
+    "name": "Banana Panama Disease",
+    "confidence": "78%",
+    "match_features": {
+      "color": [
+        "yellow"
+      ],
+      "pattern": [
+        "wilting"
+      ],
+      "part": [
+        "leaf",
+        "stem"
+      ],
+      "texture": [
+        "dry"
+      ],
+      "spread": "slow"
+    },
+    "priority_rules": [
+      "If yellowing starts from lower leaves",
+      "If plant shows internal stem discoloration"
+    ],
+    "etiology": {
+      "pathogen": "Fusarium oxysporum",
+      "environment": "Warm moist soil",
+      "transmission": "Soil-borne fungus"
+    },
+    "symptoms": [
+      "Yellowing of older leaves",
+      "Wilting plant",
+      "Internal stem discoloration"
+    ],
+    "solution": {
+      "organic": [
+        "Use disease-free planting material",
+        "Soil solarization"
+      ],
+      "chemical": [
+        "Carbendazim (1g/L)"
+      ]
+    },
+    "products": [
+      "carbendazim.jpg"
+    ],
+    "prevention": [
+      "Avoid waterlogging",
+      "Use resistant varieties"
+    ]
+  },
+  "Grape Black Rot": {
+    "name": "Grape Black Rot",
+    "confidence": "80%",
+    "match_features": {
+      "color": [
+        "black",
+        "brown"
+      ],
+      "pattern": [
+        "spots"
+      ],
+      "part": [
+        "leaf",
+        "fruit"
+      ],
+      "texture": [
+        "dry"
+      ],
+      "spread": "medium"
+    },
+    "priority_rules": [
+      "If black spots appear on fruit",
+      "If grapes shrink and rot"
+    ],
+    "etiology": {
+      "pathogen": "Guignardia bidwellii",
+      "environment": "Warm humid",
+      "transmission": "Spores"
+    },
+    "symptoms": [
+      "Black spots on leaves",
+      "Shriveled grapes",
+      "Fruit rot"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Myclobutanil (1ml/L)"
+      ]
+    },
+    "products": [
+      "myclobutanil.jpg"
+    ],
+    "prevention": [
+      "Remove infected fruit",
+      "Ensure airflow"
+    ]
+  },
+  "Wheat Smut": {
+    "name": "Wheat Smut",
+    "confidence": "76%",
+    "match_features": {
+      "color": [
+        "black"
+      ],
+      "pattern": [
+        "powder"
+      ],
+      "part": [
+        "grain"
+      ],
+      "texture": [
+        "dusty"
+      ],
+      "spread": "slow"
+    },
+    "priority_rules": [
+      "If grains show black powder",
+      "If crop yield is reduced"
+    ],
+    "etiology": {
+      "pathogen": "Ustilago tritici",
+      "environment": "Cool climate",
+      "transmission": "Seed-borne"
+    },
+    "symptoms": [
+      "Black powdery spores",
+      "Deformed grains",
+      "Reduced yield"
+    ],
+    "solution": {
+      "organic": [
+        "Use certified seeds"
+      ],
+      "chemical": [
+        "Carboxin (2g/kg seed)"
+      ]
+    },
+    "products": [
+      "carboxin.jpg"
+    ],
+    "prevention": [
+      "Seed treatment",
+      "Resistant varieties"
+    ]
+  },
+  "Sugarcane Red Rot": {
+    "name": "Sugarcane Red Rot",
+    "confidence": "82%",
+    "match_features": {
+      "color": [
+        "red"
+      ],
+      "pattern": [
+        "internal discoloration"
+      ],
+      "part": [
+        "stem"
+      ],
+      "texture": [
+        "soft"
+      ],
+      "spread": "medium"
+    },
+    "priority_rules": [
+      "If red color appears inside stem",
+      "If foul smell present"
+    ],
+    "etiology": {
+      "pathogen": "Colletotrichum falcatum",
+      "environment": "Warm humid",
+      "transmission": "Infected setts"
+    },
+    "symptoms": [
+      "Red internal stem",
+      "Bad smell",
+      "Dry leaves"
+    ],
+    "solution": {
+      "organic": [
+        "Hot water treatment"
+      ],
+      "chemical": [
+        "Carbendazim (1g/L)"
+      ]
+    },
+    "products": [
+      "carbendazim.jpg"
+    ],
+    "prevention": [
+      "Use healthy plants",
+      "Clean field"
+    ]
+  },
+  "Chili Anthracnose": {
+    "name": "Chili Anthracnose",
+    "confidence": "79%",
+    "match_features": {
+      "color": [
+        "dark",
+        "black"
+      ],
+      "pattern": [
+        "sunken spots"
+      ],
+      "part": [
+        "fruit"
+      ],
+      "texture": [
+        "soft"
+      ],
+      "spread": "fast"
+    },
+    "priority_rules": [
+      "If fruit has sunken dark spots",
+      "If fruit rot spreads quickly"
+    ],
+    "etiology": {
+      "pathogen": "Colletotrichum capsici",
+      "environment": "High humidity",
+      "transmission": "Water splash"
+    },
+    "symptoms": [
+      "Sunken spots",
+      "Fruit rot",
+      "Dark lesions"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Azoxystrobin (1ml/L)"
+      ]
+    },
+    "products": [
+      "azoxystrobin.jpg"
+    ],
+    "prevention": [
+      "Avoid overhead watering",
+      "Remove infected fruits"
+    ]
+  },
+  "Potato Scab": {
+    "name": "Potato Scab",
+    "confidence": "77%",
+    "match_features": {
+      "color": [
+        "brown"
+      ],
+      "pattern": [
+        "rough spots"
+      ],
+      "part": [
+        "root",
+        "tuber"
+      ],
+      "texture": [
+        "cracked"
+      ],
+      "spread": "slow"
+    },
+    "priority_rules": [
+      "If rough corky lesions on potato surface",
+      "If tuber skin looks cracked"
+    ],
+    "etiology": {
+      "pathogen": "Streptomyces scabies",
+      "environment": "Dry soil",
+      "transmission": "Soil-borne"
+    },
+    "symptoms": [
+      "Rough brown patches",
+      "Cracked skin",
+      "Reduced quality"
+    ],
+    "solution": {
+      "organic": [
+        "Maintain soil moisture"
+      ],
+      "chemical": [
+        "Soil treatment with sulfur"
+      ]
+    },
+    "products": [
+      "sulfur.jpg"
+    ],
+    "prevention": [
+      "Maintain proper irrigation",
+      "Use resistant varieties"
+    ]
+  },
+  "Banana Leaf Streak Virus": {
+    "name": "Banana Leaf Streak Virus",
+    "confidence": "79%",
+    "match_features": {
+      "color": [
+        "yellow",
+        "green"
+      ],
+      "pattern": [
+        "streaks"
+      ],
+      "part": [
+        "leaf"
+      ],
+      "texture": [
+        "normal"
+      ],
+      "spread": "medium"
+    },
+    "priority_rules": [
+      "If yellow streaks appear on leaves",
+      "If leaves show mosaic-like pattern"
+    ],
+    "etiology": {
+      "pathogen": "Banana streak virus",
+      "environment": "Warm",
+      "transmission": "Plant material"
+    },
+    "symptoms": [
+      "Yellow streaks",
+      "Leaf discoloration",
+      "Reduced growth"
+    ],
+    "solution": {
+      "organic": [
+        "Remove infected plants"
+      ],
+      "chemical": [
+        "No direct cure"
+      ]
+    },
+    "products": [
+      "plant_booster.jpg"
+    ],
+    "prevention": [
+      "Use virus-free plants",
+      "Field sanitation"
+    ]
+  },
+  "Tomato Septoria Leaf Spot": {
+    "name": "Tomato Septoria Leaf Spot",
+    "confidence": "82%",
+    "match_features": {
+      "color": [
+        "gray",
+        "brown"
+      ],
+      "pattern": [
+        "circular spots"
+      ],
+      "part": [
+        "leaf"
+      ],
+      "texture": [
+        "dry"
+      ],
+      "spread": "fast"
+    },
+    "priority_rules": [
+      "If small gray spots with dark borders",
+      "If lower leaves affected first"
+    ],
+    "etiology": {
+      "pathogen": "Septoria lycopersici",
+      "environment": "Humid",
+      "transmission": "Water splash"
+    },
+    "symptoms": [
+      "Gray circular spots",
+      "Yellowing leaves",
+      "Leaf drop"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil Spray"
+      ],
+      "chemical": [
+        "Chlorothalonil (2g/L)"
+      ]
+    },
+    "products": [
+      "chlorothalonil.jpg"
+    ],
+    "prevention": [
+      "Avoid overhead irrigation",
+      "Remove infected leaves"
+    ]
+  },
+  "Rice Sheath Blight": {
+    "name": "Rice Sheath Blight",
+    "confidence": "83%",
+    "match_features": {
+      "color": [
+        "brown"
+      ],
+      "pattern": [
+        "irregular lesions"
+      ],
+      "part": [
+        "stem",
+        "leaf"
+      ],
+      "texture": [
+        "soft"
+      ],
+      "spread": "fast"
+    },
+    "priority_rules": [
+      "If lesions appear near waterline",
+      "If plant base gets infected first"
+    ],
+    "etiology": {
+      "pathogen": "Rhizoctonia solani",
+      "environment": "Warm humid",
+      "transmission": "Soil and water"
+    },
+    "symptoms": [
+      "Brown lesions",
+      "Plant lodging",
+      "Reduced yield"
+    ],
+    "solution": {
+      "organic": [
+        "Proper spacing"
+      ],
+      "chemical": [
+        "Validamycin (2ml/L)"
+      ]
+    },
+    "products": [
+      "validamycin.jpg"
+    ],
+    "prevention": [
+      "Avoid dense planting",
+      "Balanced fertilizer use"
+    ]
+  },
+  "Cabbage Black Leg": {
+    "name": "Cabbage Black Leg",
+    "confidence": "78%",
+    "match_features": {
+      "color": [
+        "black"
+      ],
+      "pattern": [
+        "lesions"
+      ],
+      "part": [
+        "stem",
+        "leaf"
+      ],
+      "texture": [
+        "dry"
+      ],
+      "spread": "medium"
+    },
+    "priority_rules": [
+      "If black lesions on stem",
+      "If leaves wilt suddenly"
+    ],
+    "etiology": {
+      "pathogen": "Leptosphaeria maculans",
+      "environment": "Cool moist",
+      "transmission": "Seeds"
+    },
+    "symptoms": [
+      "Black stem lesions",
+      "Leaf yellowing",
+      "Plant collapse"
+    ],
+    "solution": {
+      "organic": [
+        "Remove infected plants"
+      ],
+      "chemical": [
+        "Carbendazim (1g/L)"
+      ]
+    },
+    "products": [
+      "carbendazim.jpg"
+    ],
+    "prevention": [
+      "Use clean seeds",
+      "Crop rotation"
+    ]
+  },
+  "Pea Powdery Mildew": {
+    "name": "Pea Powdery Mildew",
+    "confidence": "81%",
+    "match_features": {
+      "color": [
+        "white"
+      ],
+      "pattern": [
+        "powder"
+      ],
+      "part": [
+        "leaf"
+      ],
+      "texture": [
+        "dusty"
+      ],
+      "spread": "fast"
+    },
+    "priority_rules": [
+      "If white powder appears on leaves",
+      "If leaves become dry"
+    ],
+    "etiology": {
+      "pathogen": "Erysiphe pisi",
+      "environment": "Dry climate",
+      "transmission": "Airborne spores"
+    },
+    "symptoms": [
+      "White powder",
+      "Leaf drying",
+      "Reduced growth"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Sulfur (2g/L)"
+      ]
+    },
+    "products": [
+      "sulfur.jpg"
+    ],
+    "prevention": [
+      "Maintain spacing",
+      "Avoid excess nitrogen"
+    ]
+  },
+  "Soybean Rust": {
+    "name": "Soybean Rust",
+    "confidence": "84%",
+    "match_features": {
+      "color": [
+        "yellow",
+        "brown"
+      ],
+      "pattern": [
+        "spots"
+      ],
+      "part": [
+        "leaf"
+      ],
+      "texture": [
+        "powdery"
+      ],
+      "spread": "fast"
+    },
+    "priority_rules": [
+      "If yellow spots appear on leaves",
+      "If brown pustules seen"
+    ],
+    "etiology": {
+      "pathogen": "Phakopsora pachyrhizi",
+      "environment": "Humid",
+      "transmission": "Airborne spores"
+    },
+    "symptoms": [
+      "Yellow spots",
+      "Leaf drop",
+      "Yield loss"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Tebuconazole (1ml/L)"
+      ]
+    },
+    "products": [
+      "tebuconazole.jpg"
+    ],
+    "prevention": [
+      "Early detection",
+      "Use resistant varieties"
+    ]
+  },
+  "Mango Anthracnose": {
+    "name": "Mango Anthracnose",
+    "confidence": "86%",
+    "match_features": {
+      "color": [
+        "black"
+      ],
+      "pattern": [
+        "spots"
+      ],
+      "part": [
+        "leaf",
+        "fruit"
+      ],
+      "texture": [
+        "soft"
+      ],
+      "spread": "fast"
+    },
+    "priority_rules": [
+      "If black spots on fruit",
+      "If fruit rot observed"
+    ],
+    "etiology": {
+      "pathogen": "Colletotrichum gloeosporioides",
+      "environment": "High humidity",
+      "transmission": "Rain splash"
+    },
+    "symptoms": [
+      "Black lesions",
+      "Fruit rot",
+      "Leaf spots"
+    ],
+    "solution": {
+      "organic": [
+        "Neem Oil"
+      ],
+      "chemical": [
+        "Carbendazim (1g/L)"
+      ]
+    },
+    "products": [
+      "carbendazim.jpg"
+    ],
+    "prevention": [
+      "Proper pruning",
+      "Avoid water stagnation"
+    ]
+  }
+}
+
