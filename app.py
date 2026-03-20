@@ -2179,28 +2179,46 @@ def send_resend_email(target_email, subject, text_content, html_content=None, *,
     if not RESEND_API_KEY:
         return False, "Resend API key is not configured."
 
-    response = fetch_json(
-        "https://api.resend.com/emails",
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {RESEND_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json_body={
-            "from": formataddr((SMTP_SENDER_NAME, RESEND_FROM_EMAIL)),
-            "to": [recipient],
-            "subject": str(subject or APP_DISPLAY_NAME).strip() or APP_DISPLAY_NAME,
-            "text": str(text_content or "").strip(),
-            "html": str(html_content or "").strip() or build_basic_email_html(subject, text_content),
-        },
-    )
-    if isinstance(response, dict) and response.get("id"):
-        return True, None
+    payload = {
+        "from": formataddr((SMTP_SENDER_NAME, RESEND_FROM_EMAIL)),
+        "to": [recipient],
+        "subject": str(subject or APP_DISPLAY_NAME).strip() or APP_DISPLAY_NAME,
+        "text": str(text_content or "").strip(),
+        "html": str(html_content or "").strip() or build_basic_email_html(subject, text_content),
+    }
+    request_headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
-    error_message = ""
-    if isinstance(response, dict):
-        error_message = str(response.get("message") or response.get("error") or "").strip()
-    return False, error_message or f"Resend API request failed for {label}."
+    try:
+        req = Request(
+            "https://api.resend.com/emails",
+            data=json.dumps(payload).encode("utf-8"),
+            headers=request_headers,
+            method="POST",
+        )
+        with urlopen(req, timeout=API_TIMEOUT_SECONDS) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+        if isinstance(response_data, dict) and response_data.get("id"):
+            return True, None
+        if isinstance(response_data, dict):
+            error_message = str(response_data.get("message") or response_data.get("error") or "").strip()
+            return False, error_message or f"Resend API request failed for {label}."
+        return False, f"Unexpected Resend response for {label}."
+    except HTTPError as exc:
+        error_body = ""
+        try:
+            error_payload = json.loads(exc.read().decode("utf-8"))
+            if isinstance(error_payload, dict):
+                error_body = str(error_payload.get("message") or error_payload.get("error") or error_payload).strip()
+            else:
+                error_body = str(error_payload).strip()
+        except Exception:
+            error_body = str(exc)
+        return False, f"HTTP {exc.code}: {error_body or exc.reason}"
+    except (URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+        return False, str(exc)
 
 
 def send_email_content(target_email, subject, body, *, html_body=None, label="email"):
