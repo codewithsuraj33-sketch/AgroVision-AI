@@ -3171,13 +3171,37 @@ def lookup_ai_crop_doctor_local_qa(query_text):
     query_lower = query_text.lower()
     normalized_query = normalize_ai_crop_doctor_match_text(query_text)
     query_tokens = extract_ai_crop_doctor_match_tokens(query_text)
+    language = detect_ai_chat_language(query_text)
+    symptom_rules = load_disease_symptom_rules()
+
+    # Handle common symptom-only queries even when tokenization or encoding varies across environments.
+    direct_symptom_patterns = [
+        ("root rot", [{"root", "black"}, {"root", "wilt"}]),
+        ("white powder", [{"white", "powder"}]),
+        ("brown spots", [{"brown", "spots"}]),
+        ("yellow", [{"yellow", "leaf"}, {"yellow"}]),
+    ]
+    normalized_tokens = {str(token or "").strip().lower() for token in query_tokens if str(token or "").strip()}
+    for rule_key, token_groups in direct_symptom_patterns:
+        rule = symptom_rules.get(rule_key)
+        if not isinstance(rule, dict):
+            continue
+        if rule_key in normalized_query or rule_key in query_lower:
+            formatted_answer = format_ai_crop_doctor_symptom_rule_answer(rule, language=language)
+            if formatted_answer:
+                return formatted_answer
+        for token_group in token_groups:
+            if set(token_group).issubset(normalized_tokens):
+                formatted_answer = format_ai_crop_doctor_symptom_rule_answer(rule, language=language)
+                if formatted_answer:
+                    return formatted_answer
+
     if not query_tokens:
         return None
 
     if is_ai_chat_greeting_query(query_text):
-        return build_ai_chat_greeting_reply(language=detect_ai_chat_language(query_text))
+        return build_ai_chat_greeting_reply(language=language)
 
-    language = detect_ai_chat_language(query_text)
     if query_tokens & AI_CROP_DOCTOR_SYMPTOM_CUES:
         dataset_answer = lookup_ai_crop_doctor_disease_dataset_answer(query_text, language=language)
         if dataset_answer:
