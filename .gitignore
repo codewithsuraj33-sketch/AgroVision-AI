@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+pytest-cache-files-*/
 dataset/*
 !dataset/*.json
 !dataset/*.txt
