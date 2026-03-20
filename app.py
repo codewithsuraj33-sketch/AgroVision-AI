@@ -2020,6 +2020,8 @@ APP_DISPLAY_NAME = (os.getenv("APP_NAME") or "AgroVisionAI").strip() or "AgroVis
 SMTP_SERVER = (os.getenv("SMTP_SERVER") or "smtp.gmail.com").strip()
 SMTP_PORT = get_env_int("SMTP_PORT", 587)
 SMTP_EMAIL = (os.getenv("SMTP_EMAIL") or "").strip()
+RESEND_API_KEY = (os.getenv("RESEND_API_KEY") or "").strip()
+RESEND_FROM_EMAIL = (os.getenv("RESEND_FROM_EMAIL") or "onboarding@resend.dev").strip() or "onboarding@resend.dev"
 _smtp_password_raw = (os.getenv("SMTP_PASSWORD") or "").strip()
 SMTP_PASSWORD = (
     _smtp_password_raw.replace(" ", "")
@@ -2148,15 +2150,120 @@ def build_otp_email_html(otp, logo_cid=None):
 """.strip()
 
 
+def build_basic_email_html(subject, body):
+    headline = str(subject or APP_DISPLAY_NAME).strip() or APP_DISPLAY_NAME
+    content = str(body or "").strip()
+    html_lines = "<br>".join(escape(line) for line in content.splitlines()) if content else ""
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+  <body style="margin:0;padding:24px;background:#f4f8f3;font-family:Arial,sans-serif;color:#173127;">
+    <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #dce7df;border-radius:18px;overflow:hidden;">
+      <div style="padding:18px 24px;background:linear-gradient(135deg,#1f6f43,#98c15a);color:#ffffff;">
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;opacity:0.88;">{escape(APP_DISPLAY_NAME)}</div>
+        <h1 style="margin:10px 0 0;font-size:24px;line-height:1.3;">{escape(headline)}</h1>
+      </div>
+      <div style="padding:24px;font-size:15px;line-height:1.7;color:#1f2937;">
+        {html_lines}
+      </div>
+    </div>
+  </body>
+</html>
+""".strip()
+
+
+def send_resend_email(target_email, subject, text_content, html_content=None, *, label="email"):
+    recipient = str(target_email or "").strip()
+    if not recipient:
+        return False, f"Recipient email is missing for {label}."
+    if not RESEND_API_KEY:
+        return False, "Resend API key is not configured."
+
+    response = fetch_json(
+        "https://api.resend.com/emails",
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json_body={
+            "from": formataddr((SMTP_SENDER_NAME, RESEND_FROM_EMAIL)),
+            "to": [recipient],
+            "subject": str(subject or APP_DISPLAY_NAME).strip() or APP_DISPLAY_NAME,
+            "text": str(text_content or "").strip(),
+            "html": str(html_content or "").strip() or build_basic_email_html(subject, text_content),
+        },
+    )
+    if isinstance(response, dict) and response.get("id"):
+        return True, None
+
+    error_message = ""
+    if isinstance(response, dict):
+        error_message = str(response.get("message") or response.get("error") or "").strip()
+    return False, error_message or f"Resend API request failed for {label}."
+
+
+def send_email_content(target_email, subject, body, *, html_body=None, label="email"):
+    recipient = str(target_email or "").strip()
+    if not recipient:
+        return False, f"Recipient email is missing for {label}."
+
+    if isinstance(body, (list, tuple)):
+        text_content = "\n".join(str(line) for line in body)
+    else:
+        text_content = str(body or "").strip()
+    html_content = str(html_body or "").strip() or build_basic_email_html(subject, text_content)
+
+    if RESEND_API_KEY:
+        resend_sent, resend_error = send_resend_email(
+            recipient,
+            subject,
+            text_content,
+            html_content,
+            label=label,
+        )
+        if resend_sent:
+            return True, None
+        print(f"Resend Error ({label}): {resend_error}")
+
+    msg = EmailMessage()
+    msg["Subject"] = str(subject or APP_DISPLAY_NAME).strip() or APP_DISPLAY_NAME
+    msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
+    msg["To"] = recipient
+    msg["Reply-To"] = SMTP_EMAIL
+    msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
+    msg.set_content(text_content)
+    msg.add_alternative(html_content, subtype="html")
+    return send_smtp_message(msg, label=label)
+
+
 def send_otp_email(target_email, otp):
     """
-    Sends a 6-digit OTP to the user's email using SMTP.
+    Sends a 6-digit OTP to the user's email using Resend first, then SMTP fallback.
     """
     # Debug Print for Terminal
     print(f"\n--- [DEBUG OTP] OTP for {target_email} is: {otp} ---\n")
 
+    subject = f"{APP_DISPLAY_NAME} verification code: {otp}"
+    text_body = build_otp_email_text(otp)
+    html_body = build_otp_email_html(otp)
+
+    if RESEND_API_KEY:
+        resend_sent, resend_error = send_resend_email(
+            target_email,
+            subject,
+            text_body,
+            html_body,
+            label="otp email",
+        )
+        if resend_sent:
+            return True, None
+        print(f"Resend Error (otp email): {resend_error}")
+
     if not SMTP_EMAIL or not SMTP_PASSWORD:
         print("SMTP credentials are not configured. OTP email skipped.")
+        if RESEND_API_KEY:
+            return False, "Resend delivery failed and SMTP fallback is not configured."
         return False, "SMTP credentials are not configured."
 
     logo_bytes = None
@@ -2167,12 +2274,12 @@ def send_otp_email(target_email, otp):
             logo_cid = make_msgid(domain="agrovisionai.local")[1:-1]
 
     msg = EmailMessage()
-    msg["Subject"] = f"{APP_DISPLAY_NAME} verification code: {otp}"
+    msg["Subject"] = subject
     msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
     msg["To"] = target_email
     msg["Reply-To"] = SMTP_EMAIL
     msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
-    msg.set_content(build_otp_email_text(otp))
+    msg.set_content(text_body)
     msg.add_alternative(build_otp_email_html(otp, logo_cid=logo_cid), subtype="html")
 
     if logo_bytes and logo_cid:
@@ -6237,23 +6344,7 @@ def send_smtp_message(msg, label="email"):
 
 
 def send_basic_email(target_email, subject, body, *, label="email"):
-    recipient = str(target_email or "").strip()
-    if not recipient:
-        return False, f"Recipient email is missing for {label}."
-
-    if isinstance(body, (list, tuple)):
-        content = "\n".join(str(line) for line in body)
-    else:
-        content = str(body or "").strip()
-
-    msg = EmailMessage()
-    msg["Subject"] = str(subject or APP_DISPLAY_NAME).strip() or APP_DISPLAY_NAME
-    msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
-    msg["To"] = recipient
-    msg["Reply-To"] = SMTP_EMAIL
-    msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
-    msg.set_content(content)
-    return send_smtp_message(msg, label=label)
+    return send_email_content(target_email, subject, body, label=label)
 
 
 def send_twilio_text_message(target_phone, message, *, prefer_whatsapp=False, label="phone message"):
@@ -6328,15 +6419,13 @@ def send_alert_email(user, preferences, alert):
     target_email = str(getattr(preferences, "alert_email", "") or getattr(user, "email", "") or "").strip()
     if not target_email:
         return False, "Alert email address is missing."
-
-    msg = EmailMessage()
-    msg["Subject"] = f"{APP_DISPLAY_NAME} Alert: {alert.title}"
-    msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
-    msg["To"] = target_email
-    msg["Reply-To"] = SMTP_EMAIL
-    msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
-    msg.set_content(build_alert_email_text(alert, user))
-    return send_smtp_message(msg, label="alert email")
+    subject = f"{APP_DISPLAY_NAME} Alert: {alert.title}"
+    return send_email_content(
+        target_email,
+        subject,
+        build_alert_email_text(alert, user),
+        label="alert email",
+    )
 
 
 def build_alert_phone_message(alert):
