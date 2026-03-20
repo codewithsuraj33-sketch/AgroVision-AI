@@ -11,12 +11,14 @@ def test_structured_chat_knowledge_matches_non_exact_powder_query():
 
 
 def test_structured_chat_knowledge_matches_judge_style_question():
-    reply = app_module.lookup_ai_crop_doctor_local_qa(
-        "tumhara system dusre farming apps se alag kaise hai"
-    )
+    reply = app_module.lookup_ai_crop_doctor_local_qa("tumhara system dusre farming apps se alag kaise hai")
 
     assert reply is not None
-    assert "image diagnosis" in reply.lower() or "symptom-based chat doctor" in reply.lower() or "platform" in reply.lower()
+    assert (
+        "image diagnosis" in reply.lower()
+        or "symptom-based chat doctor" in reply.lower()
+        or "platform" in reply.lower()
+    )
 
 
 def test_structured_chat_knowledge_matches_hindi_script_yellowing_query():

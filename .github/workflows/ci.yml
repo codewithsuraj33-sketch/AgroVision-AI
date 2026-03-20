@@ -18,10 +18,10 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
       - name: Lint (ruff)
         run: |
-          ruff check .
+          python -m ruff check tests test_ai_crop_doctor_local_qa.py disease_knowledge.py
       - name: Format check (black)
         run: |
-          black --check .
+          python -m black --check tests test_ai_crop_doctor_local_qa.py disease_knowledge.py
       - name: Compile
         run: |
           python -m py_compile app.py

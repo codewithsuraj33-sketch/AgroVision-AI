@@ -1,41 +1,40 @@
 # pyre-ignore-all-errors
+import hmac
 import json
 import os
 import random
 import re
 import smtplib
+import textwrap
 import threading
 import time
-import textwrap
 import uuid
-import hmac
-from math import asin, cos, radians, sin, sqrt
-from functools import wraps
 from base64 import b64encode
+from datetime import date, datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
-from io import BytesIO
-from pathlib import Path
+from functools import wraps
 from hashlib import sha1, sha256
-from datetime import date, datetime, timedelta, timezone
 from html import escape
+from io import BytesIO
+from math import asin, cos, radians, sin, sqrt
+from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode, urlparse, parse_qsl, urlunparse
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
-import numpy as np # type: ignore
-from flask import Flask, Response, abort, redirect, render_template, request, session, jsonify # type: ignore
-from flask_sqlalchemy import SQLAlchemy # type: ignore
-from PIL import Image, ImageOps, UnidentifiedImageError # type: ignore
-from werkzeug.security import check_password_hash, generate_password_hash # type: ignore
-from werkzeug.utils import secure_filename # type: ignore
-import google.generativeai as genai # type: ignore
+import google.generativeai as genai  # type: ignore
+import numpy as np  # type: ignore
+from flask import Flask, Response, abort, jsonify, redirect, render_template, request, session  # type: ignore
+from flask_sqlalchemy import SQLAlchemy  # type: ignore
+from PIL import Image, ImageOps, UnidentifiedImageError  # type: ignore
+from werkzeug.security import check_password_hash, generate_password_hash  # type: ignore
+from werkzeug.utils import secure_filename  # type: ignore
 
 try:
-    import torch # type: ignore
-    import torch.nn as nn # type: ignore
-    from torchvision import transforms # type: ignore
+    import torch  # type: ignore
+    from torchvision import transforms  # type: ignore
 except Exception:
     torch = None
 
@@ -5042,7 +5041,7 @@ def build_virtual_store_product(product_asset_name, disease_entry, payload):
     category_meta = get_store_category_meta(category)
     product_name = format_product_asset_name(product_asset_name)
     detail_slug = slugify_crop_name(product_asset_name or product_name)
-    price_seed = int(sha1(f"{disease_name}|{product_name}|preview".encode("utf-8")).hexdigest(), 16)
+    price_seed = int(sha1(f"{disease_name}|{product_name}|preview".encode()).hexdigest(), 16)
     price = (249 if solution_bucket == "Organic" else 399) + (price_seed % 7) * 35
     image_url = resolve_local_product_image_url(product_asset_name, product_name)
     description = build_dynamic_product_description(
@@ -5161,7 +5160,7 @@ def build_disease_product_card(product_asset_name, disease_entry, payload, store
     product_name = serialized_product["name"] if serialized_product is not None else format_product_asset_name(product_asset_name)
     category = serialized_product["category"] if serialized_product is not None else ("Organic" if solution_bucket == "Organic" else "Pesticides")
     brand = serialized_product["seller"] if serialized_product is not None else default_store_seller(category)
-    price_seed = int(sha1(f"{disease_name}|{product_name}".encode("utf-8")).hexdigest(), 16)
+    price_seed = int(sha1(f"{disease_name}|{product_name}".encode()).hexdigest(), 16)
     rating = serialized_product["rating"] if serialized_product is not None else round(4.3 + (price_seed % 5) * 0.1, 1)
     price = serialized_product["price"] if serialized_product is not None else (249 if solution_bucket == "Organic" else 399) + (price_seed % 7) * 35
     detail_url = serialized_product["detail_url"] if serialized_product is not None else virtual_product["detail_url"]
@@ -5563,7 +5562,7 @@ def create_razorpay_order(product, user, source):
     }
 
     headers = {
-        "Authorization": f"Basic {b64encode(f'{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}'.encode('utf-8')).decode('ascii')}",
+        "Authorization": f"Basic {b64encode(f'{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}'.encode()).decode('ascii')}",
         "Content-Type": "application/json",
     }
     request_data = json.dumps(request_payload).encode("utf-8")
@@ -5589,7 +5588,7 @@ def verify_razorpay_signature(order_id, payment_id, signature):
 
     generated_signature = hmac.new(
         RAZORPAY_KEY_SECRET.encode("utf-8"),
-        f"{order_id}|{payment_id}".encode("utf-8"),
+        f"{order_id}|{payment_id}".encode(),
         sha256,
     ).hexdigest()
     return hmac.compare_digest(generated_signature, signature)
@@ -5909,9 +5908,9 @@ def build_kisan_dost_reply(user, query, history=None):
                 f"Farms page me task planner se aur reminders add ya complete kar sakte ho."
             )
         return (
-            f"Abhi aapke planner me koi open task nahi hai. "
-            f"Farms page me irrigation, spray, fertilizer ya harvest ke reminders add kar lo. "
-            f"Isse daily planning kaafi easy ho jayegi."
+            "Abhi aapke planner me koi open task nahi hai. "
+            "Farms page me irrigation, spray, fertilizer ya harvest ke reminders add kar lo. "
+            "Isse daily planning kaafi easy ho jayegi."
         )
 
     if any(word in query_lower for word in ["farm", "plot", "field"]):
@@ -6241,7 +6240,7 @@ def send_twilio_text_message(target_phone, message, *, prefer_whatsapp=False, la
         if not from_number:
             return False, "Twilio SMS sender is not configured."
 
-    auth_token = b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode("utf-8")).decode("utf-8")
+    auth_token = b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode()).decode("utf-8")
     response = fetch_json(
         f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
         method="POST",
@@ -6336,7 +6335,7 @@ def send_alert_phone_message(user, preferences, alert):
     else:
         form_body["Body"] = build_alert_phone_message(alert)
 
-    auth_token = b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode("utf-8")).decode("utf-8")
+    auth_token = b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode()).decode("utf-8")
     response = fetch_json(
         f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
         method="POST",
@@ -9646,6 +9645,7 @@ def predict_with_pytorch(image):
         return None, 0, None, 0
 
 from disease_knowledge import DISEASE_KNOWLEDGE, get_disease_info
+
 
 def select_disease_entry(crop_name, signals, seed=0):
     crop_key = normalize_crop_key(crop_name)
@@ -13012,10 +13012,11 @@ def admin_delete_mapping(mapping_id):
 
 @app.route("/predict-disease", methods=["POST"])
 def predict_disease():
+    import io
     import json
     from pathlib import Path
-    from PIL import Image, ImageOps, UnidentifiedImageError # type: ignore
-    import io
+
+    from PIL import Image, ImageOps, UnidentifiedImageError  # type: ignore
     
     user = get_current_user()
     if not user:
@@ -13531,7 +13532,7 @@ def ai_insights_page():
 
     ai_recommendations = [
         {"icon": "water", "title": "Irrigation Scheduling", "detail": "Optimal irrigation times based on weather data"},
-        {"icon": "fertilizer", "title": "Fertilizer Management", "detail": f"Customized fertilizer recommendations for nitrogen deficiency"},
+        {"icon": "fertilizer", "title": "Fertilizer Management", "detail": "Customized fertilizer recommendations for nitrogen deficiency"},
         {"icon": "rotation", "title": "Crop Rotation", "detail": "Recommend alternate crops to improve soil health."},
         {"icon": "rotation", "title": "Crop Rotation", "detail": "Recommend alternate growing schedule for better yield."},
     ]
@@ -13751,7 +13752,7 @@ def create_razorpay_order_amount_inr(amount_inr, receipt, notes=None):
             data=json.dumps(payload).encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Basic {b64encode(f'{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}'.encode('utf-8')).decode('ascii')}",
+                "Authorization": f"Basic {b64encode(f'{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}'.encode()).decode('ascii')}",
             },
             method="POST",
         )

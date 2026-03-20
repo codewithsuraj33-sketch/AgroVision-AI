@@ -42,7 +42,9 @@ def test_dashboard_renders():
     app = make_app()
 
     user = Obj(name="Test User", location="Testville", crop_type="Wheat")
-    weather = Obj(temp=28, description="Clear", slider_percent=70, rainfall_mm=0, humidity=60, updated_at="now")
+    weather = Obj(
+        temp=28, description="Clear", slider_percent=70, rainfall_mm=0, humidity=60, updated_at="now"
+    )
     soil_metrics = [
         Obj(label="pH", tone="blue", fill=65, value_display="6.5"),
         Obj(label="Nitrogen", tone="green", fill=40, value_display="40%"),
@@ -83,7 +85,14 @@ def test_verify_otp_renders():
 
 def test_village_module_renders():
     app = make_app()
-    user = Obj(name="Village User", location="Cuttack", crop_type="Rice", plan="free", wallet_balance=25, loyalty_points=10)
+    user = Obj(
+        name="Village User",
+        location="Cuttack",
+        crop_type="Rice",
+        plan="free",
+        wallet_balance=25,
+        loyalty_points=10,
+    )
     module = {
         "active_page": "notifications",
         "title": "Notifications",
@@ -158,7 +167,13 @@ def test_rent_tractor_template_renders():
                 "subtitle": "Plough, Rotavator, Cultivator",
                 "icon": "fa-tractor",
                 "machines": [
-                    {"name": "Rotavator (7ft)", "power": "45HP+", "eta": "10 min away", "price_inr": 800, "unit": "/hr"},
+                    {
+                        "name": "Rotavator (7ft)",
+                        "power": "45HP+",
+                        "eta": "10 min away",
+                        "price_inr": 800,
+                        "unit": "/hr",
+                    },
                 ],
             }
         ],
