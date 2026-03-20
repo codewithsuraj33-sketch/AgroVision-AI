@@ -1,15 +1,15 @@
 :root{
-  --admin-bg: radial-gradient(1200px 700px at 20% -10%, rgba(68, 173, 255, 0.18), transparent 60%),
-              radial-gradient(900px 560px at 90% 10%, rgba(125, 255, 46, 0.14), transparent 55%),
-              radial-gradient(800px 520px at 40% 110%, rgba(48, 230, 191, 0.12), transparent 55%),
-              #071323;
+  --admin-bg: radial-gradient(1200px 700px at 20% -10%, rgba(47, 111, 159, 0.18), transparent 60%),
+              radial-gradient(900px 560px at 90% 10%, rgba(217, 164, 65, 0.12), transparent 55%),
+              radial-gradient(800px 520px at 40% 110%, rgba(31, 122, 77, 0.14), transparent 55%),
+              #081711;
   --admin-card: rgba(255,255,255,0.06);
   --admin-border: rgba(180, 210, 255, 0.16);
   --admin-text: rgba(255,255,255,0.92);
   --admin-muted: rgba(255,255,255,0.68);
-  --admin-accent: #30e6bf;
-  --admin-accent-2: #7dff2e;
-  --admin-danger: #ff4d5f;
+  --admin-accent: #2f6f9f;
+  --admin-accent-2: #1f7a4d;
+  --admin-danger: #dc2626;
 }
 
 .admin-page{
@@ -152,6 +152,14 @@
   font-weight: 700;
 }
 
+.admin-page-head-split{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .admin-cards{
   margin-top: 18px;
   display: grid;
@@ -209,6 +217,12 @@
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--admin-border);
   border-radius: 18px;
+}
+
+.admin-panel-copy{
+  margin: -2px 0 12px;
+  color: var(--admin-muted);
+  font-weight: 700;
 }
 
 .admin-panel-title{
@@ -321,6 +335,10 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.admin-inline-form{
+  margin: 0;
 }
 
 .admin-btn{
@@ -603,6 +621,7 @@
 @media (max-width: 640px){
   .admin-shell{ padding: 22px 14px 34px; }
   .admin-page-head h1{ font-size: 24px; }
+  .admin-page-head-split{ align-items: stretch; }
   .admin-cards{ grid-template-columns: 1fr; }
   .admin-audit-grid{ grid-template-columns: 1fr; }
   .admin-form-grid{ grid-template-columns: 1fr; }
@@ -610,6 +629,8 @@
   .admin-field input,
   .admin-field textarea,
   .admin-field select{ min-height: 46px; font-size: 16px; }
+  .admin-inline-form{ width: 100%; }
+  .admin-inline-form .admin-btn{ width: 100%; }
   .admin-actions{ flex-direction: column; }
   .admin-actions .admin-btn{ width: 100%; text-align: center; }
   .admin-table{ min-width: 640px; }

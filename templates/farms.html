@@ -21,16 +21,160 @@
       display: grid;
       gap: 20px;
     }
-    .farms-notice {
-      padding: 14px 18px;
-      border-radius: 16px;
+    .farm-operations-page .dashboard-hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at top left, rgba(20, 184, 111, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.98));
+      border: 1px solid rgba(148, 163, 184, 0.24);
+    }
+    .farm-operations-page .dashboard-hero::before {
+      content: "";
+      position: absolute;
+      inset: auto -10% -35% auto;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(34, 197, 94, 0.12), transparent 68%);
+      pointer-events: none;
+    }
+    .farms-hero-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .farms-user-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+      text-decoration: none;
+      color: inherit;
+    }
+    .farms-user-avatar-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .farms-user-avatar-img,
+    .farms-user-avatar-placeholder {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .farms-user-avatar-img {
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.14);
+    }
+    .farms-user-avatar-placeholder {
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(20, 184, 111, 0.12));
+      color: #295f95;
+      font-size: 1.1rem;
+    }
+    .farms-user-meta {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+    .farms-user-meta small {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6a7d94;
+    }
+    .farms-user-meta strong {
+      color: #12314f;
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+    .farms-hero-nav {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+    .farm-operations-page .dashboard-hero-copy {
+      display: grid;
+      gap: 10px;
+      max-width: 760px;
+    }
+    .farm-operations-page .dashboard-hero-copy h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+      color: #10243f;
+    }
+    .farm-operations-page .dashboard-hero-copy p {
+      margin: 0;
+      max-width: 640px;
+      font-size: 1rem;
+      line-height: 1.7;
+      color: #52657d;
+    }
+    .farm-operations-page .shared-primary-action {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 18px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(20, 184, 111, 0.12), rgba(56, 189, 248, 0.1));
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+    }
+    .farm-operations-page .shared-primary-action-copy strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #12314f;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .farm-operations-page .shared-primary-action-copy span {
+      display: block;
+      color: #54697f;
+      line-height: 1.6;
       font-weight: 600;
-      background: rgba(34, 185, 120, 0.14);
+    }
+    .farm-operations-page .shared-primary-action-button {
+      min-width: 150px;
+      justify-content: center;
+      text-decoration: none;
+      background: linear-gradient(135deg, #14b86f, #109660);
+      color: #fff;
+      box-shadow: 0 14px 26px rgba(20, 184, 111, 0.22);
+    }
+    .farm-operations-page .shared-primary-action-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 30px rgba(20, 184, 111, 0.26);
+    }
+    .farms-notice {
+      padding: 15px 18px;
+      border-radius: 18px;
+      font-weight: 600;
+      background: linear-gradient(135deg, rgba(34, 185, 120, 0.14), rgba(52, 211, 153, 0.08));
       color: #0f5132;
       border: 1px solid rgba(15, 81, 50, 0.12);
+      box-shadow: 0 14px 30px rgba(21, 94, 63, 0.08);
     }
     .farms-notice-warning {
-      background: rgba(255, 193, 7, 0.16);
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.18), rgba(251, 191, 36, 0.1));
       color: #8a6100;
     }
     .farms-stats-grid {
@@ -53,19 +197,108 @@
     }
     .farms-panel {
       padding: 22px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 255, 0.96));
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+    .farms-panel-equal {
+      min-height: 476px;
     }
     .farms-panel-head {
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      align-items: center;
+      align-items: flex-start;
       margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
     }
     .farms-panel-head p,
     .farm-note,
     .activity-item small,
     .task-card small {
       color: #607087;
+    }
+    .farms-panel-head h2 {
+      margin: 0 0 6px;
+      font-size: 1.24rem;
+      color: #15314f;
+      letter-spacing: -0.03em;
+    }
+    .section-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #2d6a9f;
+    }
+    .section-kicker i {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: rgba(59, 130, 246, 0.12);
+    }
+    .farms-stat-card {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 249, 255, 0.96));
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .farm-stat-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .farm-stat-top span {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #607087;
+    }
+    .farm-stat-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 1rem;
+      color: #0f766e;
+      background: linear-gradient(135deg, rgba(20, 184, 166, 0.18), rgba(59, 130, 246, 0.12));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    }
+    .farm-stat-icon.tasks {
+      color: #1d4ed8;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(125, 211, 252, 0.14));
+    }
+    .farm-stat-icon.overdue {
+      color: #b45309;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(251, 191, 36, 0.14));
+    }
+    .farm-stat-icon.weather {
+      color: #0f766e;
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(103, 232, 249, 0.14));
+    }
+    .farms-stat-card strong {
+      font-size: 2rem;
+      line-height: 1;
+      color: #15314f;
+      letter-spacing: -0.04em;
+    }
+    .farms-stat-card small {
+      color: #607087;
+      line-height: 1.5;
     }
     .primary-panel-grid {
       display: grid;
@@ -76,6 +309,11 @@
     .primary-summary {
       display: grid;
       gap: 14px;
+    }
+    .primary-summary-head h3 {
+      margin: 0 0 8px;
+      font-size: 1.32rem;
+      color: #173252;
     }
     .primary-badge {
       display: inline-flex;
@@ -94,9 +332,10 @@
       gap: 12px;
     }
     .primary-detail {
-      background: #f8fafc;
-      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(240, 247, 253, 0.96));
+      border-radius: 18px;
       padding: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.14);
     }
     .primary-detail span {
       display: block;
@@ -109,6 +348,7 @@
       border-radius: 20px;
       overflow: hidden;
       border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
     }
     .farm-cards-grid,
     .activity-list,
@@ -117,9 +357,23 @@
       gap: 14px;
     }
     .agro-card {
-      border-radius: 18px;
+      border-radius: 22px;
       padding: 18px;
       border: 1px solid rgba(15, 23, 42, 0.08);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.96));
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+    }
+    .farm-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .farm-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 84px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(59, 130, 246, 0.08));
+      pointer-events: none;
     }
     .farm-card-top,
     .task-card-top,
@@ -144,6 +398,11 @@
       background: rgba(59, 130, 246, 0.12);
       color: #1d4ed8;
     }
+    .farm-card-top > div,
+    .task-card-top > div {
+      position: relative;
+      z-index: 1;
+    }
     .farm-card-stats {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -151,9 +410,10 @@
       margin: 14px 0;
     }
     .farm-mini-stat {
-      background: rgba(255, 255, 255, 0.84);
-      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 16px;
       padding: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
     }
     .farm-mini-stat span {
       display: block;
@@ -172,11 +432,11 @@
     .task-action-btn,
     .submit-btn {
       border: none;
-      border-radius: 12px;
-      padding: 10px 14px;
+      border-radius: 14px;
+      padding: 10px 16px;
       font-weight: 700;
       cursor: pointer;
-      transition: transform 0.18s ease, opacity 0.18s ease;
+      transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
     }
     .farm-action-btn:hover,
     .task-action-btn:hover,
@@ -189,16 +449,23 @@
     .submit-btn {
       background: linear-gradient(135deg, #14b86f, #0f9f5e);
       color: #fff;
+      box-shadow: 0 12px 24px rgba(20, 184, 111, 0.2);
     }
     .farm-action-btn.secondary,
     .task-action-btn.secondary {
-      background: rgba(59, 130, 246, 0.12);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(96, 165, 250, 0.1));
       color: #1d4ed8;
     }
     .farm-action-btn.ghost,
     .task-action-btn.ghost {
-      background: rgba(220, 53, 69, 0.1);
+      background: rgba(220, 53, 69, 0.08);
       color: #b42318;
+    }
+    .farm-card-actions .farm-action-btn.primary {
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 0.86rem;
+      box-shadow: 0 10px 18px rgba(20, 184, 111, 0.16);
     }
     .form-grid,
     .task-form-grid {
@@ -225,7 +492,8 @@
       border: 1px solid rgba(15, 23, 42, 0.12);
       padding: 12px 14px;
       font: inherit;
-      background: #fff;
+      background: linear-gradient(180deg, #fff, #f8fbff);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
     }
     .field-textarea {
       min-height: 110px;
@@ -246,15 +514,17 @@
       align-items: start;
     }
     .task-form {
-      background: #f8fafc;
-      border-radius: 18px;
+      background: linear-gradient(180deg, #f8fafc, #f1f7fb);
+      border-radius: 22px;
       padding: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.14);
     }
     .task-card {
       padding: 16px;
-      border-radius: 18px;
+      border-radius: 20px;
       border: 1px solid rgba(15, 23, 42, 0.08);
       background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.04);
     }
     .task-card.overdue {
       border-color: rgba(220, 53, 69, 0.22);
@@ -298,14 +568,115 @@
       padding: 24px 18px;
       text-align: center;
       border-radius: 18px;
-      background: #f8fafc;
+      background: linear-gradient(180deg, #f8fafc, #eff6fb);
       color: #607087;
+    }
+    [data-theme="dark"] .farm-operations-page .dashboard-hero {
+      background:
+        radial-gradient(circle at top left, rgba(20, 184, 111, 0.12), transparent 28%),
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 32%),
+        linear-gradient(180deg, rgba(9, 22, 39, 0.98), rgba(8, 19, 35, 0.98));
+      border-color: rgba(110, 145, 190, 0.18);
+    }
+    [data-theme="dark"] .farms-user-badge,
+    [data-theme="dark"] .farms-hero-nav,
+    [data-theme="dark"] .farm-operations-page .shared-primary-action {
+      background: linear-gradient(180deg, rgba(10, 23, 40, 0.9), rgba(8, 19, 35, 0.96));
+      border-color: rgba(110, 145, 190, 0.16);
+      box-shadow: 0 18px 30px rgba(0, 0, 0, 0.2);
+    }
+    [data-theme="dark"] .farms-user-avatar-placeholder {
+      color: #b7d8ff;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(20, 184, 111, 0.12));
+    }
+    [data-theme="dark"] .farms-user-meta small,
+    [data-theme="dark"] .farm-operations-page .dashboard-hero-copy p,
+    [data-theme="dark"] .farm-operations-page .shared-primary-action-copy span {
+      color: #93aac4;
+    }
+    [data-theme="dark"] .farms-user-meta strong,
+    [data-theme="dark"] .farm-operations-page .dashboard-hero-copy h1,
+    [data-theme="dark"] .farm-operations-page .shared-primary-action-copy strong {
+      color: #eef6ff;
+    }
+    [data-theme="dark"] .farms-notice {
+      color: #d6ffe8;
+      border-color: rgba(74, 222, 128, 0.16);
+    }
+    [data-theme="dark"] .farms-notice-warning {
+      color: #ffe2a8;
+      border-color: rgba(251, 191, 36, 0.16);
+    }
+    [data-theme="dark"] .farms-panel,
+    [data-theme="dark"] .farms-stat-card,
+    [data-theme="dark"] .agro-card,
+    [data-theme="dark"] .task-card,
+    [data-theme="dark"] .task-form,
+    [data-theme="dark"] .primary-detail,
+    [data-theme="dark"] .farm-mini-stat,
+    [data-theme="dark"] .empty-state {
+      background: linear-gradient(180deg, rgba(10, 23, 40, 0.94), rgba(8, 19, 35, 0.98));
+      border-color: rgba(110, 145, 190, 0.16);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+    }
+    [data-theme="dark"] .farms-panel-head,
+    [data-theme="dark"] .activity-item {
+      border-color: rgba(110, 145, 190, 0.12);
+    }
+    [data-theme="dark"] .farms-panel-head h2,
+    [data-theme="dark"] .farms-stat-card strong,
+    [data-theme="dark"] .primary-summary-head h3,
+    [data-theme="dark"] .primary-detail strong,
+    [data-theme="dark"] .farm-mini-stat strong,
+    [data-theme="dark"] .task-card strong,
+    [data-theme="dark"] .activity-item strong {
+      color: #eef6ff;
+    }
+    [data-theme="dark"] .farms-panel-head p,
+    [data-theme="dark"] .farm-note,
+    [data-theme="dark"] .activity-item small,
+    [data-theme="dark"] .task-card small,
+    [data-theme="dark"] .farms-stat-card small,
+    [data-theme="dark"] .primary-detail span,
+    [data-theme="dark"] .farm-mini-stat span,
+    [data-theme="dark"] .activity-time,
+    [data-theme="dark"] .farm-stat-top span {
+      color: #93aac4;
+    }
+    [data-theme="dark"] .field-label,
+    [data-theme="dark"] .checkbox-row {
+      color: #d9ebff;
+    }
+    [data-theme="dark"] .field-input,
+    [data-theme="dark"] .field-select,
+    [data-theme="dark"] .field-textarea {
+      background: linear-gradient(180deg, rgba(10, 25, 39, 0.94), rgba(13, 30, 49, 0.98));
+      border-color: rgba(110, 145, 190, 0.16);
+      color: #eef6ff;
+    }
+    [data-theme="dark"] .farm-chip.secondary,
+    [data-theme="dark"] .farm-action-btn.secondary,
+    [data-theme="dark"] .task-action-btn.secondary,
+    [data-theme="dark"] .section-kicker i {
+      color: #b7d8ff;
+    }
+    [data-theme="dark"] .section-kicker {
+      color: #8cc9ff;
+    }
+    [data-theme="dark"] .primary-map {
+      border-color: rgba(110, 145, 190, 0.16);
     }
     @media (max-width: 1180px) {
       .farms-stats-grid,
       .farms-layout,
       .primary-panel-grid,
       .task-layout {
+        grid-template-columns: 1fr;
+      }
+      .farms-panel-equal {
+        min-height: auto;
+      }
+      .farm-operations-page .shared-primary-action {
         grid-template-columns: 1fr;
       }
     }
@@ -316,6 +687,13 @@
       .primary-detail-grid,
       .farm-card-stats {
         grid-template-columns: 1fr;
+      }
+      .farms-hero-bar {
+        align-items: stretch;
+      }
+      .farms-user-badge,
+      .farms-hero-nav {
+        width: 100%;
       }
     }
   </style>
@@ -339,17 +717,22 @@
 
     <section class="dashboard-main farms-workspace">
       <header class="dashboard-hero">
-        <div class="dashboard-hero-top">
-          <div style="display: flex; align-items: center;">
-            {% if user and user.profile_photo %}
-              <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-            {% else %}
-              <i class="fas fa-user-circle" style="font-size: 24px; color: var(--text-muted); margin-right: 8px;"></i>
-            {% endif %}
-            <span style="font-weight: 700; color: var(--text-dark);">{{ user.name }}</span>
-          </div>
+        <div class="dashboard-hero-top farms-hero-bar">
+          <a class="farms-user-badge" href="/profile" aria-label="Open profile">
+            <span class="farms-user-avatar-link">
+              {% if user and user.profile_photo %}
+                <img class="farms-user-avatar-img" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+              {% else %}
+                <span class="farms-user-avatar-placeholder"><i class="fas fa-user-circle"></i></span>
+              {% endif %}
+            </span>
+            <span class="farms-user-meta">
+              <small>Active Profile</small>
+              <strong>{{ user.name }}</strong>
+            </span>
+          </a>
 
-          <nav class="weather-top-nav" aria-label="Farm utility navigation">
+          <nav class="weather-top-nav farms-hero-nav" aria-label="Farm utility navigation">
             <a href="/dashboard">Dashboard</a>
             <span class="weather-divider"></span>
             <a href="/farms">Farms</a>
@@ -372,22 +755,34 @@
 
       <section class="farms-stats-grid">
         <article class="agro-card farms-stat-card">
-          <span>Total Farms</span>
+          <div class="farm-stat-top">
+            <span>Total Farms</span>
+            <div class="farm-stat-icon"><i class="fas fa-tractor"></i></div>
+          </div>
           <strong>{{ farms_page.farm_cards|length }}</strong>
           <small>{{ farms_page.primary_farm.name if farms_page.primary_farm else 'Primary farm pending' }}</small>
         </article>
         <article class="agro-card farms-stat-card">
-          <span>Open Tasks</span>
+          <div class="farm-stat-top">
+            <span>Open Tasks</span>
+            <div class="farm-stat-icon tasks"><i class="fas fa-list-check"></i></div>
+          </div>
           <strong>{{ farms_page.task_summary.open_count }}</strong>
           <small>{{ farms_page.task_summary.due_today_count }} due today</small>
         </article>
         <article class="agro-card farms-stat-card">
-          <span>Overdue Work</span>
+          <div class="farm-stat-top">
+            <span>Overdue Work</span>
+            <div class="farm-stat-icon overdue"><i class="fas fa-clock"></i></div>
+          </div>
           <strong>{{ farms_page.task_summary.overdue_count }}</strong>
           <small>Keep high-priority work on track</small>
         </article>
         <article class="agro-card farms-stat-card">
-          <span>Weather Sync</span>
+          <div class="farm-stat-top">
+            <span>Weather Sync</span>
+            <div class="farm-stat-icon weather"><i class="fas fa-cloud-sun"></i></div>
+          </div>
           <strong>{{ farms_page.weather.temp }}&deg;C</strong>
           <small>{{ farms_page.weather.city }}</small>
         </article>
@@ -395,9 +790,10 @@
 
       <section class="farms-layout">
         <div class="farms-main">
-          <article class="agro-card farms-panel">
+          <article class="agro-card farms-panel farms-panel-equal">
             <div class="farms-panel-head">
               <div>
+                <span class="section-kicker"><i class="fas fa-satellite-dish"></i> Live Sync</span>
                 <h2>Primary Farm Snapshot</h2>
                 <p>Your main farm drives the live dashboard, weather, and AI recommendations.</p>
               </div>
@@ -406,8 +802,8 @@
 
             <div class="primary-panel-grid">
               <div class="primary-summary">
-                <div>
-                  <h3 style="margin-bottom:8px;">{{ farms_page.primary_farm.name if farms_page.primary_farm else 'Primary Farm' }}</h3>
+                <div class="primary-summary-head">
+                  <h3>{{ farms_page.primary_farm.name if farms_page.primary_farm else 'Primary Farm' }}</h3>
                   <p class="farm-note">{{ farms_page.primary_farm.notes if farms_page.primary_farm and farms_page.primary_farm.notes else 'This farm is currently synced across your dashboard, alerts, and AI assistant.' }}</p>
                 </div>
 
@@ -438,6 +834,7 @@
           <article class="agro-card farms-panel">
             <div class="farms-panel-head">
               <div>
+                <span class="section-kicker"><i class="fas fa-layer-group"></i> Plot Overview</span>
                 <h2>Farm Portfolio</h2>
                 <p>Switch your primary farm anytime and keep separate task queues for each plot.</p>
               </div>
@@ -503,6 +900,7 @@
           <article class="farms-panel" id="task-planner">
             <div class="farms-panel-head">
               <div>
+                <span class="section-kicker"><i class="fas fa-calendar-days"></i> Daily Workflow</span>
                 <h2>Task Planner</h2>
                 <p>Track irrigation, fertilizer, spray, harvest, and field inspections in one queue.</p>
               </div>
@@ -623,9 +1021,10 @@
         </div>
 
         <div class="farms-side">
-          <article class="farms-panel" id="add-farm-form">
+          <article class="farms-panel farms-panel-equal" id="add-farm-form">
             <div class="farms-panel-head">
               <div>
+                <span class="section-kicker"><i class="fas fa-plus"></i> New Entry</span>
                 <h2>Add Farm / Plot</h2>
                 <p>Create separate farm records for different villages, crops, or fields.</p>
               </div>
@@ -674,6 +1073,7 @@
           <article class="farms-panel">
             <div class="farms-panel-head">
               <div>
+                <span class="section-kicker"><i class="fas fa-wave-square"></i> Timeline</span>
                 <h2>Recent Activity</h2>
                 <p>Quick log of what you recently added, scanned, or updated.</p>
               </div>

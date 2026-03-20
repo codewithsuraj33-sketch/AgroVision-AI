@@ -80,6 +80,10 @@
             </div>
             <p class="profile-avatar-name">{{ user.name }}</p>
             <p class="profile-avatar-email">{{ user.email }}</p>
+            <div class="profile-avatar-meta">
+              <span class="profile-avatar-chip">Account Owner</span>
+              <span class="profile-avatar-chip profile-avatar-chip-soft">Farm Profile</span>
+            </div>
             <button class="profile-change-photo-btn" type="button" onclick="document.getElementById('photoInput').click()">
               <i class="fas fa-camera"></i> Change Photo
             </button>
@@ -87,6 +91,10 @@
 
           <!-- Quick Stats -->
           <div class="profile-stats-card">
+            <div class="profile-stats-head">
+              <span>Profile Snapshot</span>
+              <strong>Live details</strong>
+            </div>
             <div class="profile-stat-item">
               <i class="fas fa-map-marker-alt profile-stat-icon"></i>
               <div>
@@ -124,7 +132,11 @@
               <div class="profile-card-header-icon">
                 <i class="fas fa-user-pen"></i>
               </div>
-              <h2>User Info</h2>
+              <div class="profile-card-header-copy">
+                <span class="profile-card-kicker">Identity</span>
+                <h2>User Info</h2>
+                <p>Name, email, and login details used across AgroVisionAI.</p>
+              </div>
             </div>
 
             <div class="profile-fields">
@@ -153,6 +165,7 @@
                   <i class="fas fa-lock-open"></i> Edit Password
                 </button>
               </div>
+              <p class="profile-password-note">Keep your account secure by updating your password only when needed.</p>
               <div class="profile-field-wrap profile-field-wrap-password" id="pwDisplayWrap">
                 <i class="fas fa-lock profile-field-icon"></i>
                 <input type="password" value="**********" disabled>
@@ -209,7 +222,11 @@
               <div class="profile-card-header-icon profile-card-header-icon-green">
                 <i class="fas fa-tractor"></i>
               </div>
-              <h2>Farm Info</h2>
+              <div class="profile-card-header-copy">
+                <span class="profile-card-kicker">Operations</span>
+                <h2>Farm Info</h2>
+                <p>Keep your field profile updated for better alerts and crop-specific suggestions.</p>
+              </div>
             </div>
 
             <div class="profile-fields profile-fields-3col">
@@ -254,8 +271,11 @@
             <div class="profile-farm-widgets">
               <div class="profile-widget profile-widget-soil">
                 <div class="profile-widget-head">
-                  <i class="fas fa-seedling"></i>
-                  <span>Soil Health</span>
+                  <div class="profile-widget-title">
+                    <i class="fas fa-seedling"></i>
+                    <span>Soil Health</span>
+                  </div>
+                  <span class="profile-widget-badge">Live</span>
                 </div>
                 <div class="profile-widget-bar-wrap">
                   <div class="profile-widget-bar">
@@ -263,12 +283,18 @@
                   </div>
                   <strong>{{ soil_score_display }}</strong>
                 </div>
+                <p class="profile-widget-caption">Field readiness score based on your latest farm record.</p>
               </div>
 
               <div class="profile-widget profile-widget-disease">
                 <div class="profile-widget-head">
-                  <i class="fas fa-triangle-exclamation"></i>
-                  <span>Disease Detection</span>
+                  <div class="profile-widget-title">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <span>Disease Detection</span>
+                  </div>
+                  <span class="profile-widget-badge {% if 'No active' in disease_status %}profile-widget-badge-safe{% else %}profile-widget-badge-warn{% endif %}">
+                    {% if 'No active' in disease_status %}Stable{% else %}Check{% endif %}
+                  </span>
                 </div>
                 <p class="profile-widget-msg">{{ disease_status }}</p>
               </div>

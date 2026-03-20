@@ -9,7 +9,7 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ product.name }} - AgroVision Store</title>
+  <title>{{ product.name }} - Agro Market</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -31,7 +31,7 @@
       <nav class="store-detail-breadcrumb" aria-label="Breadcrumb">
         <a href="/dashboard">Dashboard</a>
         <span>/</span>
-        <a href="/market">Store</a>
+        <a href="/market">Agro Market</a>
         <span>/</span>
         <strong>{{ product.name }}</strong>
       </nav>
@@ -78,10 +78,10 @@
               </button>
             {% else %}
               <a class="store-primary-button" href="/market?q={{ product.name }}">
-                Explore in store
+                Explore in Agro Market
               </a>
             {% endif %}
-            <a class="store-secondary-button" href="/market">Back to store</a>
+            <a class="store-secondary-button" href="/market">Back to Agro Market</a>
           </div>
 
           <div class="store-detail-meta-grid">

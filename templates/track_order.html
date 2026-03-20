@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Order</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .track-order-shell { align-items: stretch; }
+    .track-order-main { padding: 24px; background: linear-gradient(180deg, rgba(236, 253, 245, 0.8), rgba(248, 250, 252, 0.98)); }
+    .track-order-hero {
+      display: grid;
+      gap: 18px;
+      padding: 28px;
+      border-radius: 30px;
+      background: linear-gradient(135deg, #06251b, #0f5132 52%, #14532d);
+      color: #fff;
+      box-shadow: 0 24px 60px rgba(6, 37, 27, 0.18);
+    }
+    .track-order-hero-top,
+    .track-order-head,
+    .track-order-summary,
+    .track-order-card-top,
+    .track-order-card-meta,
+    .track-order-status-row,
+    .track-order-progress-row,
+    .track-order-card-footer,
+    .track-order-filter-row,
+    .track-order-empty {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .track-order-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .track-order-hero h1 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.05; }
+    .track-order-hero p { margin: 0; color: rgba(255, 255, 255, 0.82); max-width: 720px; line-height: 1.7; }
+    .track-order-market-link,
+    .track-order-filter {
+      border: 0;
+      border-radius: 999px;
+      cursor: pointer;
+      font: 700 0.95rem "Manrope", sans-serif;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    .track-order-market-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 18px;
+      color: #06251b;
+      text-decoration: none;
+      background: linear-gradient(135deg, #dcfce7, #fef3c7);
+      box-shadow: 0 12px 28px rgba(220, 252, 231, 0.2);
+    }
+    .track-order-market-link:hover,
+    .track-order-filter:hover { transform: translateY(-1px); }
+    .track-order-summary { margin-top: 8px; }
+    .track-order-stat {
+      min-width: 150px;
+      flex: 1 1 150px;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .track-order-stat span { display: block; color: rgba(255, 255, 255, 0.68); font-size: 0.88rem; }
+    .track-order-stat strong { display: block; margin-top: 8px; font-size: 1.9rem; }
+    .track-order-workspace { margin-top: 22px; display: grid; gap: 18px; }
+    .track-order-panel {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 28px;
+      padding: 22px;
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+    }
+    .track-order-filter-row { margin-bottom: 14px; }
+    .track-order-filter {
+      padding: 10px 15px;
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+    .track-order-filter.is-active {
+      background: #0f5132;
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(15, 81, 50, 0.18);
+    }
+    .track-order-list { display: grid; gap: 16px; }
+    .track-order-card {
+      display: grid;
+      gap: 18px;
+      padding: 20px;
+      border-radius: 24px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+    .track-order-card.is-hidden { display: none; }
+    .track-order-card-main {
+      display: grid;
+      grid-template-columns: 108px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .track-order-product-thumb {
+      width: 108px;
+      height: 108px;
+      border-radius: 24px;
+      object-fit: cover;
+      background: #e2e8f0;
+    }
+    .track-order-card h2 { margin: 0; font-size: 1.2rem; color: #0f172a; }
+    .track-order-card-meta { color: #475569; font-size: 0.95rem; }
+    .track-order-badges { display: flex; flex-wrap: wrap; gap: 10px; }
+    .track-order-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+    .track-order-badge.payment { background: #fef3c7; color: #92400e; }
+    .track-order-badge.pending { background: #ffedd5; color: #9a3412; }
+    .track-order-badge.confirmed { background: #dbeafe; color: #1d4ed8; }
+    .track-order-badge.delivered { background: #dcfce7; color: #166534; }
+    .track-order-progress {
+      position: relative;
+      height: 9px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+      width: min(280px, 100%);
+    }
+    .track-order-progress > span {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: var(--progress, 0%);
+      border-radius: inherit;
+      background: linear-gradient(90deg, #f59e0b, #0f9f68, #16a34a);
+    }
+    .track-order-progress-row small,
+    .track-order-card-footer small { color: #64748b; }
+    .track-order-helper {
+      margin: 0;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: #f8fafc;
+      color: #334155;
+      line-height: 1.65;
+    }
+    .track-order-timeline {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .track-order-step {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: #fff;
+    }
+    .track-order-step strong { display: block; margin-bottom: 6px; color: #0f172a; }
+    .track-order-step p,
+    .track-order-step small { margin: 0; color: #64748b; line-height: 1.55; }
+    .track-order-step.is-complete {
+      border-color: rgba(22, 163, 74, 0.24);
+      background: linear-gradient(180deg, rgba(220, 252, 231, 0.72), #fff);
+    }
+    .track-order-empty {
+      padding: 24px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #f8fafc, #ecfeff);
+      border: 1px dashed rgba(15, 23, 42, 0.12);
+    }
+    .track-order-empty p { margin: 0; max-width: 560px; color: #475569; line-height: 1.7; }
+    @media (max-width: 1100px) {
+      .track-order-timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 780px) {
+      .track-order-main { padding: 16px; }
+      .track-order-hero,
+      .track-order-panel,
+      .track-order-card { border-radius: 22px; }
+      .track-order-card-main { grid-template-columns: 1fr; }
+      .track-order-product-thumb { width: 100%; height: 180px; }
+      .track-order-timeline { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+  </button>
+
+  <main class="dashboard-shell track-order-shell">
+    <aside class="dashboard-sidebar">
+      {% set active_page = 'track_order' %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main track-order-main">
+      <section class="track-order-hero">
+        <div class="track-order-hero-top">
+          <span class="track-order-kicker"><i class="fas fa-route"></i> Live status center</span>
+          <a class="track-order-market-link" href="/market"><i class="fas fa-store"></i> Order more products</a>
+        </div>
+        <div class="track-order-head">
+          <div>
+            <h1>{{ track_order.title }}</h1>
+            <p>{{ track_order.description }}</p>
+          </div>
+        </div>
+        <div class="track-order-summary">
+          <article class="track-order-stat">
+            <span>Total orders</span>
+            <strong>{{ track_order.counts.total }}</strong>
+          </article>
+          <article class="track-order-stat">
+            <span>Awaiting payment</span>
+            <strong>{{ track_order.counts.awaiting_payment }}</strong>
+          </article>
+          <article class="track-order-stat">
+            <span>Pending</span>
+            <strong>{{ track_order.counts.pending }}</strong>
+          </article>
+          <article class="track-order-stat">
+            <span>Confirmed</span>
+            <strong>{{ track_order.counts.confirmed }}</strong>
+          </article>
+          <article class="track-order-stat">
+            <span>Delivered</span>
+            <strong>{{ track_order.counts.delivered }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="track-order-workspace">
+        <section class="track-order-panel">
+          {% if track_order.orders %}
+            <div class="track-order-filter-row">
+              <div>
+                <strong>Filter orders</strong>
+                <div style="color:#64748b; margin-top:4px;">See exactly whether an order is pending, confirmed, or delivered.</div>
+              </div>
+              <div class="track-order-badges">
+                <button class="track-order-filter is-active" type="button" data-filter="all">All</button>
+                <button class="track-order-filter" type="button" data-filter="payment">Awaiting payment</button>
+                <button class="track-order-filter" type="button" data-filter="pending">Pending</button>
+                <button class="track-order-filter" type="button" data-filter="confirmed">Confirmed</button>
+                <button class="track-order-filter" type="button" data-filter="delivered">Delivered</button>
+              </div>
+            </div>
+
+            <div class="track-order-list" id="trackOrderList">
+              {% for order in track_order.orders %}
+                <article class="track-order-card" id="order-{{ order.id }}" data-status="{{ order.status_tone }}">
+                  <div class="track-order-card-main">
+                    <img class="track-order-product-thumb" src="{{ order.image_url }}" alt="{{ order.product_name }}">
+                    <div style="display:grid; gap:14px;">
+                      <div class="track-order-card-top">
+                        <div style="display:grid; gap:8px;">
+                          <h2>{{ order.product_name }}</h2>
+                          <div class="track-order-card-meta">
+                            <span>Order #{{ order.id }}</span>
+                            <span>{{ order.amount_label }}</span>
+                            <span>{{ order.created_at_label }}</span>
+                          </div>
+                        </div>
+                        <div class="track-order-badges">
+                          <span class="track-order-badge payment"><i class="fas fa-credit-card"></i> {{ order.payment_status_label }}</span>
+                          <span class="track-order-badge {{ order.status_tone }}"><i class="fas fa-truck-fast"></i> {{ order.status_label }}</span>
+                        </div>
+                      </div>
+
+                      <div class="track-order-progress-row">
+                        <div class="track-order-progress" style="--progress: {{ order.progress_percent }}%;">
+                          <span></span>
+                        </div>
+                        <small>Last updated {{ order.last_update_label }}</small>
+                      </div>
+
+                      <p class="track-order-helper">{{ order.helper_text }}</p>
+
+                      <div class="track-order-timeline">
+                        {% for item in order.timeline %}
+                          <article class="track-order-step{% if item.completed %} is-complete{% endif %}">
+                            <strong>{{ item.label }}</strong>
+                            <p>{{ item.detail }}</p>
+                            <small>{{ item.timestamp_label }}</small>
+                          </article>
+                        {% endfor %}
+                      </div>
+
+                      <div class="track-order-card-footer">
+                        <small>Status path is updated automatically whenever admin changes the order stage.</small>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                          <a class="track-order-market-link" href="/download/order-invoice/{{ order.id }}" style="padding:10px 16px; font-size:0.88rem;">
+                            <i class="fas fa-file-pdf"></i> Invoice PDF
+                          </a>
+                          <a class="track-order-market-link" href="/market" style="padding:10px 16px; font-size:0.88rem;">Buy related products</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="track-order-empty">
+              <div>
+                <strong style="display:block; margin-bottom:8px; font-size:1.1rem;">No orders yet</strong>
+                <p>Your order tracking module is ready. As soon as a user buys a product, this page will show whether it is awaiting payment, pending confirmation, confirmed, or delivered.</p>
+              </div>
+              <a class="track-order-market-link" href="/market"><i class="fas fa-cart-shopping"></i> Go to market</a>
+            </div>
+          {% endif %}
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', function (event) {
+          event.stopPropagation();
+          sidebar.classList.toggle('sidebar-open');
+        });
+        document.addEventListener('click', function (event) {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(event.target) && event.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+
+      const filters = document.querySelectorAll('[data-filter]');
+      const cards = document.querySelectorAll('.track-order-card');
+      filters.forEach(function (filterButton) {
+        filterButton.addEventListener('click', function () {
+          filters.forEach(function (button) { button.classList.remove('is-active'); });
+          filterButton.classList.add('is-active');
+          const activeFilter = filterButton.getAttribute('data-filter');
+          cards.forEach(function (card) {
+            const cardStatus = card.getAttribute('data-status');
+            const shouldShow = activeFilter === 'all' || cardStatus === activeFilter;
+            card.classList.toggle('is-hidden', !shouldShow);
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>

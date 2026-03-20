@@ -280,11 +280,13 @@
       <header class="dashboard-hero">
         <div class="dashboard-hero-top">
           <div style="display: flex; align-items: center;">
-            {% if user and user.profile_photo %}
-              <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-            {% else %}
-              <i class="fas fa-user-circle" style="font-size: 24px; color: var(--text-muted); margin-right: 8px;"></i>
-            {% endif %}
+            <a class="profile-quick-link" href="/profile" aria-label="Open profile">
+              {% if user and user.profile_photo %}
+                <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+              {% else %}
+                <i class="fas fa-user-circle" style="font-size: 24px; color: var(--text-muted); margin-right: 8px;"></i>
+              {% endif %}
+            </a>
             <span style="font-weight: 700; color: var(--text-dark);">{{ user.name }}</span>
           </div>
 

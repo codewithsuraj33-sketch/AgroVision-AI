@@ -6,7 +6,6 @@
       document.documentElement.setAttribute('data-theme', 'dark');
     }
   </script>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Weather Monitoring</title>
@@ -15,208 +14,144 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
-<body class="dashboard-page weather-monitor-page">
-
-  <!-- Mobile Menu Toggle Button -->
+<body class="dashboard-page weather-monitor-page weather-v2-page">
   <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
     <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
   </button>
 
   <main class="dashboard-shell weather-monitor-shell">
-      <!-- Language Switcher -->
-      <div class="language-switcher">
-        <div id="google_translate_element"></div>
-      </div>
+    <div class="language-switcher">
+      <div id="google_translate_element"></div>
+    </div>
+
     <aside class="dashboard-sidebar weather-sidebar">
       {% set active_page = 'weather' %}
       {% include "_user_sidebar.html" %}
     </aside>
 
-    <section class="dashboard-main weather-monitor-main">
-      <header class="weather-hero-banner">
-        <div class="weather-hero-top">
-          {% if user and user.profile_photo %}
-            <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-          {% else %}
-            <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
-          {% endif %}
+    <section class="dashboard-main weather-monitor-main" data-weather-root data-initial-city="{{ initial_weather_city }}">
+      <header class="weather-v2-hero agro-card">
+        <div class="weather-v2-topbar">
+          <div class="weather-v2-title-block">
+            <span class="weather-v2-kicker">Weather Intelligence</span>
+            <h1>Weather Monitoring</h1>
+            <p>Track temperature, rain chance, AQI, and farm-ready insights in one clean weather dashboard.</p>
+          </div>
 
-          <nav class="weather-top-nav" aria-label="Weather utility navigation">
-            <a href="/dashboard">Your</a>
-            <span class="weather-divider"></span>
-            <a href="#">Farm</a>
-            <span class="weather-divider"></span>
-            <a href="#location-card">Location</a>
-            <span class="weather-divider"></span>
-            <a href="/">About</a>
-          </nav>
+          <form class="weather-v2-search" id="weatherSearchForm">
+            <label class="weather-v2-search-field" for="weatherCityInput">
+              <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+              <input id="weatherCityInput" name="city" type="search" value="{{ initial_weather_city }}" placeholder="Search city or village">
+            </label>
+            <button class="store-primary-button" type="submit">Update</button>
+            <a
+              class="store-secondary-button"
+              id="weatherDownloadButton"
+              href="/download/weather-report?city={{ initial_weather_city }}"
+            >
+              <i class="fas fa-file-pdf" aria-hidden="true"></i> Download PDF
+            </a>
+          </form>
         </div>
 
-        <div class="weather-hero-copy">
-          <h1>Weather Monitoring</h1>
-          <p>Track climate conditions to make informed farming decisions.</p>
+        <div id="weatherError" class="weather-v2-error" hidden></div>
+
+        <div id="weatherLoadingState" class="weather-v2-loading">
+          <div class="weather-v2-hero-skeleton">
+            <span class="weather-v2-skeleton weather-v2-skeleton-line weather-v2-skeleton-short"></span>
+            <span class="weather-v2-skeleton weather-v2-skeleton-temp"></span>
+            <span class="weather-v2-skeleton weather-v2-skeleton-line"></span>
+          </div>
+          <div class="weather-v2-hero-meta">
+            <span class="weather-v2-skeleton weather-v2-skeleton-pill"></span>
+            <span class="weather-v2-skeleton weather-v2-skeleton-pill"></span>
+            <span class="weather-v2-skeleton weather-v2-skeleton-pill"></span>
+          </div>
         </div>
+
+        <div id="weatherHeroContent" class="weather-v2-hero-content" hidden></div>
       </header>
 
-      <section class="weather-monitor-grid">
-        <article class="agro-card weather-summary-card current-summary-card">
-          <span class="weather-summary-label">Current</span>
-          <div class="weather-summary-main">
-            <img src="{{ weather_page.current.icon_url }}" alt="{{ weather_page.current.description }}">
-            <strong>{{ weather_page.current.temp }}&deg;C</strong>
-          </div>
-          <span class="weather-summary-note">{{ weather_page.current.description }}</span>
-        </article>
-
-        <article class="agro-card weather-summary-card rainfall-summary-card">
-          <span class="weather-summary-label">Rain Fall</span>
-          <div class="weather-summary-main weather-summary-main-small">
-            <span class="weather-summary-icon">&#9729;</span>
-            <strong>{{ weather_page.rainfall.value }} mm</strong>
-          </div>
-          <span class="weather-summary-note">{{ weather_page.rainfall.label }}</span>
-        </article>
-
-        <article class="agro-card weather-summary-card wind-summary-card">
-          <span class="weather-summary-label">Wind</span>
-          <div class="weather-summary-main weather-summary-main-small">
-            <span class="weather-summary-icon">&#10148;</span>
-            <div class="weather-wind-copy">
-              <strong>{{ weather_page.wind.direction }}</strong>
-              <small>{{ weather_page.wind.speed_kmh }} km/h</small>
-            </div>
-          </div>
-          <span class="weather-summary-note">Real-time field wind</span>
-        </article>
-
-        <article class="agro-card weather-location-card" id="location-card">
-          <div id="weather-leaflet-map" class="weather-location-frame" style="width:100%;height:100%;min-height:200px;"></div>
-
-          <div class="weather-location-overlay">
-            <a class="weather-change-btn" href="{{ weather_page.location_card.maps_search_url }}" target="_blank" rel="noreferrer">Change Location</a>
-            <div class="weather-location-meta">
-              <span>{{ weather_page.location_card.summary }}</span>
-              <strong>{{ weather_page.location_card.coordinates }}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article class="agro-card weather-forecast-board">
-          <div class="weather-board-head">
+      <section class="weather-v2-layout">
+        <article class="agro-card weather-v2-panel">
+          <div class="weather-v2-panel-head">
             <div>
+              <span class="weather-v2-kicker">Next 24 Hours</span>
+              <h2>Hourly Forecast</h2>
+            </div>
+          </div>
+          <div id="weatherHourlySkeleton" class="weather-v2-hourly weather-v2-hourly-skeleton">
+            {% for _ in range(6) %}
+              <div class="weather-v2-hour-card">
+                <span class="weather-v2-skeleton weather-v2-skeleton-line weather-v2-skeleton-tiny"></span>
+                <span class="weather-v2-skeleton weather-v2-skeleton-icon"></span>
+                <span class="weather-v2-skeleton weather-v2-skeleton-line weather-v2-skeleton-tiny"></span>
+              </div>
+            {% endfor %}
+          </div>
+          <div id="weatherHourlyList" class="weather-v2-hourly" hidden></div>
+        </article>
+
+        <article class="agro-card weather-v2-panel">
+          <div class="weather-v2-panel-head">
+            <div>
+              <span class="weather-v2-kicker">Weekly Outlook</span>
               <h2>7-Day Forecast</h2>
             </div>
-            <div class="weather-board-tools">
-              <span class="weather-tool-chip">{{ weather_page.current.location }}</span>
-              <span class="weather-tool-chip">{{ weather_page.current.temp }}&deg;C</span>
-              <span class="weather-tool-chip">{{ user.crop_type or "Mixed Crop" }}</span>
-            </div>
           </div>
-
-          <div class="weather-forecast-strip">
-            {% for item in weather_page.forecast_cards %}
-              <article class="forecast-day-card">
-                <span class="forecast-day-name">{{ item.label }}</span>
-                <img src="{{ item.icon_url }}" alt="{{ item.summary }}">
-                <span class="forecast-day-summary">{{ item.summary }}</span>
-                <strong>{{ item.temp }}&deg;C</strong>
-                <small>{{ item.rainfall_mm }} mm</small>
-              </article>
-            {% endfor %}
-          </div>
-        </article>
-
-        <article class="agro-card weather-history-card">
-          <div class="weather-card-head">
-            <h2>Historical Weather Data</h2>
-            <span class="dot-menu">&#8226;&#8226;&#8226;</span>
-          </div>
-
-          <div class="weather-history-chart">
-            <div class="weather-history-yaxis">
-              {% for item in weather_page.history.y_axis %}
-                <span>{{ item }}</span>
-              {% endfor %}
-            </div>
-
-            <div class="weather-history-surface">
-              <svg class="weather-history-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points="{{ weather_page.history.polyline }}"></polyline>
-              </svg>
-
-              <div class="weather-history-dots">
-                {% for point in weather_page.history.points %}
-                  <i data-style-left="{{ point.left }}%" data-style-bottom="{{ point.line_bottom }}%"></i>
-                {% endfor %}
-              </div>
-
-              <div class="weather-history-labels">
-                {% for label in weather_page.history.labels %}
-                  <span>{{ label }}</span>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="agro-card weather-advisories-card">
-          <div class="weather-card-head">
-            <h2>Climate Advisories</h2>
-            <span class="dot-menu">&#8226;&#8226;&#8226;</span>
-          </div>
-
-          <div class="weather-advisory-list">
-            {% for item in weather_page.advisories %}
-              <div class="weather-advisory-item weather-advisory-item-{{ item.kind }}">
-                <span class="weather-advisory-icon">!</span>
-                <div class="weather-advisory-copy">
-                  <strong>{{ item.title }}</strong>
-                  <span>{{ item.detail }}</span>
-                </div>
+          <div id="weatherDailySkeleton" class="weather-v2-daily-grid">
+            {% for _ in range(7) %}
+              <div class="weather-v2-day-card weather-v2-day-card-skeleton">
+                <span class="weather-v2-skeleton weather-v2-skeleton-line weather-v2-skeleton-tiny"></span>
+                <span class="weather-v2-skeleton weather-v2-skeleton-icon"></span>
+                <span class="weather-v2-skeleton weather-v2-skeleton-line weather-v2-skeleton-short"></span>
               </div>
             {% endfor %}
           </div>
+          <div id="weatherDailyGrid" class="weather-v2-daily-grid" hidden></div>
+        </article>
+
+        <article class="agro-card weather-v2-panel weather-v2-metrics-panel">
+          <div class="weather-v2-panel-head">
+            <div>
+              <span class="weather-v2-kicker">Field Metrics</span>
+              <h2>Climate Data Cards</h2>
+            </div>
+          </div>
+          <div id="weatherMetricsGrid" class="weather-v2-metrics-grid"></div>
+        </article>
+
+        <article class="agro-card weather-v2-panel weather-v2-insights-panel">
+          <div class="weather-v2-panel-head">
+            <div>
+              <span class="weather-v2-kicker">AI Advisory</span>
+              <h2>Smart Farming Insights</h2>
+            </div>
+          </div>
+          <div id="weatherInsightsList" class="weather-v2-insights-list"></div>
         </article>
       </section>
     </section>
   </main>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var mapEl = document.getElementById('weather-leaflet-map');
-      if (!mapEl) return;
-      var lat = parseFloat("{{ weather_page.location_card.lat|default(20.296)  }}");
-      var lng = parseFloat("{{ weather_page.location_card.lon|default(85.824)  }}");
-      var map = L.map('weather-leaflet-map').setView([lat, lng], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-        maxZoom: 19
-      }).addTo(map);
-      L.marker([lat, lng]).addTo(map).bindPopup('{{ weather_page.current.location|default("Your Farm") }}').openPopup();
-      setTimeout(function() { map.invalidateSize(); }, 400);
-    });
-  </script>
 
-  <!-- Theme Toggle Script -->
   <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
     <i class="fas fa-moon" id="themeIcon"></i>
   </button>
+
   <script>
     (function() {
       const themeToggle = document.getElementById('themeToggle');
       const themeIcon = document.getElementById('themeIcon');
-      
-      // Check saved theme
       const savedTheme = localStorage.getItem('theme');
+
       if (savedTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
         themeIcon.classList.remove('fa-moon');
         themeIcon.classList.add('fa-sun');
       }
-      
-      themeToggle.addEventListener('click', () => {
+
+      themeToggle?.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         if (currentTheme === 'dark') {
           document.documentElement.removeAttribute('data-theme');
@@ -233,49 +168,292 @@
     })();
   </script>
 
-
-  <!-- Mobile Sidebar JS -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const mobileToggle = document.getElementById('mobileMenuToggle');
-      const sidebar = document.querySelector('.dashboard-sidebar');
-      
-      if (mobileToggle && sidebar) {
-        mobileToggle.addEventListener('click', (e) => {
-          e.stopPropagation(); // prevent immediate close on document click
-          sidebar.classList.toggle('sidebar-open');
-        });
-
-        // Close sidebar if clicking outside of it on mobile
-        document.addEventListener('click', (e) => {
-          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
-            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
-              sidebar.classList.remove('sidebar-open');
-            }
-          }
-        });
-      }
+    document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
     });
   </script>
 
-  <!-- Fix IDE Parsing: Apply dynamic styles via JS -->
   <script>
-    function applyDataStyles() {
-      document.querySelectorAll('*').forEach(el => {
-        Array.from(el.attributes).forEach(attr => {
-          if (attr.name.startsWith('data-style-')) {
-            const cssProp = attr.name.slice(11); // 'data-style-'.length == 11
-            el.style[cssProp] = attr.value;
-          }
+    (function() {
+      const root = document.querySelector('[data-weather-root]');
+      if (!root) {
+        return;
+      }
+
+      const initialCity = root.dataset.initialCity || 'Bhubaneswar';
+      const form = document.getElementById('weatherSearchForm');
+      const cityInput = document.getElementById('weatherCityInput');
+      const errorBox = document.getElementById('weatherError');
+      const loadingState = document.getElementById('weatherLoadingState');
+      const heroContent = document.getElementById('weatherHeroContent');
+      const hourlyList = document.getElementById('weatherHourlyList');
+      const hourlySkeleton = document.getElementById('weatherHourlySkeleton');
+      const dailyGrid = document.getElementById('weatherDailyGrid');
+      const dailySkeleton = document.getElementById('weatherDailySkeleton');
+      const metricsGrid = document.getElementById('weatherMetricsGrid');
+      const insightsList = document.getElementById('weatherInsightsList');
+      const weatherDownloadButton = document.getElementById('weatherDownloadButton');
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function weatherIconMarkup(condition, large = false) {
+        const label = String(condition || '').toLowerCase();
+        let iconClass = 'fa-cloud-sun';
+
+        if (label.includes('thunder')) {
+          iconClass = 'fa-bolt';
+        } else if (label.includes('rain') || label.includes('drizzle') || label.includes('shower')) {
+          iconClass = 'fa-cloud-rain';
+        } else if (label.includes('snow') || label.includes('sleet')) {
+          iconClass = 'fa-snowflake';
+        } else if (label.includes('mist') || label.includes('fog') || label.includes('haze') || label.includes('smoke')) {
+          iconClass = 'fa-smog';
+        } else if (label.includes('wind')) {
+          iconClass = 'fa-wind';
+        } else if (label.includes('cloud')) {
+          iconClass = 'fa-cloud';
+        } else if (label.includes('clear') || label.includes('sun')) {
+          iconClass = 'fa-sun';
+        }
+
+        return `<span class="weather-v2-condition-icon${large ? ' weather-v2-condition-icon-lg' : ''}" aria-hidden="true"><i class="fas ${iconClass}"></i></span>`;
+      }
+
+      function setLoading(isLoading) {
+        loadingState.hidden = !isLoading;
+        hourlySkeleton.hidden = !isLoading;
+        dailySkeleton.hidden = !isLoading;
+
+        if (isLoading) {
+          heroContent.hidden = true;
+          hourlyList.hidden = true;
+          dailyGrid.hidden = true;
+        }
+      }
+
+      function setError(message) {
+        if (!message) {
+          errorBox.hidden = true;
+          errorBox.textContent = '';
+          return;
+        }
+        errorBox.hidden = false;
+        errorBox.textContent = message;
+      }
+
+      function updateUrl(city) {
+        const nextUrl = new URL(window.location.href);
+        if (city) {
+          nextUrl.searchParams.set('city', city);
+        } else {
+          nextUrl.searchParams.delete('city');
+        }
+        window.history.replaceState({}, '', nextUrl.toString());
+      }
+
+      function updateWeatherDownloadLink(city) {
+        if (!weatherDownloadButton) {
+          return;
+        }
+        const resolvedCity = String(city || cityInput?.value || initialCity || 'Bhubaneswar').trim() || 'Bhubaneswar';
+        weatherDownloadButton.href = `/download/weather-report?city=${encodeURIComponent(resolvedCity)}`;
+      }
+
+      function buildHumidityBars(currentHumidity, hourly) {
+        return hourly.slice(0, 8).map((item, index) => {
+          const baseline = Number(currentHumidity || 0);
+          const rainFactor = Number(item.rain_prob || 0) * 0.12;
+          const variance = (index % 2 === 0 ? -4 : 3) + rainFactor;
+          return Math.max(22, Math.min(100, Math.round(baseline + variance)));
         });
+      }
+
+      function renderHero(data) {
+        const current = data.current || {};
+        const aqi = data.aqi || {};
+        const requestedLocation = String(data.requested_location || data.location || cityInput?.value || initialCity || 'Bhubaneswar').trim() || 'Bhubaneswar';
+        const sourceNote = data.source === 'fallback'
+          ? '<div class="weather-v2-source-note">Showing smart fallback weather because this exact location was not available from live API.</div>'
+          : '<div class="weather-v2-source-note weather-v2-source-note-live">Live OpenWeather data</div>';
+        heroContent.innerHTML = `
+          <div class="weather-v2-now">
+            <div class="weather-v2-now-copy">
+              <span class="weather-v2-location">${escapeHtml(requestedLocation)}</span>
+              <div class="weather-v2-temp-row">
+                <strong>${escapeHtml(current.temp)}&deg;C</strong>
+                ${weatherIconMarkup(current.condition, true)}
+              </div>
+              <p>${escapeHtml(current.condition)}</p>
+              ${sourceNote}
+            </div>
+            <div class="weather-v2-now-meta">
+              <div class="weather-v2-chip">Feels like ${escapeHtml(current.feels_like)}&deg;C</div>
+              <div class="weather-v2-chip">Humidity ${escapeHtml(current.humidity)}%</div>
+              <div class="weather-v2-chip">Wind ${escapeHtml(current.wind_speed)} km/h</div>
+              <div class="weather-v2-chip">AQI ${escapeHtml(aqi.level)}</div>
+              <div class="weather-v2-updated">Updated ${escapeHtml(data.updated_at)}</div>
+            </div>
+          </div>
+        `;
+        if (cityInput && requestedLocation) {
+          cityInput.value = requestedLocation;
+        }
+        updateWeatherDownloadLink(requestedLocation || cityInput?.value || initialCity);
+      }
+
+      function renderHourly(data) {
+        hourlyList.innerHTML = (data.hourly || []).map(item => `
+          <article class="weather-v2-hour-card">
+            <span>${escapeHtml(item.time)}</span>
+            ${weatherIconMarkup(item.condition)}
+            <strong>${escapeHtml(item.temp)}&deg;</strong>
+            <small>${escapeHtml(item.rain_prob)}% rain</small>
+          </article>
+        `).join('');
+      }
+
+      function renderDaily(data) {
+        dailyGrid.innerHTML = (data.daily || []).map(item => `
+          <article class="weather-v2-day-card">
+            <span>${escapeHtml(item.day)}</span>
+            ${weatherIconMarkup(item.condition || 'forecast')}
+            <strong>${escapeHtml(item.max)}&deg; / ${escapeHtml(item.min)}&deg;</strong>
+          </article>
+        `).join('');
+      }
+
+      function showContent() {
+        heroContent.hidden = false;
+        hourlyList.hidden = false;
+        dailyGrid.hidden = false;
+      }
+
+      function renderMetrics(data) {
+        const current = data.current || {};
+        const aqi = data.aqi || {};
+        const hourly = data.hourly || [];
+        const humidityBars = buildHumidityBars(current.humidity, hourly);
+        const rainBars = hourly.slice(0, 8).map(item => Math.max(10, Number(item.rain_prob || 0)));
+        const windRotation = Number(current.wind_deg || 0);
+
+        metricsGrid.innerHTML = `
+          <article class="weather-v2-metric-card">
+            <div class="weather-v2-metric-head">
+              <span>Humidity</span>
+              <strong>${escapeHtml(current.humidity)}%</strong>
+            </div>
+            <div class="weather-v2-mini-bars">
+              ${humidityBars.map(value => `<i style="height:${value}%"></i>`).join('')}
+            </div>
+            <small>High humidity can trigger fungal pressure.</small>
+          </article>
+          <article class="weather-v2-metric-card">
+            <div class="weather-v2-metric-head">
+              <span>Wind</span>
+              <strong>${escapeHtml(current.wind_speed)} km/h</strong>
+            </div>
+            <div class="weather-v2-wind-body">
+              <span class="weather-v2-wind-arrow" style="transform: rotate(${windRotation}deg);">
+                <i class="fas fa-location-arrow" aria-hidden="true"></i>
+              </span>
+              <small>Direction-based spray planning</small>
+            </div>
+          </article>
+          <article class="weather-v2-metric-card">
+            <div class="weather-v2-metric-head">
+              <span>Rain Probability</span>
+              <strong>${Math.max(...rainBars, 0)}%</strong>
+            </div>
+            <div class="weather-v2-rain-bars">
+              ${rainBars.map(value => `<i style="height:${value}%"></i>`).join('')}
+            </div>
+            <small>Use this window before irrigation or spraying.</small>
+          </article>
+          <article class="weather-v2-metric-card">
+            <div class="weather-v2-metric-head">
+              <span>Air Quality</span>
+              <strong>${escapeHtml(aqi.level)}</strong>
+            </div>
+            <div class="weather-v2-aqi-bar">
+              <span style="width:${escapeHtml(aqi.bar_width)}%;background:${escapeHtml(aqi.color)};"></span>
+            </div>
+            <small>AQI value ${escapeHtml(aqi.value)} for outdoor field activity.</small>
+          </article>
+        `;
+      }
+
+      function renderInsights(data) {
+        const insights = Array.isArray(data.insights) ? data.insights : [];
+        const iconForInsight = (text) => {
+          const lower = String(text || '').toLowerCase();
+          if (lower.includes('rain')) return 'fa-cloud-rain';
+          if (lower.includes('heat')) return 'fa-sun';
+          if (lower.includes('humidity') || lower.includes('fungal')) return 'fa-bacteria';
+          if (lower.includes('irrigation')) return 'fa-droplet';
+          if (lower.includes('spray')) return 'fa-wind';
+          return 'fa-brain';
+        };
+
+        insightsList.innerHTML = insights.map(item => `
+          <article class="weather-v2-insight-card">
+            <span class="weather-v2-insight-icon"><i class="fas ${iconForInsight(item)}" aria-hidden="true"></i></span>
+            <p>${escapeHtml(item)}</p>
+          </article>
+        `).join('');
+      }
+
+      async function loadWeather(city) {
+        setError('');
+        setLoading(true);
+        updateUrl(city);
+        updateWeatherDownloadLink(city);
+
+        try {
+          const response = await fetch(`/api/weather?city=${encodeURIComponent(city)}`, {
+            headers: { 'Accept': 'application/json' }
+          });
+          if (!response.ok) {
+            throw new Error('Weather data could not be loaded.');
+          }
+
+          const data = await response.json();
+          renderHero(data);
+          renderHourly(data);
+          renderDaily(data);
+          renderMetrics(data);
+          renderInsights(data);
+          showContent();
+        } catch (error) {
+          setError(error.message || 'Weather data is unavailable right now.');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      form?.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const nextCity = (cityInput?.value || '').trim() || initialCity;
+        loadWeather(nextCity);
       });
-    }
-    document.addEventListener('DOMContentLoaded', applyDataStyles);
+
+      updateWeatherDownloadLink(initialCity);
+      loadWeather(initialCity);
+    })();
   </script>
 
-  <!-- Google Translate -->
   <script>
     function googleTranslateElementInit() {
+      if (!window.google || !google.translate || !google.translate.TranslateElement) {
+        return;
+      }
       new google.translate.TranslateElement(
         {
           pageLanguage: 'en',
@@ -286,10 +464,6 @@
       );
     }
   </script>
-  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
+  <script async src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
-
 </html>
-
-

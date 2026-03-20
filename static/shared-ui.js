@@ -346,6 +346,111 @@
 })();
 
 (function () {
+  function initScrollReveal() {
+    if (!document.body || !document.body.classList.contains("dashboard-page")) {
+      return;
+    }
+
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      return;
+    }
+
+    var selector = [
+      ".dashboard-grid > .agro-card",
+      ".dashboard-grid > .dash-card-link",
+      ".dashboard-content-area > .agro-card",
+      ".agro-card.weather-v2-panel",
+      ".weather-v2-hour-card",
+      ".weather-v2-day-card",
+      ".weather-v2-metric-card",
+      ".weather-v2-insight-card",
+      ".store-card",
+      ".store-organic-card",
+      ".disease-store-card",
+      ".crop-library-hero",
+      ".crop-library-stat-card",
+      ".crop-library-toolbar",
+      ".crop-library-card",
+      ".crop-detail-related-card",
+      ".crop-library-empty",
+      ".library-topbar",
+      ".library-toolbar",
+      ".library-section-head",
+      ".library-risk",
+      ".soil-toolbar-card",
+      ".soil-gauge-card",
+      ".soil-nutrient-card",
+      ".soil-history-card",
+      ".soil-map-card",
+      ".soil-summary-card",
+      ".crop-toolbar-card",
+      ".crop-image-card",
+      ".crop-alert-card",
+      ".crop-history-card",
+      ".crop-actions-card",
+      ".disease-hero-banner",
+      ".disease-upload-card",
+      ".disease-report-card",
+      ".disease-result-card",
+      ".track-order-stat",
+      ".track-order-panel",
+      ".track-order-card",
+      ".alerts-card",
+      ".alerts-rec-card",
+      ".ai-rec-card",
+      ".settings-summary-card",
+      ".settings-card",
+      ".mini-info-card",
+      ".profile-avatar-card",
+      ".profile-stats-card",
+      ".profile-card",
+      ".selector-card",
+      ".calculator-container",
+      ".history-section",
+      ".sub-card",
+      ".refer-card",
+      ".refer-help-card",
+      ".village-module-card",
+      ".task-card",
+      ".post-card"
+    ].join(", ");
+
+    var elements = Array.prototype.slice.call(document.querySelectorAll(selector))
+      .filter(function (element, index, all) {
+        return all.indexOf(element) === index;
+      });
+
+    if (!elements.length) {
+      return;
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) {
+          return;
+        }
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    }, {
+      threshold: 0.14,
+      rootMargin: "0px 0px -8% 0px"
+    });
+
+    elements.forEach(function (element, index) {
+      if (element.classList.contains("is-visible")) {
+        return;
+      }
+      element.classList.add("av-scroll-reveal");
+      element.style.setProperty("--reveal-delay", String((index % 8) * 70) + "ms");
+      observer.observe(element);
+    });
+  }
+
   function shouldSkipSharedUi() {
     if (document.body.classList.contains("admin-page")) {
       return true;
@@ -365,7 +470,12 @@
       return { label: "Detect Disease", href: "#crop-image", detail: "Leaf photo upload karke AI diagnosis start karo." };
     }
     if (path === "/refer-and-earn") {
-      return { label: "Share Referral", href: "#referralShareCard", detail: "Referral code ko fast share karke rewards unlock karo." };
+      return {
+        label: "Share Referral",
+        href: "#referralShareCard",
+        detail: "Referral code ko fast share karke rewards unlock karo.",
+        actionName: "shareReferral"
+      };
     }
     return null;
   }
@@ -386,14 +496,37 @@
 
     var action = document.createElement("div");
     action.className = "shared-primary-action";
+    var actionTrigger = config.actionName
+      ? '<button class="shared-primary-action-button" type="button" data-primary-action="' + config.actionName + '" data-primary-target="' + (config.href || "") + '">' + config.label + "</button>"
+      : '<a class="shared-primary-action-button" href="' + config.href + '">' + config.label + "</a>";
     action.innerHTML = [
       '<div class="shared-primary-action-copy">',
       "  <strong>Primary action</strong>",
       "  <span>" + config.detail + "</span>",
       "</div>",
-      '<a class="shared-primary-action-button" href="' + config.href + '">' + config.label + "</a>",
+      actionTrigger,
     ].join("");
     host.appendChild(action);
+
+    var actionButton = action.querySelector("[data-primary-action]");
+    if (actionButton) {
+      actionButton.addEventListener("click", function () {
+        var actionName = actionButton.getAttribute("data-primary-action");
+        var target = actionButton.getAttribute("data-primary-target") || "";
+        var fn = actionName && typeof window[actionName] === "function" ? window[actionName] : null;
+        if (fn) {
+          Promise.resolve(fn()).catch(function () {
+            if (target) {
+              window.location.hash = target;
+            }
+          });
+          return;
+        }
+        if (target) {
+          window.location.hash = target;
+        }
+      });
+    }
   }
 
   function createChatShell() {
@@ -616,6 +749,7 @@
     }
     ensurePrimaryActionBanner();
     initAiCropDoctor();
+    initScrollReveal();
   }
 
   if (document.readyState === "loading") {

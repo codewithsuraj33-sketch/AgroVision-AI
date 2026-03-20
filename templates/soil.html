@@ -31,28 +31,36 @@
 
     <section class="dashboard-main soil-monitor-main">
       <header class="soil-hero-banner">
-        <div class="soil-hero-top">
-          {% if user and user.profile_photo %}
-            <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-          {% else %}
-            <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
-          {% endif %}
+        <div class="soil-hero-top soil-hero-bar">
+          <a class="soil-user-badge" href="/profile" aria-label="Open profile">
+            <span class="soil-user-avatar-link">
+              {% if user and user.profile_photo %}
+                <img class="soil-user-avatar-img" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+              {% else %}
+                <span class="soil-user-avatar-placeholder" aria-hidden="true"><i class="fas fa-user-circle"></i></span>
+              {% endif %}
+            </span>
+            <span class="soil-user-meta">
+              <small>Active Profile</small>
+              <strong>{{ user.name }}</strong>
+            </span>
+          </a>
 
-          <nav class="weather-top-nav" aria-label="Soil utility navigation">
-            <a href="/dashboard">{{ user.name }}</a>
+          <nav class="weather-top-nav soil-hero-nav" aria-label="Soil utility navigation">
+            <a href="/dashboard">Dashboard</a>
             <span class="weather-divider"></span>
-            <a href="#">Farm</a>
+            <a href="/farms">Farms</a>
             <span class="weather-divider"></span>
             <a href="#soil-map-card">Location</a>
             <span class="weather-divider"></span>
-            <a href="/">About</a>
+            <a href="/settings">Settings</a>
           </nav>
         </div>
 
         <div class="soil-hero-copy">
           <h1>Soil Health Monitoring</h1>
-          <strong>Your Farm, Location: {{ soil_page.location.name }}</strong>
-          <p>Analyze soil data to optimize crop growth and field health.</p>
+          <strong>Current field location: {{ soil_page.location.name }}</strong>
+          <p>Track live weather-linked estimates for soil pH, NPK, moisture, and map-based field signals from one clean monitoring workspace.</p>
         </div>
       </header>
 
@@ -67,7 +75,30 @@
             {% endfor %}
           </div>
 
-          <a class="soil-toolbar-button" href="{{ soil_page.location.maps_search_url }}" target="_blank" rel="noreferrer">Change Location</a>
+          <div class="soil-location-panel">
+            <div class="soil-location-copy">
+              <span class="soil-location-kicker"><i class="fas fa-location-dot"></i> Change Location</span>
+              <strong>{{ soil_page.location.name }}</strong>
+              <p>Location update karte hi live weather-linked soil pH, NPK, moisture, weather, aur map data naye place ke hisaab se refresh ho jayega.</p>
+            </div>
+
+            <form class="soil-location-form" method="POST" action="/soil-health">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="apply_location" value="1">
+              <input class="soil-location-input" type="text" name="location" value="{{ soil_page.location.name }}" placeholder="Enter city, village, or district" aria-label="Change soil location">
+              <div class="soil-location-actions">
+                <button class="soil-toolbar-button" type="submit">Update Location</button>
+                <a class="soil-location-link" href="/download/soil-report">Download PDF</a>
+                <a class="soil-location-link" href="{{ soil_page.location.maps_search_url }}" target="_blank" rel="noreferrer">Open Map</a>
+              </div>
+            </form>
+
+            {% if location_notice %}
+              <div class="soil-location-status soil-location-status-{{ location_notice.tone }}">
+                {{ location_notice.text }}
+              </div>
+            {% endif %}
+          </div>
         </article>
 
         <article class="agro-card soil-gauge-card">

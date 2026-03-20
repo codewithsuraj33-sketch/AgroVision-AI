@@ -295,6 +295,40 @@
       useCaseInput.value = initialUseCase;
     }
 
+    function normalizeSearchText(value) {
+      return String(value || "")
+        .toLowerCase()
+        .match(/[a-z0-9]+/g)?.join(" ") || "";
+    }
+
+    function matchesSearchQuery(searchText, query) {
+      const normalizedQuery = normalizeSearchText(query);
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const normalizedSearch = normalizeSearchText(searchText);
+      if (!normalizedSearch) {
+        return false;
+      }
+
+      if (normalizedSearch.indexOf(normalizedQuery) !== -1) {
+        return true;
+      }
+
+      const searchTokens = normalizedSearch.split(" ").filter(Boolean);
+      const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+      if (!searchTokens.length || !queryTokens.length) {
+        return false;
+      }
+
+      return queryTokens.every(function (queryToken) {
+        return searchTokens.some(function (searchToken) {
+          return searchToken.indexOf(queryToken) !== -1 || queryToken.indexOf(searchToken) !== -1;
+        });
+      });
+    }
+
     function updateUrl(query, category, sort, useCase) {
       const nextUrl = new URL(window.location.href);
       if (query) {
@@ -395,10 +429,10 @@
       cards.forEach(function (card) {
         const rawSearch = (card.dataset.search || "").trim();
         const fallbackSearch = ((card.dataset.productName || "") + " " + (card.textContent || "")).trim();
-        const searchText = (rawSearch ? rawSearch : fallbackSearch).toLowerCase();
+        const searchText = rawSearch ? rawSearch : fallbackSearch;
         const categoryText = card.dataset.productCategory || "";
         const useCaseText = (card.textContent || "").toLowerCase();
-        const matchesQuery = !query || searchText.indexOf(query) !== -1;
+        const matchesQuery = matchesSearchQuery(searchText, query);
         const matchesCategory = category === "All" || categoryText === category;
         const matchesUseCase = !useCase || useCaseText.indexOf(useCase.toLowerCase()) !== -1;
         const isVisible = matchesQuery && matchesCategory && matchesUseCase;
@@ -447,15 +481,13 @@
       });
     });
 
-    searchInput && searchInput.addEventListener("input", updateCatalog);
+    searchInput && searchInput.addEventListener("input", function () {
+      if (useCaseInput && useCaseInput.value) {
+        setActiveUseCase("");
+      }
+      updateCatalog();
+    });
     sortSelect && sortSelect.addEventListener("change", updateCatalog);
-
-    if (filterForm) {
-      filterForm.addEventListener("submit", function (event) {
-        event.preventDefault();
-        updateCatalog();
-      });
-    }
 
     setActiveTab(initialCategory);
     setActiveUseCase(initialUseCase);

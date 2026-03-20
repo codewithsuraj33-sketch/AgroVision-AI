@@ -15,6 +15,122 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .crop-monitor-page .dashboard-hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at top left, rgba(20, 184, 111, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.98));
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      box-shadow: 0 22px 44px rgba(15, 23, 42, 0.1);
+    }
+    .crop-monitor-page .dashboard-hero::before {
+      content: "";
+      position: absolute;
+      inset: auto -10% -35% auto;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(34, 197, 94, 0.12), transparent 68%);
+      pointer-events: none;
+    }
+    .farms-hero-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .farms-user-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+      text-decoration: none;
+      color: inherit;
+    }
+    .farms-user-avatar-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .farms-user-avatar-img,
+    .farms-user-avatar-placeholder {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .farms-user-avatar-img {
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.14);
+    }
+    .farms-user-avatar-placeholder {
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(20, 184, 111, 0.12));
+      color: #295f95;
+      font-size: 1.1rem;
+    }
+    .farms-user-meta {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+    .farms-user-meta small {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6a7d94;
+    }
+    .farms-user-meta strong {
+      color: #12314f;
+      font-size: 1rem;
+      line-height: 1.2;
+    }
+    .farms-hero-nav {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+    .crop-monitor-page .dashboard-hero-copy {
+      display: grid;
+      gap: 10px;
+      max-width: 760px;
+    }
+    .crop-monitor-page .dashboard-hero-copy h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+      color: #10243f;
+    }
+    .crop-monitor-page .dashboard-hero-copy p {
+      margin: 0;
+      max-width: 640px;
+      font-size: 1rem;
+      line-height: 1.7;
+      color: #52657d;
+    }
+    @media (max-width: 780px) {
+      .farms-hero-bar {
+        align-items: stretch;
+      }
+      .farms-user-badge,
+      .farms-hero-nav {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body class="dashboard-page crop-monitor-page">
 
@@ -30,29 +146,34 @@
     </aside>
 
     <section class="dashboard-main crop-monitor-main">
-      <header class="crop-hero-banner">
-        <div class="crop-hero-top">
-          {% if user and user.profile_photo %}
-            <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-          {% else %}
-            <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
-          {% endif %}
+      <header class="dashboard-hero">
+        <div class="dashboard-hero-top farms-hero-bar">
+          <a class="farms-user-badge" href="/profile" aria-label="Open profile">
+            <span class="farms-user-avatar-link">
+              {% if user and user.profile_photo %}
+                <img class="farms-user-avatar-img" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+              {% else %}
+                <span class="farms-user-avatar-placeholder"><i class="fas fa-user-circle"></i></span>
+              {% endif %}
+            </span>
+            <span class="farms-user-meta">
+              <small>Active Profile</small>
+              <strong>{{ user.name }}</strong>
+            </span>
+          </a>
 
-          <nav class="weather-top-nav" aria-label="Crop utility navigation">
-            <a href="/dashboard">{{ user.name }}</a>
+          <nav class="weather-top-nav farms-hero-nav" aria-label="Crop utility navigation">
+            <a href="/dashboard">Dashboard</a>
             <span class="weather-divider"></span>
-            <a href="/dashboard">Home</a>
+            <a href="/farms">Farms</a>
             <span class="weather-divider"></span>
-            <a href="#crop-image-card">Location</a>
-            <span class="weather-divider"></span>
-            <a href="/">About</a>
+            <a href="/settings">Settings</a>
           </nav>
         </div>
 
-        <div class="crop-hero-copy">
+        <div class="dashboard-hero-copy">
           <h1>Satellite Crop Monitoring</h1>
-          <p>Monitor crop health and growth using satellite imagery.</p>
-          <strong>Your Farm, Location: {{ crop_page.location_label }}</strong>
+          <p>Track NDVI shifts, stress zones, and scouting priorities from one crop monitoring workspace instead of jumping between isolated charts.</p>
         </div>
       </header>
 

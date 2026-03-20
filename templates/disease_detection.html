@@ -179,6 +179,14 @@
     .disease-report-actions {
       width: min(100%, 320px);
       flex: 0 0 320px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .disease-report-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
     .disease-report-action,
@@ -566,11 +574,13 @@
     <section class="dashboard-main disease-monitor-main">
       <header class="disease-hero-banner">
         <div class="disease-hero-top">
-          {% if user and user.profile_photo %}
-            <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
-          {% else %}
-            <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
-          {% endif %}
+          <a class="profile-quick-link" href="/profile" aria-label="Open profile">
+            {% if user and user.profile_photo %}
+              <img class="dashboard-avatar-img dashboard-avatar-small" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;" src="/static/uploads/{{ user.profile_photo }}" alt="Avatar">
+            {% else %}
+              <span class="dashboard-avatar dashboard-avatar-small" aria-hidden="true"></span>
+            {% endif %}
+          </a>
 
           <nav class="weather-top-nav" aria-label="Disease utility navigation">
             <a href="/dashboard">Your</a>
@@ -668,6 +678,17 @@
                     <img class="disease-result-image" id="resultImage" src="" alt="Uploaded crop leaf" hidden>
                     <div class="disease-result-image-placeholder" id="resultImageFallback"></div>
                   </div>
+                  <div class="disease-report-buttons">
+                    <a
+                      class="disease-report-action is-primary"
+                      id="downloadDiseasePdfButton"
+                      href="/download/disease-report"
+                      {% if not has_cached_pdf %}hidden{% endif %}
+                    >
+                      <i class="fa-solid fa-file-pdf"></i> Download PDF
+                    </a>
+                  </div>
+                  <p class="disease-result-feedback" id="resultFeedback"></p>
                 </div>
               </div>
 
@@ -768,6 +789,8 @@
       var resultProductLinkInline = document.getElementById("resultProductLinkInline");
       var resultImage = document.getElementById("resultImage");
       var resultImageFallback = document.getElementById("resultImageFallback");
+      var resultFeedback = document.getElementById("resultFeedback");
+      var downloadDiseasePdfButton = document.getElementById("downloadDiseasePdfButton");
       var uploadPreviewSrc = "";
 
       function escapeHtml(value) {
@@ -820,6 +843,15 @@
         });
       }
 
+      function setResultFeedback(message, tone) {
+        if (!resultFeedback) return;
+        resultFeedback.textContent = message || "";
+        resultFeedback.className = "disease-result-feedback";
+        if (tone) {
+          resultFeedback.classList.add("is-" + tone);
+        }
+      }
+
       function setLoadingState(isLoading) {
         resultCard.hidden = false;
         resultSkeleton.hidden = !isLoading;
@@ -834,6 +866,9 @@
           resultImage.src = uploadPreviewSrc;
           resultImage.hidden = false;
           resultImageFallback.hidden = true;
+        }
+        if (isLoading) {
+          setResultFeedback("");
         }
       }
 
@@ -941,6 +976,10 @@
         }
 
         renderSuggestedProducts(result.suggested_products);
+        if (downloadDiseasePdfButton) {
+          downloadDiseasePdfButton.hidden = false;
+        }
+        setResultFeedback("Disease report PDF is ready to download.", "success");
       }
 
       if (fileInput) {

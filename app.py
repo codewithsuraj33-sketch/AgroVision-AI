@@ -6,6 +6,7 @@ import re
 import smtplib
 import threading
 import time
+import textwrap
 import uuid
 import hmac
 from math import asin, cos, radians, sin, sqrt
@@ -90,6 +91,417 @@ def inject_shared_ui_assets(response):
 
     response.set_data(html)
     return response
+
+
+def normalize_pdf_text(value, max_length=None):
+    text = re.sub(r"\s+", " ", str(value or "").strip())
+    if not text:
+        return ""
+    if max_length is not None and max_length > 3 and len(text) > max_length:
+        text = text[: max_length - 3].rstrip() + "..."
+    return text.encode("ascii", "replace").decode("ascii")
+
+
+def slugify_download_token(value, default="report"):
+    normalized = normalize_pdf_text(value).lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")
+    return slug or default
+
+
+def compact_pdf_list(values, limit=5, item_length=180):
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, (list, tuple)):
+        return []
+
+    normalized_items = []
+    for item in values:
+        text = normalize_pdf_text(item, item_length)
+        if text:
+            normalized_items.append(text)
+        if len(normalized_items) >= limit:
+            break
+    return normalized_items
+
+
+def escape_pdf_text(value):
+    return str(value or "").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def wrap_pdf_line(text, width=92, bullet=False):
+    normalized = normalize_pdf_text(text)
+    if not normalized:
+        return []
+    return textwrap.wrap(
+        normalized,
+        width=width,
+        initial_indent="- " if bullet else "",
+        subsequent_indent="  " if bullet else "",
+        break_long_words=False,
+        break_on_hyphens=False,
+    ) or [normalized]
+
+
+def format_pdf_rgb(color):
+    return " ".join(f"{max(0.0, min(1.0, float(channel))):.3f}" for channel in color)
+
+
+def build_pdf_rect_command(x, y, width, height, fill_color=None, stroke_color=None, line_width=1):
+    commands = ["q"]
+    if fill_color is not None:
+        commands.append(f"{format_pdf_rgb(fill_color)} rg")
+    if stroke_color is not None:
+        commands.append(f"{format_pdf_rgb(stroke_color)} RG")
+        commands.append(f"{line_width:.2f} w")
+    commands.append(f"{x:.2f} {y:.2f} {width:.2f} {height:.2f} re")
+    if fill_color is not None and stroke_color is not None:
+        commands.append("B")
+    elif fill_color is not None:
+        commands.append("f")
+    else:
+        commands.append("S")
+    commands.append("Q")
+    return commands
+
+
+def build_pdf_text_commands(lines, x, y, font="F1", size=10.5, leading=14, color=(0.12, 0.18, 0.16)):
+    safe_lines = [normalize_pdf_text(line) for line in lines if normalize_pdf_text(line)]
+    if not safe_lines:
+        return []
+
+    commands = [
+        "BT",
+        f"/{font} {size:.2f} Tf",
+        f"{format_pdf_rgb(color)} rg",
+        f"{leading:.2f} TL",
+        f"1 0 0 1 {x:.2f} {y:.2f} Tm",
+    ]
+    for index, line in enumerate(safe_lines):
+        if index:
+            commands.append("T*")
+        commands.append(f"({escape_pdf_text(line)}) Tj")
+    commands.append("ET")
+    return commands
+
+
+def build_pdf_blocks(meta_lines=None, sections=None):
+    blocks = []
+
+    meta_content = []
+    for meta_line in meta_lines or []:
+        meta_content.extend(wrap_pdf_line(meta_line, width=82, bullet=False))
+    if meta_content:
+        blocks.append(
+            {
+                "heading": "Report Snapshot",
+                "lines": meta_content,
+                "height": 26 + 14 * len(meta_content) + 18,
+                "fill_color": (0.94, 0.98, 0.95),
+                "stroke_color": (0.78, 0.89, 0.81),
+                "stripe_color": (0.26, 0.62, 0.41),
+            }
+        )
+
+    for section in sections or []:
+        heading = normalize_pdf_text(section.get("heading"), 80) or "Section"
+        section_lines = []
+        for paragraph in section.get("paragraphs") or []:
+            section_lines.extend(wrap_pdf_line(paragraph, width=84, bullet=False))
+            if section_lines:
+                section_lines.append("")
+        for item in section.get("items") or []:
+            section_lines.extend(wrap_pdf_line(item, width=80, bullet=True))
+        while section_lines and not section_lines[-1].strip():
+            section_lines.pop()
+        if not section_lines:
+            continue
+
+        chunk_size = 13
+        for chunk_index in range(0, len(section_lines), chunk_size):
+            chunk_lines = section_lines[chunk_index:chunk_index + chunk_size]
+            chunk_heading = heading if chunk_index == 0 else f"{heading} (cont.)"
+            blocks.append(
+                {
+                    "heading": chunk_heading,
+                    "lines": chunk_lines,
+                    "height": 28 + 14 * len(chunk_lines) + 18,
+                    "fill_color": (1.0, 1.0, 1.0),
+                    "stroke_color": (0.84, 0.90, 0.86),
+                    "stripe_color": (0.95, 0.73, 0.16),
+                }
+            )
+
+    return blocks
+
+
+def paginate_pdf_blocks(blocks):
+    page_top = 642
+    page_bottom = 54
+    gap = 14
+    pages = []
+    current_page = []
+    cursor_y = page_top
+
+    for block in blocks:
+        block_height = float(block.get("height") or 0)
+        if current_page and cursor_y - block_height < page_bottom:
+            pages.append(current_page)
+            current_page = []
+            cursor_y = page_top
+        current_page.append(dict(block, top_y=cursor_y))
+        cursor_y -= block_height + gap
+
+    if current_page:
+        pages.append(current_page)
+    return pages or [[]]
+
+
+def build_pdf_page_commands(title, blocks, page_number, page_count):
+    commands = []
+    page_width = 612
+    page_height = 792
+    margin_x = 36
+    content_width = page_width - (margin_x * 2)
+
+    commands.extend(build_pdf_rect_command(0, 0, page_width, page_height, fill_color=(0.97, 0.98, 0.97)))
+    commands.extend(build_pdf_rect_command(0, 676, page_width, 116, fill_color=(0.07, 0.32, 0.22)))
+    commands.extend(build_pdf_rect_command(0, 664, page_width, 12, fill_color=(0.95, 0.73, 0.16)))
+
+    title_lines = wrap_pdf_line(title, width=34, bullet=False)[:2]
+    commands.extend(build_pdf_text_commands(["AgroVision AI"], margin_x, 756, font="F2", size=11, leading=13, color=(1, 1, 1)))
+    commands.extend(build_pdf_text_commands(title_lines, margin_x, 730, font="F2", size=22, leading=24, color=(1, 1, 1)))
+    commands.extend(
+        build_pdf_text_commands(
+            ["Styled report export for farm records, sharing, and follow-up actions."],
+            margin_x,
+            694,
+            font="F1",
+            size=9.6,
+            leading=12,
+            color=(0.90, 0.96, 0.92),
+        )
+    )
+
+    if not blocks:
+        commands.extend(
+            build_pdf_rect_command(margin_x, 560, content_width, 70, fill_color=(1, 1, 1), stroke_color=(0.84, 0.90, 0.86))
+        )
+        commands.extend(build_pdf_text_commands(["No report content available."], margin_x + 18, 598, font="F2", size=12))
+
+    for block in blocks:
+        top_y = float(block["top_y"])
+        height = float(block["height"])
+        bottom_y = top_y - height
+        commands.extend(
+            build_pdf_rect_command(
+                margin_x,
+                bottom_y,
+                content_width,
+                height,
+                fill_color=block.get("fill_color"),
+                stroke_color=block.get("stroke_color"),
+                line_width=1,
+            )
+        )
+        commands.extend(
+            build_pdf_rect_command(
+                margin_x,
+                top_y - 6,
+                content_width,
+                6,
+                fill_color=block.get("stripe_color"),
+            )
+        )
+        commands.extend(
+            build_pdf_text_commands(
+                [block.get("heading") or "Section"],
+                margin_x + 18,
+                top_y - 24,
+                font="F2",
+                size=12,
+                leading=14,
+                color=(0.10, 0.28, 0.18),
+            )
+        )
+        commands.extend(
+            build_pdf_text_commands(
+                block.get("lines") or [],
+                margin_x + 18,
+                top_y - 44,
+                font="F1",
+                size=10.2,
+                leading=13.5,
+                color=(0.16, 0.22, 0.18),
+            )
+        )
+
+    commands.extend(build_pdf_rect_command(margin_x, 30, content_width, 1.2, fill_color=(0.84, 0.90, 0.86)))
+    commands.extend(
+        build_pdf_text_commands(
+            [f"Page {page_number} of {page_count}"],
+            page_width - 112,
+            18,
+            font="F1",
+            size=9,
+            leading=11,
+            color=(0.34, 0.42, 0.37),
+        )
+    )
+    return commands
+
+
+def build_text_pdf_bytes(title, meta_lines=None, sections=None):
+    blocks = build_pdf_blocks(meta_lines=meta_lines, sections=sections)
+    pages = paginate_pdf_blocks(blocks)
+
+    objects = []
+    page_objects = []
+    font_regular_object_number = 3
+    font_bold_object_number = 4
+    next_object_number = 5
+
+    for page_index, page_blocks in enumerate(pages, start=1):
+        stream_commands = build_pdf_page_commands(title, page_blocks, page_index, len(pages))
+        stream_bytes = "\n".join(stream_commands).encode("latin-1", errors="replace")
+        content_object_number = next_object_number
+        page_object_number = next_object_number + 1
+        next_object_number += 2
+        page_objects.append(page_object_number)
+
+        objects.append(
+            (
+                content_object_number,
+                b"<< /Length "
+                + str(len(stream_bytes)).encode("ascii")
+                + b" >>\nstream\n"
+                + stream_bytes
+                + b"\nendstream",
+            )
+        )
+        objects.append(
+            (
+                page_object_number,
+                (
+                    f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+                    f"/Resources << /Font << /F1 {font_regular_object_number} 0 R /F2 {font_bold_object_number} 0 R >> >> "
+                    f"/Contents {content_object_number} 0 R >>"
+                ).encode("ascii"),
+            )
+        )
+
+    kids = " ".join(f"{page_object_number} 0 R" for page_object_number in page_objects)
+    ordered_objects = {
+        1: b"<< /Type /Catalog /Pages 2 0 R >>",
+        2: f"<< /Type /Pages /Count {len(page_objects)} /Kids [{kids}] >>".encode("ascii"),
+        3: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        4: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
+    }
+    for object_number, payload in objects:
+        ordered_objects[object_number] = payload
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+
+    for object_number in range(1, max(ordered_objects.keys()) + 1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{object_number} 0 obj\n".encode("ascii"))
+        pdf.extend(ordered_objects[object_number])
+        pdf.extend(b"\nendobj\n")
+
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {len(offsets)}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        (
+            f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("ascii")
+    )
+    return bytes(pdf)
+
+
+def build_pdf_download_response(filename, title, meta_lines=None, sections=None):
+    safe_filename = f"{slugify_download_token(filename)}.pdf"
+    pdf_bytes = build_text_pdf_bytes(title, meta_lines=meta_lines, sections=sections)
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'},
+    )
+
+
+def cache_last_disease_report_pdf(user, payload):
+    if user is None or not isinstance(payload, dict) or not payload.get("success"):
+        return
+
+    etiology = payload.get("etiology") if isinstance(payload.get("etiology"), dict) else {}
+    session["last_disease_report_pdf"] = {
+        "user_id": int(getattr(user, "id", 0) or 0),
+        "generated_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
+        "location": normalize_pdf_text(getattr(user, "location", "") or "", 80),
+        "crop": normalize_pdf_text(payload.get("crop"), 80),
+        "disease": normalize_pdf_text(payload.get("disease"), 100),
+        "report_title": normalize_pdf_text(payload.get("report_title"), 120),
+        "confidence": normalize_pdf_text(payload.get("confidence_display") or f"{int(payload.get('confidence') or 0)}%", 24),
+        "risk_level": normalize_pdf_text(payload.get("risk_level"), 32),
+        "analysis_source": normalize_pdf_text(payload.get("analysis_source"), 60),
+        "diagnostic_reason": normalize_pdf_text(payload.get("diagnostic_reason") or payload.get("why_this_result"), 280),
+        "cause": normalize_pdf_text(payload.get("cause"), 220),
+        "pathogen": normalize_pdf_text(etiology.get("pathogen"), 180),
+        "environment": normalize_pdf_text(etiology.get("environment"), 180),
+        "transmission": normalize_pdf_text(etiology.get("transmission"), 180),
+        "symptoms": compact_pdf_list(payload.get("symptoms_list") or payload.get("matched_symptoms") or payload.get("symptoms"), limit=5, item_length=180),
+        "organic_solutions": compact_pdf_list(payload.get("organic_solutions") or payload.get("organic_solution"), limit=4, item_length=180),
+        "chemical_solutions": compact_pdf_list(payload.get("chemical_solutions") or payload.get("chemical_solution"), limit=4, item_length=180),
+        "prevention_tips": compact_pdf_list(payload.get("prevention_tips") or payload.get("prevention"), limit=5, item_length=180),
+        "do_now_checklist": compact_pdf_list(payload.get("do_now_checklist"), limit=4, item_length=180),
+        "suggested_products": compact_pdf_list(
+            [item.get("name") for item in payload.get("suggested_products", []) if isinstance(item, dict)],
+            limit=3,
+            item_length=100,
+        ),
+    }
+    session.modified = True
+
+
+def jsonify_disease_result(user, payload):
+    cache_last_disease_report_pdf(user, payload)
+    return jsonify(payload)
+
+
+def build_fallback_disease_pdf_payload(user):
+    latest_history = (
+        DiseaseHistory.query.filter_by(user_id=user.id).order_by(DiseaseHistory.date.desc()).first()
+        if user is not None
+        else None
+    )
+    if latest_history is None:
+        return None
+
+    timestamp = normalize_timestamp(getattr(latest_history, "date", None))
+    return {
+        "report_title": normalize_pdf_text(f"{latest_history.detected_disease} Disease Report", 120),
+        "generated_at": timestamp.strftime("%d %b %Y, %I:%M %p") if timestamp else datetime.now().strftime("%d %b %Y, %I:%M %p"),
+        "location": normalize_pdf_text(getattr(user, "location", "") or "", 80),
+        "crop": normalize_pdf_text(getattr(latest_history, "crop_type", "") or getattr(user, "crop_type", "") or "Crop", 80),
+        "disease": normalize_pdf_text(getattr(latest_history, "detected_disease", "") or "Unknown", 100),
+        "confidence": normalize_pdf_text(f"{int(getattr(latest_history, 'confidence', 0) or 0)}%", 24),
+        "risk_level": "Needs field review",
+        "analysis_source": "Saved diagnosis history",
+        "diagnostic_reason": "A full structured report was not cached, so this PDF summarizes the latest saved diagnosis history.",
+        "cause": "",
+        "pathogen": "",
+        "environment": "",
+        "transmission": "",
+        "symptoms": [],
+        "organic_solutions": [],
+        "chemical_solutions": [],
+        "prevention_tips": [],
+        "do_now_checklist": ["Open disease detection again to generate a fresh full report PDF."],
+        "suggested_products": [],
+    }
 
 
 def load_local_env_file(env_path):
@@ -223,7 +635,6 @@ DISABLED_DASHBOARD_MODULES = {
     "agri_market",
     "govt_buddy_ai",
     "my_wallet",
-    "notifications",
     "upgrade_hub",
 }
 CROP_LIBRARY_IMAGE_DIR = Path(app.root_path) / "static" / "images" / "crops"
@@ -358,7 +769,7 @@ SUBSCRIPTION_PLANS = {
         "price_inr": 199,
         "duration_days": 30,
         "rank": 2,
-        "description": "All Pro features + satellite farm twin monitoring.",
+        "description": "All Pro features + priority order tracking updates.",
     },
 }
 
@@ -682,6 +1093,8 @@ GOOGLE_MAPS_API_KEY = os.getenv(
 
 API_TIMEOUT_SECONDS = 12
 CDSE_TOKEN_CACHE = {"access_token": None, "expires_at": 0}
+WEATHER_API_CACHE_TTL_SECONDS = 300
+WEATHER_API_CACHE = {}
 NDVI_EVALSCRIPT = """
 //VERSION=3
 function setup() {
@@ -1498,19 +1911,30 @@ def update_otp_session_state(otp, target_email, otp_type, *, user_id=None, email
         session["otp_user_id"] = int(user_id)
 
 
-def build_otp_notice(email_sent, failure_reason=None):
+def build_otp_notice(email_sent, failure_reason=None, *, whatsapp_sent=False, whatsapp_reason=None):
+    if email_sent and whatsapp_sent:
+        return (
+            f"Verification code sent successfully on email and WhatsApp. "
+            f"The code stays valid for {OTP_EXPIRY_MINUTES} minutes."
+        )
+
     if email_sent:
-        return f"Verification code sent successfully. The code stays valid for {OTP_EXPIRY_MINUTES} minutes."
+        return f"Verification code sent successfully on email. The code stays valid for {OTP_EXPIRY_MINUTES} minutes."
+
+    if whatsapp_sent:
+        return (
+            f"Verification code sent on WhatsApp. The code stays valid for {OTP_EXPIRY_MINUTES} minutes."
+        )
 
     if OTP_DEBUG_FALLBACK_ENABLED:
         return (
             "Email delivery failed in this environment, so a local fallback OTP is shown below for testing."
         )
 
-    if failure_reason:
-        return "We could not send the OTP email right now. Please try again after checking the mail settings."
+    if failure_reason or whatsapp_reason:
+        return "We could not send the OTP right now. Please try again after checking the mail and WhatsApp settings."
 
-    return "We could not send the OTP email right now. Please try again."
+    return "We could not send the OTP right now. Please try again."
 
 
 def get_otp_page_context(error=None, notice=None):
@@ -1745,29 +2169,27 @@ def send_otp_email(target_email, otp):
             filename=EMAIL_LOGO_FILENAME,
         )
 
-    try:
-        if SMTP_USE_SSL or SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
-                server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                server.send_message(msg)
-        else:
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                server.send_message(msg)
-        return True, None
-    except Exception as e:
-        print(f"SMTP Error: {e}")
-        return False, str(e)
+    return send_smtp_message(msg, label="otp email")
+
+
+def send_otp_whatsapp(target_phone, otp):
+    otp_code = str(otp or "").strip()
+    if not otp_code:
+        return False, "OTP code is missing."
+
+    message = (
+        f"{APP_DISPLAY_NAME} verification code: {otp_code}. "
+        f"It is valid for {OTP_EXPIRY_MINUTES} minutes. Do not share this code with anyone."
+    )
+    return send_twilio_text_message(
+        target_phone,
+        message,
+        prefer_whatsapp=True,
+        label="otp whatsapp",
+    )
 
 
 def send_admin_order_email(order, user, product):
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
-        print("SMTP credentials are not configured. Admin order email skipped.")
-        return False
-
     if not ADMIN_NOTIFY_EMAIL:
         print("Admin notification email is not configured. Admin order email skipped.")
         return False
@@ -1791,29 +2213,13 @@ def send_admin_order_email(order, user, product):
         f"Status: {get_fulfillment_status(order).title()}",
     ]
 
-    msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
-    msg["To"] = ADMIN_NOTIFY_EMAIL
-    msg["Reply-To"] = SMTP_EMAIL
-    msg.set_content("\n".join(body_lines))
-
-    try:
-        if SMTP_USE_SSL or SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
-                server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                server.send_message(msg)
-        else:
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                server.send_message(msg)
-        return True
-    except Exception as e:
-        print(f"SMTP Error (admin order email): {e}")
-        return False
+    sent, _ = send_basic_email(
+        ADMIN_NOTIFY_EMAIL,
+        subject,
+        body_lines,
+        label="admin order email",
+    )
+    return sent
 
 
 def clamp(value, lower, upper):
@@ -2127,6 +2533,40 @@ AI_CROP_DOCTOR_SYMPTOM_CUES = {
     "holes", "wilt", "dry", "pest", "fungal", "fungus", "rot", "infection", "burn",
 }
 
+AI_CHAT_GREETING_TERMS = {
+    "hi", "hii", "hiii", "hello", "helo", "hey", "namaste", "namaskar", "salaam",
+    "morning", "afternoon", "evening",
+}
+
+AI_CHAT_GREETING_PHRASES = {
+    "hi",
+    "hii",
+    "hiii",
+    "hello",
+    "helo",
+    "hey",
+    "namaste",
+    "namaskar",
+    "salaam",
+    "good morning",
+    "good afternoon",
+    "good evening",
+}
+
+AI_CHAT_FOLLOWUP_TERMS = {
+    "ye", "yeh", "is", "isko", "iska", "iske", "iss", "isme",
+    "wo", "woh", "us", "usko", "uska", "uske", "usme",
+    "kya", "kaise", "kab", "kitna", "kyu", "kyon", "kyun",
+    "karu", "kru", "karna", "ab", "abhi", "fir", "phir",
+    "detail", "details", "next", "then",
+}
+
+AI_CROP_DOCTOR_DATASET_HINT_TOKENS = {
+    "aphid", "bacterial", "blight", "curl", "fungal", "fungus", "infect", "insect",
+    "leaf", "lesion", "mildew", "mite", "mold", "mosaic", "pest", "powder", "rot",
+    "rust", "spot", "thrip", "virus", "whitefly", "worm",
+}
+
 AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS = {
     "agriculture", "farming", "farm", "crop", "plant", "technology", "system",
 }
@@ -2156,6 +2596,10 @@ AI_CROP_DOCTOR_CHAT_INTENT_ALIAS_MAP = {
 
 
 AI_CROP_DOCTOR_LOCAL_QA_PHRASE_ALIASES = {
+    "fertilizer kiya hai": "fertilizer kya hai",
+    "fertiliser kiya hai": "fertilizer kya hai",
+    "irrigasion kiya hai": "irrigation kya hai",
+    "irrigation kiya hai": "irrigation kya hai",
     "पीले पड़ रहे": "yellow leaf",
     "पीला पड़ रहा": "yellow leaf",
     "पीली पड़ रही": "yellow leaf",
@@ -2437,6 +2881,110 @@ def load_ai_crop_doctor_chat_match_entries():
     return AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE
 
 
+def build_ai_chat_greeting_reply(language="Hinglish"):
+    normalized_language = str(language or "Hinglish").strip().lower()
+    if normalized_language == "english":
+        return "Hello! I am AI Crop Doctor. Tell me your crop, symptom, weather, or spray question and I will help."
+    return "Namaste! Main AI Crop Doctor hoon. Aap crop, symptom, weather, ya spray se related sawal pooch sakte ho."
+
+
+def build_ai_chat_uncertain_query_reply(language="Hinglish"):
+    normalized_language = str(language or "Hinglish").strip().lower()
+    if normalized_language == "english":
+        return "Please ask in a little more detail, like crop name, symptom, weather issue, or what you want to know about seeds, fertilizer, or disease."
+    return "Thoda aur clear batayein, jaise crop ka naam, symptom, weather issue, ya aap beej, khad, bimari me se kis cheez ke baare me pooch rahe ho."
+
+
+def lookup_ai_crop_doctor_disease_dataset_answer(query_text, language="Hinglish"):
+    query_text = str(query_text or "").strip()
+    if not query_text:
+        return None
+
+    normalized_query = normalize_ai_crop_doctor_match_text(query_text)
+    query_tokens = extract_ai_crop_doctor_match_tokens(query_text)
+    strong_query_tokens = query_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
+    if not strong_query_tokens:
+        return None
+
+    if not (
+        strong_query_tokens & AI_CROP_DOCTOR_DATASET_HINT_TOKENS
+        or strong_query_tokens & AI_CROP_DOCTOR_SYMPTOM_CUES
+    ):
+        return None
+
+    best_entry = None
+    best_score = 0.0
+    best_overlap = 0
+    best_name_hit = False
+
+    for entry in load_disease_dataset().values():
+        disease_name = str(entry.get("name") or "").strip()
+        disease_name_normalized = normalize_ai_crop_doctor_match_text(disease_name)
+        disease_name_tokens = extract_ai_crop_doctor_match_tokens(disease_name)
+
+        signature_parts = [disease_name]
+        signature_parts.extend(entry.get("symptoms", []))
+        signature_parts.extend((entry.get("solution") or {}).get("organic", []))
+        signature_parts.extend((entry.get("solution") or {}).get("chemical", []))
+        signature_parts.extend(entry.get("prevention", []))
+
+        etiology = entry.get("etiology") or {}
+        signature_parts.extend(
+            [
+                str(etiology.get("pathogen") or "").strip(),
+                str(etiology.get("environment") or "").strip(),
+                str(etiology.get("transmission") or "").strip(),
+            ]
+        )
+
+        signature_tokens = extract_ai_crop_doctor_match_tokens(" ".join(signature_parts))
+        overlap = len(strong_query_tokens & signature_tokens)
+        disease_overlap = len(strong_query_tokens & disease_name_tokens)
+        name_hit = bool(
+            disease_name_normalized
+            and (
+                disease_name_normalized in normalized_query
+                or normalized_query in disease_name_normalized
+            )
+        )
+
+        if not overlap and not disease_overlap and not name_hit:
+            continue
+
+        score = overlap * 2.0 + disease_overlap * 4.0
+        if name_hit:
+            score += 8.0
+
+        for symptom in entry.get("symptoms", [])[:4]:
+            symptom_normalized = normalize_ai_crop_doctor_match_text(symptom)
+            if symptom_normalized and symptom_normalized in normalized_query:
+                score += 3.0
+
+        if score > best_score:
+            best_entry = entry
+            best_score = score
+            best_overlap = overlap
+            best_name_hit = name_hit
+
+    if best_entry is None:
+        return None
+
+    if not best_name_hit and (best_overlap < 3 or best_score < 7.0):
+        return None
+
+    answer = {
+        "disease": best_entry.get("name"),
+        "confidence_hint": best_entry.get("confidence"),
+        "symptoms": best_entry.get("symptoms", []),
+        "cause": str((best_entry.get("etiology") or {}).get("pathogen") or "").strip(),
+        "solution": best_entry.get("solution", {}),
+        "prevention": best_entry.get("prevention", []),
+        "products": best_entry.get("products", []),
+        "recommendation": "Image ya close symptom detail se isko aur confirm kiya ja sakta hai.",
+    }
+    return format_ai_crop_doctor_structured_answer(answer, language=language)
+
+
 def format_ai_crop_doctor_symptom_rule_answer(rule, language="Hinglish"):
     if not isinstance(rule, dict):
         return None
@@ -2508,6 +3056,9 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
         return None
 
     language = detect_ai_chat_language(query_text)
+    if is_ai_chat_greeting_query(query_text):
+        return build_ai_chat_greeting_reply(language=language)
+
     best_entry = None
     best_score = 0.0
     best_strong_overlap = 0
@@ -2519,6 +3070,16 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
         score = 0.0
         phrase_match = False
         keyword_hits = 0
+        normalized_tag = normalize_ai_crop_doctor_match_text(entry.get("tag"))
+
+        if normalized_tag:
+            if normalized_query == normalized_tag or normalized_query.replace(" ", "") == normalized_tag.replace(" ", ""):
+                score += 16
+                phrase_match = True
+                keyword_hits += 1
+            elif normalized_tag in normalized_query or normalized_query in normalized_tag:
+                score += 6
+                phrase_match = True
 
         for pattern in entry.get("patterns", []):
             normalized_pattern = normalize_ai_crop_doctor_match_text(pattern)
@@ -2598,6 +3159,9 @@ def lookup_ai_crop_doctor_local_qa(query_text):
     if not query_tokens:
         return None
 
+    if is_ai_chat_greeting_query(query_text):
+        return build_ai_chat_greeting_reply(language=detect_ai_chat_language(query_text))
+
     structured_answer = lookup_ai_crop_doctor_chat_knowledge(query_text)
     if structured_answer:
         return structured_answer
@@ -2668,6 +3232,9 @@ def lookup_ai_crop_doctor_local_qa(query_text):
         return get_ai_crop_doctor_local_answer(best_entry, language=language)
 
     if query_tokens & AI_CROP_DOCTOR_SYMPTOM_CUES:
+        dataset_answer = lookup_ai_crop_doctor_disease_dataset_answer(query_text, language=language)
+        if dataset_answer:
+            return dataset_answer
         symptom_rule = match_disease_symptom_rule(normalized_query, query_text)
         formatted_answer = format_ai_crop_doctor_symptom_rule_answer(symptom_rule, language=language)
         if formatted_answer:
@@ -3769,6 +4336,30 @@ def build_store_product_highlights(product):
     return unique_crop_list(highlights)[:3]
 
 
+def normalize_store_search_text(value):
+    return " ".join(re.findall(r"[a-z0-9]+", str(value or "").lower()))
+
+
+def matches_store_search_query(search_text, search_query):
+    normalized_query = normalize_store_search_text(search_query)
+    if not normalized_query:
+        return True
+
+    normalized_search = normalize_store_search_text(search_text)
+    if normalized_query in normalized_search:
+        return True
+
+    search_tokens = normalized_search.split()
+    query_tokens = normalized_query.split()
+    if not search_tokens or not query_tokens:
+        return False
+
+    return all(
+        any(query_token in search_token or search_token in query_token for search_token in search_tokens)
+        for query_token in query_tokens
+    )
+
+
 def serialize_store_product(product):
     meta = get_store_category_meta(product.category)
     tags = safe_json_loads(product.tags_json, [])
@@ -3780,6 +4371,7 @@ def serialize_store_product(product):
     search_text = " ".join(
         [
             str(product.name or ""),
+            str(product.slug or ""),
             str(product.category or ""),
             description,
             str(product.seller or ""),
@@ -3873,14 +4465,13 @@ def find_store_product_by_name(name):
 
 
 def apply_store_filters(products, search_query="", active_category="All", sort_option="featured", recommended_slug=None):
-    normalized_query = str(search_query or "").strip().lower()
     category = active_category if active_category in STORE_CATEGORY_ORDER else "All"
 
     filtered = []
     for product in products:
         if category != "All" and product["category"] != category:
             continue
-        if normalized_query and normalized_query not in product["search_text"]:
+        if not matches_store_search_query(product["search_text"], search_query):
             continue
         filtered.append(product)
 
@@ -3944,10 +4535,14 @@ def build_store_page_context(search_query="", active_category="All", sort_option
         sum(product["rating"] for product in serialized_products) / max(len(serialized_products), 1),
         1,
     ) if serialized_products else 0
+    has_active_filters = bool(str(search_query or "").strip()) or active_category != "All" or sort_option != "featured"
+    organic_products = [product for product in serialized_products if product["category"] == "Organic"]
+    organic_featured = organic_products[0] if organic_products else None
 
     return {
         "products": filtered_products,
         "all_products": serialized_products,
+        "catalog_products": filtered_products if has_active_filters else serialized_products,
         "categories": categories,
         "search_query": search_query,
         "active_category": active_category if active_category in STORE_CATEGORY_ORDER else "All",
@@ -3959,6 +4554,9 @@ def build_store_page_context(search_query="", active_category="All", sort_option
         "top_rated": f"{top_rated:.1f}" if top_rated else "0.0",
         "avg_rating": f"{avg_rating:.1f}" if avg_rating else "0.0",
         "tools_count": sum(1 for product in serialized_products if product["category"] == "Tools"),
+        "organic_count": len(organic_products),
+        "organic_products": organic_products[:4],
+        "organic_featured": organic_featured,
     }
 
 
@@ -3998,6 +4596,78 @@ def get_fulfillment_status(order):
     notes = get_order_notes(order)
     status = str(notes.get("fulfillment_status") or "pending").strip().lower()
     return status if status in FULFILLMENT_STATUS_ORDER else "pending"
+
+
+def get_order_status_timestamps(order):
+    notes = get_order_notes(order)
+    raw_timestamps = notes.get("status_timestamps")
+    timestamp_map = raw_timestamps if isinstance(raw_timestamps, dict) else {}
+    result = {}
+    for status in FULFILLMENT_STATUS_ORDER:
+        result[status] = parse_stored_timestamp(timestamp_map.get(status))
+    return result
+
+
+def set_order_status_timestamp(order, status, timestamp=None):
+    if order is None:
+        return
+
+    normalized_status = str(status or "").strip().lower()
+    if normalized_status not in FULFILLMENT_STATUS_ORDER:
+        return
+
+    notes = get_order_notes(order)
+    raw_timestamps = notes.get("status_timestamps")
+    timestamp_map = raw_timestamps if isinstance(raw_timestamps, dict) else {}
+    when = normalize_timestamp(timestamp) or datetime.now(timezone.utc)
+    timestamp_map[normalized_status] = when.isoformat()
+    notes["status_timestamps"] = timestamp_map
+    set_order_notes(order, notes)
+
+
+def build_order_timeline(order):
+    fulfillment_status = get_fulfillment_status(order)
+    payment_status = str(getattr(order, "status", "created") or "created").strip().lower()
+    status_timestamps = get_order_status_timestamps(order)
+    is_paid = payment_status == "paid"
+    confirmed_timestamp = status_timestamps.get("confirmed") or (
+        status_timestamps.get("delivered") if fulfillment_status == "delivered" else None
+    )
+
+    return [
+        {
+            "key": "placed",
+            "label": "Order placed",
+            "detail": "Your request is saved in the system.",
+            "completed": True,
+            "timestamp": normalize_timestamp(getattr(order, "created_at", None)),
+        },
+        {
+            "key": "pending",
+            "label": "Pending review" if is_paid else "Payment pending",
+            "detail": (
+                "Admin review is pending before dispatch."
+                if is_paid
+                else "Complete payment to move this order into confirmation."
+            ),
+            "completed": is_paid,
+            "timestamp": status_timestamps.get("pending") if is_paid else None,
+        },
+        {
+            "key": "confirmed",
+            "label": "Confirmed",
+            "detail": "Admin has approved the order and preparation is underway.",
+            "completed": fulfillment_status in {"confirmed", "delivered"},
+            "timestamp": confirmed_timestamp,
+        },
+        {
+            "key": "delivered",
+            "label": "Delivered",
+            "detail": "The order is marked as delivered.",
+            "completed": fulfillment_status == "delivered",
+            "timestamp": status_timestamps.get("delivered"),
+        },
+    ]
 
 
 def set_fulfillment_status(order, new_status):
@@ -4923,20 +5593,25 @@ def lookup_kisan_dost_knowledge(query_text, crop_name):
 
     best_entry = None
     best_score = 0
+    best_keyword_signal = 0
 
     for entry in knowledge_entries:
         keywords = [str(keyword).lower() for keyword in entry.get("keywords", [])]
         crops = [str(crop).lower() for crop in entry.get("crops", [])]
         score = 0
+        keyword_signal = 0
 
         for keyword in keywords:
             keyword_tokens = set(re.findall(r"[a-z0-9]+", keyword))
             if keyword in query_lower:
                 score += 3
+                keyword_signal = max(keyword_signal, 3)
             elif keyword_tokens and keyword_tokens.issubset(query_tokens):
                 score += 2
+                keyword_signal = max(keyword_signal, 2)
             elif keyword_tokens & query_tokens:
                 score += 1
+                keyword_signal = max(keyword_signal, 1)
 
         if crops and crop_lower:
             if any(crop in explicit_query_crops for crop in crops):
@@ -4947,8 +5622,9 @@ def lookup_kisan_dost_knowledge(query_text, crop_name):
         if score > best_score:
             best_score = score
             best_entry = entry
+            best_keyword_signal = keyword_signal
 
-    if best_entry and best_score >= 2:
+    if best_entry and best_score >= 2 and best_keyword_signal > 0:
         return str(best_entry.get("answer", "")).strip() or None
     return None
 
@@ -4994,6 +5670,9 @@ def build_ai_chat_context_query(query_text, history):
     if not clean_query:
         return ""
 
+    if is_ai_chat_greeting_query(clean_query):
+        return clean_query
+
     user_messages = [str(item.get("content") or "").strip() for item in history if item.get("role") == "user"]
     if user_messages and user_messages[-1].lower() == clean_query.lower():
         user_messages = user_messages[:-1]
@@ -5002,19 +5681,40 @@ def build_ai_chat_context_query(query_text, history):
         return clean_query
 
     query_tokens = re.findall(r"[a-z0-9]+", clean_query.lower())
-    followup_terms = {
-        "ye", "yeh", "is", "isko", "iska", "iske", "iss", "isme",
-        "wo", "woh", "us", "usko", "uska", "uske", "usme",
-        "kya", "kaise", "kab", "kitna", "kyu", "kyon", "kyun",
-        "karu", "kru", "karna", "ab", "abhi", "fir", "phir",
-        "detail", "details", "phir", "next", "then",
-    }
-    should_merge_context = len(query_tokens) <= 6 or any(token in followup_terms for token in query_tokens)
+    should_merge_context = any(token in AI_CHAT_FOLLOWUP_TERMS for token in query_tokens)
     if not should_merge_context:
         return clean_query
 
     context_parts = user_messages[-2:] + [clean_query]
     return " ".join(part for part in context_parts if part)
+
+
+def is_ai_chat_greeting_query(query_text):
+    normalized = re.sub(r"[^a-z0-9\s]+", " ", str(query_text or "").strip().lower())
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    if not normalized:
+        return False
+    if normalized in AI_CHAT_GREETING_PHRASES:
+        return True
+    if re.fullmatch(r"h+i+", normalized):
+        return True
+
+    tokens = [token for token in re.findall(r"[a-z0-9]+", normalized) if token]
+    return bool(tokens) and len(tokens) <= 3 and all(token in AI_CHAT_GREETING_TERMS for token in tokens)
+
+
+def is_ai_chat_low_context_query(query_text):
+    normalized = normalize_ai_crop_doctor_match_text(query_text)
+    tokens = extract_ai_crop_doctor_match_tokens(normalized)
+    if not tokens or is_ai_chat_greeting_query(query_text):
+        return False
+    if len(tokens) > 4:
+        return False
+    if tokens & AI_CROP_DOCTOR_SYMPTOM_CUES:
+        return False
+    if tokens & AI_CROP_DOCTOR_DATASET_HINT_TOKENS:
+        return False
+    return True
 
 
 def format_ai_chat_history_for_prompt(history):
@@ -5117,6 +5817,7 @@ def build_kisan_dost_reply(user, query, history=None):
     history = sanitize_ai_chat_history(history)
     query_text = build_ai_chat_context_query(query, history)
     query_lower = query_text.lower()
+    answer_language = detect_ai_chat_language(query_text)
     _, farms = ensure_user_farm_setup(user)
     task_summary = build_task_summary(user, limit=2)
     weather_intent_terms = [
@@ -5171,6 +5872,9 @@ def build_kisan_dost_reply(user, query, history=None):
 
     if local_qa_answer:
         return local_qa_answer
+
+    if is_ai_chat_greeting_query(query_text):
+        return build_ai_chat_greeting_reply(language=answer_language)
 
     if any(word in query_lower for word in ["mandi", "market", "price", "rate", "bhav"]):
         lead_rate = mandi_rates[0]
@@ -5288,11 +5992,36 @@ def build_kisan_dost_reply(user, query, history=None):
     if project_faq_answer:
         return project_faq_answer
 
+    if is_ai_chat_low_context_query(query_text):
+        return build_ai_chat_uncertain_query_reply(language=answer_language)
+
     return (
         f"{crop_name} ke liye abhi best focus moisture, soil balance, aur timely monitoring par rakho. "
         f"Agar aap mandi, irrigation, disease, ya weather me se kisi specific cheez par sawal puchoge to main aur exact advice de sakta hoon. "
         f"Dashboard ke cards bhi live guidance ke liye ready hain."
     )
+
+
+def build_ai_chat_unknown_reply(query_text=""):
+    language = detect_ai_chat_language(query_text)
+    if str(language).strip().lower() == "english":
+        return "Sorry, mujhe iske bare me pata nahi hai."
+    return "Sorry, mujhe iske bare me pata nahi hai."
+
+
+def resolve_ai_chat_response(user, query, history=None):
+    sanitized_history = sanitize_ai_chat_history(history)
+    context_query = build_ai_chat_context_query(query, sanitized_history)
+
+    groq_reply = ask_groq_ai_crop_doctor(user, query, sanitized_history)
+    if groq_reply:
+        return {"response": groq_reply, "provider": "groq"}
+
+    dataset_reply = lookup_ai_crop_doctor_local_qa(context_query)
+    if dataset_reply:
+        return {"response": dataset_reply, "provider": "local_knowledge"}
+
+    return {"response": build_ai_chat_unknown_reply(query), "provider": "fallback"}
 
 
 def fetch_json(url, params=None, method="GET", headers=None, json_body=None, form_body=None):
@@ -5399,6 +6128,18 @@ def normalize_timestamp(value):
     return None
 
 
+def parse_stored_timestamp(value):
+    if isinstance(value, str):
+        raw_value = value.strip()
+        if not raw_value:
+            return None
+        try:
+            return normalize_timestamp(datetime.fromisoformat(raw_value.replace("Z", "+00:00")))
+        except ValueError:
+            return None
+    return normalize_timestamp(value)
+
+
 def format_relative_time(value):
     timestamp = normalize_timestamp(value)
     if timestamp is None:
@@ -5441,6 +6182,63 @@ def send_smtp_message(msg, label="email"):
     except Exception as e:
         print(f"SMTP Error ({label}): {e}")
         return False, str(e)
+
+
+def send_basic_email(target_email, subject, body, *, label="email"):
+    recipient = str(target_email or "").strip()
+    if not recipient:
+        return False, f"Recipient email is missing for {label}."
+
+    if isinstance(body, (list, tuple)):
+        content = "\n".join(str(line) for line in body)
+    else:
+        content = str(body or "").strip()
+
+    msg = EmailMessage()
+    msg["Subject"] = str(subject or APP_DISPLAY_NAME).strip() or APP_DISPLAY_NAME
+    msg["From"] = formataddr((SMTP_SENDER_NAME, SMTP_EMAIL))
+    msg["To"] = recipient
+    msg["Reply-To"] = SMTP_EMAIL
+    msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
+    msg.set_content(content)
+    return send_smtp_message(msg, label=label)
+
+
+def send_twilio_text_message(target_phone, message, *, prefer_whatsapp=False, label="phone message"):
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        return False, "Twilio credentials are not configured."
+
+    to_number = normalize_alert_phone_number(target_phone)
+    if not to_number:
+        return False, "Target phone number is missing."
+
+    if prefer_whatsapp:
+        from_number = str(TWILIO_WHATSAPP_FROM or "").strip()
+        if not from_number:
+            return False, "Twilio WhatsApp sender is not configured."
+        if not from_number.startswith("whatsapp:"):
+            from_number = f"whatsapp:{normalize_alert_phone_number(from_number)}"
+        if not str(to_number).startswith("whatsapp:"):
+            to_number = f"whatsapp:{to_number}"
+    else:
+        from_number = normalize_alert_phone_number(TWILIO_SMS_FROM)
+        if not from_number:
+            return False, "Twilio SMS sender is not configured."
+
+    auth_token = b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode("utf-8")).decode("utf-8")
+    response = fetch_json(
+        f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
+        method="POST",
+        headers={"Authorization": f"Basic {auth_token}", "Accept": "application/json"},
+        form_body={"To": to_number, "From": from_number, "Body": str(message or "").strip()},
+    )
+    if response and response.get("sid"):
+        return True, None
+
+    error_message = ""
+    if isinstance(response, dict):
+        error_message = str(response.get("message") or response.get("detail") or "").strip()
+    return False, error_message or f"Twilio API request failed for {label}."
 
 
 def normalize_alert_phone_number(raw_phone):
@@ -5538,6 +6336,183 @@ def send_alert_phone_message(user, preferences, alert):
     return False, error_message or "Twilio API request failed."
 
 
+def build_order_amount_label(order):
+    amount_inr = int(getattr(order, "amount", 0) or 0) / 100.0
+    currency = str(getattr(order, "currency", RAZORPAY_CURRENCY) or RAZORPAY_CURRENCY)
+    return f"{currency} {amount_inr:.2f}"
+
+
+def get_order_product_name(order, product=None):
+    direct_product = product or getattr(order, "product", None)
+    product_name = str(getattr(direct_product, "name", "") or "").strip()
+    if product_name:
+        return product_name
+    notes = get_order_notes(order)
+    return str(notes.get("product_name") or "Store Product").strip() or "Store Product"
+
+
+def send_user_order_email(order, user, product=None, event_type="placed"):
+    if user is None:
+        return False, "User is missing."
+
+    target_email = str(getattr(user, "email", "") or "").strip()
+    if not target_email:
+        return False, "User email is missing."
+
+    event_key = str(event_type or "placed").strip().lower()
+    event_copy = {
+        "placed": {
+            "subject": f"{APP_DISPLAY_NAME} order placed #{getattr(order, 'id', '')}",
+            "headline": "Your order has been placed successfully.",
+            "detail": "Our team has received your order and it is waiting for confirmation.",
+        },
+        "confirmed": {
+            "subject": f"{APP_DISPLAY_NAME} order confirmed #{getattr(order, 'id', '')}",
+            "headline": "Your order has been confirmed by the admin team.",
+            "detail": "We have started preparing your order for delivery.",
+        },
+        "delivered": {
+            "subject": f"{APP_DISPLAY_NAME} order delivered #{getattr(order, 'id', '')}",
+            "headline": "Your order has been marked as delivered.",
+            "detail": "If you have not received the product yet, please contact support immediately.",
+        },
+    }.get(event_key)
+    if event_copy is None:
+        return False, "Unsupported order event."
+
+    body_lines = [
+        f"Hello {str(getattr(user, 'name', '') or 'Farmer').strip()},",
+        "",
+        event_copy["headline"],
+        event_copy["detail"],
+        "",
+        f"Order ID: #{getattr(order, 'id', '-')}",
+        f"Product: {get_order_product_name(order, product)}",
+        f"Amount: {build_order_amount_label(order)}",
+        f"Payment status: {str(getattr(order, 'status', 'created') or 'created').title()}",
+        f"Fulfillment status: {get_fulfillment_status(order).title()}",
+        "Track order: /track-order",
+        "",
+        f"- Team {APP_DISPLAY_NAME}",
+    ]
+    return send_basic_email(
+        target_email,
+        event_copy["subject"],
+        body_lines,
+        label="user order email",
+    )
+
+
+def send_task_status_email(user, task, event_type="created"):
+    if user is None:
+        return False, "User is missing."
+
+    target_email = str(getattr(user, "email", "") or "").strip()
+    if not target_email:
+        return False, "User email is missing."
+
+    event_key = str(event_type or "created").strip().lower()
+    event_copy = {
+        "created": {
+            "subject": f"{APP_DISPLAY_NAME} task created: {task.title}",
+            "headline": "A new task was added to your farm planner.",
+            "detail": "Review the task details and keep it on schedule.",
+        },
+        "started": {
+            "subject": f"{APP_DISPLAY_NAME} task started: {task.title}",
+            "headline": "Your task is now marked as in progress.",
+            "detail": "Complete it after the field work is finished to keep reminders accurate.",
+        },
+        "completed": {
+            "subject": f"{APP_DISPLAY_NAME} task completed: {task.title}",
+            "headline": "Great work. This task is now marked as completed.",
+            "detail": "The planner has been updated and pending reminders for this task are cleared.",
+        },
+        "reminder": {
+            "subject": f"{APP_DISPLAY_NAME} reminder: complete {task.title}",
+            "headline": "This task is still in progress and needs your attention.",
+            "detail": "Please mark it complete once the work is done so you keep receiving the right updates.",
+        },
+    }.get(event_key)
+    if event_copy is None:
+        return False, "Unsupported task event."
+
+    farm_label = getattr(getattr(task, "farm", None), "name", "") or "All farms"
+    due_label = format_task_due_label(task)
+    body_lines = [
+        f"Hello {str(getattr(user, 'name', '') or 'Farmer').strip()},",
+        "",
+        event_copy["headline"],
+        event_copy["detail"],
+        "",
+        f"Task: {task.title}",
+        f"Farm: {farm_label}",
+        f"Category: {getattr(task, 'category', '') or 'General'}",
+        f"Priority: {str(getattr(task, 'priority', 'medium') or 'medium').title()}",
+        f"Status: {str(getattr(task, 'status', 'todo') or 'todo').replace('_', ' ').title()}",
+        f"Due: {due_label}",
+        "Planner: /farms#task-planner",
+        "",
+        f"- Team {APP_DISPLAY_NAME}",
+    ]
+    return send_basic_email(
+        target_email,
+        event_copy["subject"],
+        body_lines,
+        label="task status email",
+    )
+
+
+def build_order_status_alert_key(order, event_type):
+    order_id = getattr(order, "id", order)
+    return f"order-status-{str(event_type or 'placed').strip().lower()}-{int(order_id)}"
+
+
+def upsert_order_status_alert(user, order, product=None, event_type="placed", commit=True):
+    if user is None or order is None:
+        return None
+
+    event_key = str(event_type or "placed").strip().lower()
+    alert_copy = {
+        "placed": {
+            "title": f"Order placed: #{getattr(order, 'id', '-')}",
+            "detail": f"{get_order_product_name(order, product)} payment is received and admin confirmation is pending.",
+            "action_url": "/track-order",
+        },
+        "confirmed": {
+            "title": f"Order confirmed: #{getattr(order, 'id', '-')}",
+            "detail": f"{get_order_product_name(order, product)} has been confirmed and is moving toward delivery.",
+            "action_url": "/track-order",
+        },
+        "delivered": {
+            "title": f"Order delivered: #{getattr(order, 'id', '-')}",
+            "detail": f"{get_order_product_name(order, product)} has been marked as delivered.",
+            "action_url": "/track-order",
+        },
+    }.get(event_key)
+    if alert_copy is None:
+        return None
+
+    alert_key = build_order_status_alert_key(order, event_key)
+    alert = AlertRecord.query.filter_by(user_id=user.id, alert_key=alert_key).first()
+    if alert is None:
+        alert = AlertRecord(user_id=user.id, alert_key=alert_key)  # type: ignore
+        db.session.add(alert)
+
+    alert.category = "order"
+    alert.severity = "insight"
+    alert.title = alert_copy["title"]
+    alert.detail = alert_copy["detail"]
+    alert.action_url = alert_copy["action_url"]
+    alert.is_active = True
+    alert.is_read = False
+    alert.last_notified_at = datetime.now(timezone.utc)
+
+    if commit:
+        db.session.commit()
+    return alert
+
+
 def build_task_reminder_alert_key(task_or_id):
     task_id = getattr(task_or_id, "id", task_or_id)
     return f"task-reminder-{int(task_id)}"
@@ -5553,8 +6528,13 @@ def build_task_reminder_detail(task):
             farm_label = farm.name
     due_label = format_task_due_label(task)
     category_label = (getattr(task, "category", "") or "General").strip() or "General"
+    task_status = (getattr(task, "status", "") or "todo").strip().lower()
     detail_parts = [
-        f"'{task.title}' is still pending in your farm planner.",
+        (
+            f"'{task.title}' is still in progress in your farm planner."
+            if task_status == "in_progress"
+            else f"'{task.title}' is still pending in your farm planner."
+        ),
         f"Farm: {farm_label}.",
         f"Category: {category_label}.",
     ]
@@ -5578,7 +6558,7 @@ def deactivate_task_reminder_alert(task_id, user_id=None, commit=True):
     return alert
 
 
-def upsert_task_reminder_alert(task, force_notify=False, commit=True):
+def upsert_task_reminder_alert(task, force_notify=False, commit=True, send_channels=True):
     if task is None:
         return None
 
@@ -5636,15 +6616,18 @@ def upsert_task_reminder_alert(task, force_notify=False, commit=True):
             should_notify = (now - last_notified_at).total_seconds() >= TASK_REMINDER_INTERVAL_SECONDS
 
     if should_notify:
-        email_sent = False
-        sms_sent = False
-        if getattr(preferences, "email_alerts", False):
-            email_sent, _ = send_alert_email(user, preferences, alert)
-        if getattr(preferences, "sms_alerts", False):
-            sms_sent, _ = send_alert_phone_message(user, preferences, alert)
+        if send_channels:
+            email_sent = False
+            sms_sent = False
+            if (getattr(task, "status", "") or "").strip().lower() == "in_progress":
+                email_sent, _ = send_task_status_email(user, task, "reminder")
+            elif getattr(preferences, "email_alerts", False):
+                email_sent, _ = send_alert_email(user, preferences, alert)
+            if getattr(preferences, "sms_alerts", False):
+                sms_sent, _ = send_alert_phone_message(user, preferences, alert)
+            alert.email_sent = bool(alert.email_sent or email_sent)
+            alert.sms_sent = bool(alert.sms_sent or sms_sent)
         alert.last_notified_at = now
-        alert.email_sent = bool(alert.email_sent or email_sent)
-        alert.sms_sent = bool(alert.sms_sent or sms_sent)
 
     if commit:
         db.session.commit()
@@ -5914,6 +6897,8 @@ def sync_user_alerts(user):
 
     for stale_alert in AlertRecord.query.filter_by(user_id=user.id, is_active=True).all():
         if str(getattr(stale_alert, "alert_key", "") or "").startswith("task-reminder-"):
+            continue
+        if str(getattr(stale_alert, "alert_key", "") or "").startswith("order-status-"):
             continue
         if stale_alert.alert_key not in active_keys:
             stale_alert.is_active = False
@@ -6239,16 +7224,32 @@ def build_village_module_context(user, module_key):
             }
         )
 
-    notification_feed = [
-        {
-            "title": item["title"],
-            "detail": item["detail"],
-            "meta": item["time_ago"],
-            "badge": str(item["tone"]).replace("_", " ").title(),
-            "badge_tone": "neutral",
-        }
-        for item in recent_activity[:4]
-    ]
+    notification_feed = []
+    recent_alerts = AlertRecord.query.filter_by(user_id=user.id).order_by(AlertRecord.updated_at.desc()).limit(4).all()
+    for alert in recent_alerts:
+        serialized = serialize_alert_record(alert)
+        notification_feed.append(
+            {
+                "title": serialized["title"],
+                "detail": serialized["detail"],
+                "meta": serialized["time_ago"],
+                "badge": "New" if not serialized["is_read"] else "Alert",
+                "badge_tone": "positive" if not serialized["is_read"] else "neutral",
+            }
+        )
+
+    for item in recent_activity:
+        if len(notification_feed) >= 4:
+            break
+        notification_feed.append(
+            {
+                "title": item["title"],
+                "detail": item["detail"],
+                "meta": item["time_ago"],
+                "badge": str(item["tone"]).replace("_", " ").title(),
+                "badge_tone": "neutral",
+            }
+        )
     if not notification_feed:
         notification_feed.append(
             {
@@ -6418,7 +7419,7 @@ def build_village_module_context(user, module_key):
         },
         "agri_market": {
             "active_page": "agri_market",
-            "title": "Agri Market",
+            "title": "Agro Market",
             "badge": "Input and demand signals",
             "description": "Browse farm products, track mandi momentum, and connect market visibility with the buying decisions already in your app.",
             "stats": [
@@ -7078,6 +8079,467 @@ def fetch_onecall_daily_payload(lat, lon):
     )
 
 
+def get_weather_cache_key(city):
+    return str(city or "").strip().lower()
+
+
+def get_cached_weather_api_payload(city):
+    cache_key = get_weather_cache_key(city)
+    cached = WEATHER_API_CACHE.get(cache_key)
+    if not cached:
+        return None
+
+    if float(cached.get("expires_at", 0)) <= time.time():
+        WEATHER_API_CACHE.pop(cache_key, None)
+        return None
+
+    return cached.get("payload")
+
+
+def set_cached_weather_api_payload(city, payload):
+    cache_key = get_weather_cache_key(city)
+    if not cache_key:
+        return
+
+    WEATHER_API_CACHE[cache_key] = {
+        "expires_at": time.time() + WEATHER_API_CACHE_TTL_SECONDS,
+        "payload": payload,
+    }
+
+
+def format_weather_local_timestamp(timestamp_value, timezone_offset=0, fmt="%I %p"):
+    try:
+        normalized_timestamp = int(timestamp_value or 0) + int(timezone_offset or 0)
+        label = datetime.fromtimestamp(normalized_timestamp, tz=timezone.utc).strftime(fmt)
+        if "%I" in fmt:
+            label = label.lstrip("0")
+        return label
+    except (TypeError, ValueError, OSError):
+        return ""
+
+
+def build_weather_date_key(timestamp_value, timezone_offset=0):
+    return format_weather_local_timestamp(timestamp_value, timezone_offset, "%Y-%m-%d")
+
+
+def map_aqi_index(aqi_value):
+    try:
+        normalized = int(aqi_value or 0)
+    except (TypeError, ValueError):
+        normalized = 0
+
+    if normalized <= 1:
+        return {"value": max(normalized, 1), "level": "Good", "color": "#22a06b", "bar_width": 28}
+    if normalized <= 3:
+        return {"value": normalized, "level": "Moderate", "color": "#f59e0b", "bar_width": 62}
+    return {"value": normalized if normalized else 4, "level": "Poor", "color": "#dc2626", "bar_width": 100}
+
+
+WEATHER_LOCATION_HINTS = {
+    "bhubaneswar": "Bhubaneswar, Odisha, IN",
+    "bhubaneshwar": "Bhubaneswar, Odisha, IN",
+    "bhubanewar": "Bhubaneswar, Odisha, IN",
+    "bhuvaneswar": "Bhubaneswar, Odisha, IN",
+    "bbsr": "Bhubaneswar, Odisha, IN",
+    "malkangiri": "Malkangiri, Odisha, IN",
+    "malakangiri": "Malkangiri, Odisha, IN",
+    "malakanagiri": "Malkangiri, Odisha, IN",
+}
+
+
+def normalize_weather_place_name(value):
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").strip().lower()).strip()
+
+
+def build_weather_location_queries(location_name):
+    raw_value = str(location_name or "").strip()
+    normalized_value = normalize_weather_place_name(raw_value)
+    queries = []
+
+    hinted_query = WEATHER_LOCATION_HINTS.get(normalized_value)
+    if hinted_query:
+        queries.append(hinted_query)
+
+    if raw_value and "," not in raw_value:
+        queries.append(f"{raw_value}, IN")
+        queries.append(f"{raw_value}, India")
+
+    if raw_value:
+        queries.append(raw_value)
+
+    deduped_queries = []
+    seen_queries = set()
+    for query in queries:
+        query_key = normalize_weather_place_name(query)
+        if not query_key or query_key in seen_queries:
+            continue
+        seen_queries.add(query_key)
+        deduped_queries.append(query)
+
+    return deduped_queries
+
+
+def resolve_openweather_location(location_name):
+    if not OPENWEATHER_API_KEY:
+        return None
+
+    normalized_query = normalize_weather_place_name(location_name)
+    if not normalized_query:
+        return None
+
+    best_match = None
+    best_score = -1
+
+    for query in build_weather_location_queries(location_name):
+        payload = fetch_json(
+            "https://api.openweathermap.org/geo/1.0/direct",
+            params={
+                "q": query,
+                "limit": 5,
+                "appid": OPENWEATHER_API_KEY,
+            },
+        )
+        if not isinstance(payload, list) or not payload:
+            continue
+
+        for candidate in payload:
+            try:
+                lat = float(candidate.get("lat"))
+                lon = float(candidate.get("lon"))
+            except (TypeError, ValueError):
+                continue
+
+            candidate_name = str(candidate.get("name") or "").strip()
+            candidate_state = str(candidate.get("state") or "").strip()
+            candidate_country = str(candidate.get("country") or "").strip().upper()
+            candidate_name_norm = normalize_weather_place_name(candidate_name)
+
+            score = 0
+            if candidate_country == "IN":
+                score += 6
+            if candidate_name_norm == normalized_query:
+                score += 10
+            elif candidate_name_norm.startswith(normalized_query) or normalized_query.startswith(candidate_name_norm):
+                score += 6
+
+            local_names = candidate.get("local_names") or {}
+            if isinstance(local_names, dict):
+                local_matches = [
+                    normalize_weather_place_name(local_name)
+                    for local_name in local_names.values()
+                    if str(local_name or "").strip()
+                ]
+                if normalized_query in local_matches:
+                    score += 8
+
+            state_norm = normalize_weather_place_name(candidate_state)
+            if state_norm == "odisha":
+                score += 3
+
+            if score > best_score:
+                display_name = candidate_name or str(location_name or "").strip().title()
+                if candidate_state and candidate_state.lower() not in display_name.lower():
+                    display_name = f"{display_name}, {candidate_state}"
+
+                if normalize_weather_place_name(location_name) in WEATHER_LOCATION_HINTS:
+                    display_name = "Malkangiri, Odisha"
+
+                best_match = {
+                    "lat": lat,
+                    "lon": lon,
+                    "name": display_name,
+                    "country": candidate_country,
+                    "state": candidate_state,
+                }
+                best_score = score
+
+        if best_match and best_score >= 12:
+            break
+
+    return best_match
+
+
+def build_weather_hourly_data(forecast_payload, timezone_offset=0):
+    hourly_points = []
+    forecast_list = (forecast_payload or {}).get("list") or []
+
+    for item in forecast_list[:8]:
+        weather_info = (item.get("weather") or [{}])[0]  # type: ignore
+        hourly_points.append(
+            {
+                "time": format_weather_local_timestamp(item.get("dt"), timezone_offset, "%I %p"),
+                "temp": round(float((item.get("main") or {}).get("temp", 0))),  # type: ignore
+                "rain_prob": clamp(int(round(float(item.get("pop", 0)) * 100)), 0, 100),  # type: ignore
+                "icon": build_weather_icon_url(weather_info.get("icon", "01d")),  # type: ignore
+                "condition": weather_info.get("main", "Clear"),  # type: ignore
+            }
+        )
+
+    return hourly_points
+
+
+def build_weather_daily_data(current_payload, forecast_payload, timezone_offset=0):
+    grouped_days = {}
+    current_weather = (current_payload.get("weather") or [{}])[0] if isinstance(current_payload, dict) else {}
+    current_main = current_payload.get("main") or {} if isinstance(current_payload, dict) else {}
+    current_dt = current_payload.get("dt") if isinstance(current_payload, dict) else None
+    current_key = build_weather_date_key(current_dt, timezone_offset) if current_dt else ""
+
+    if current_key:
+        grouped_days[current_key] = {
+            "timestamp": current_dt,
+            "temps": [float(current_main.get("temp_min", current_main.get("temp", 0))), float(current_main.get("temp_max", current_main.get("temp", 0)))],
+            "icons": [current_weather.get("icon", "01d")],
+            "conditions": [current_weather.get("main", "Clear")],
+        }
+
+    for item in ((forecast_payload or {}).get("list") or []):
+        date_key = build_weather_date_key(item.get("dt"), timezone_offset)
+        if not date_key:
+            continue
+
+        bucket = grouped_days.setdefault(
+            date_key,
+            {"timestamp": item.get("dt"), "temps": [], "icons": []},
+        )
+        temp_info = item.get("main") or {}
+        bucket["temps"].append(float(temp_info.get("temp_min", temp_info.get("temp", 0))))
+        bucket["temps"].append(float(temp_info.get("temp_max", temp_info.get("temp", 0))))
+        bucket["icons"].append(((item.get("weather") or [{}])[0]).get("icon", "01d"))  # type: ignore
+        bucket.setdefault("conditions", []).append(((item.get("weather") or [{}])[0]).get("main", "Clear"))  # type: ignore
+
+    ordered_keys = sorted(grouped_days.keys())
+    daily_points = []
+
+    for date_key in ordered_keys[:7]:
+        bucket = grouped_days[date_key]
+        temps = bucket.get("temps") or [0]
+        icons = bucket.get("icons") or ["01d"]
+        conditions = bucket.get("conditions") or ["Clear"]
+        day_label = format_weather_local_timestamp(bucket.get("timestamp"), timezone_offset, "%a")
+        daily_points.append(
+            {
+                "day": day_label or "Day",
+                "min": round(min(float(value) for value in temps)),
+                "max": round(max(float(value) for value in temps)),
+                "icon": build_weather_icon_url(icons[len(icons) // 2]),
+                "condition": str(conditions[len(conditions) // 2] or "Clear"),
+            }
+        )
+
+    while len(daily_points) < 7:
+        last_point = daily_points[-1] if daily_points else {"day": "Day", "min": 24, "max": 31, "icon": build_weather_icon_url("01d")}
+        next_index = len(daily_points)
+        next_day = (datetime.now() + timedelta(days=next_index)).strftime("%a")
+        variance = -1 if next_index % 2 == 0 else 1
+        daily_points.append(
+            {
+                "day": next_day,
+                "min": int(last_point["min"]) + variance,
+                "max": int(last_point["max"]) + variance,
+                "icon": last_point["icon"],
+                "condition": last_point.get("condition", "Clear"),
+            }
+        )
+
+    return daily_points[:7]
+
+
+def build_weather_insights_payload(current_data, hourly_points, daily_points, aqi_payload):
+    insights = []
+    humidity_value = int(current_data.get("humidity", 0) or 0)
+    temp_value = float(current_data.get("temp", 0) or 0)
+    rain_peak = max((int(item.get("rain_prob", 0) or 0) for item in hourly_points), default=0)
+    wind_speed = float(current_data.get("wind_speed", 0) or 0)
+
+    if humidity_value > 80:
+        insights.append("High humidity can increase fungal risk in the field.")
+        insights.append("High pest risk due to humidity. Scout leaves and lower canopy today.")
+    if rain_peak > 50:
+        insights.append("Rain expected. Avoid spraying today and keep drainage ready.")
+    if temp_value > 35:
+        insights.append("Heat stress warning. Irrigate in early morning or evening hours.")
+    if wind_speed >= 6:
+        insights.append("Avoid spraying during stronger wind windows to reduce drift loss.")
+    if rain_peak < 35 and temp_value < 34:
+        insights.append("Good time for irrigation planning and field scouting.")
+    if aqi_payload.get("level") == "Poor":
+        insights.append("Air quality is poor. Limit long field exposure and use a mask if needed.")
+
+    unique_insights = []
+    for item in insights:
+        if item not in unique_insights:
+            unique_insights.append(item)
+
+    return unique_insights[:4] or [
+        "Stable weather window for routine farm activity.",
+        "Continue regular scouting and irrigation planning.",
+    ]
+
+
+def build_openweather_monitor_payload(city):
+    location_name = str(city or "").strip() or "Bhubaneswar"
+    cached_payload = get_cached_weather_api_payload(location_name)
+    if cached_payload is not None:
+        cached_copy = dict(cached_payload)
+        requested_location = str(cached_copy.get("requested_location") or location_name).strip() or location_name
+        matched_location = str(cached_copy.get("matched_location") or cached_copy.get("location") or "").strip()
+        cached_copy["requested_location"] = requested_location
+        cached_copy["location"] = requested_location
+        cached_copy["matched_location"] = (
+            matched_location
+            if matched_location
+            and normalize_weather_place_name(matched_location) != normalize_weather_place_name(requested_location)
+            else ""
+        )
+        return cached_copy
+
+    fallback_weather = fetch_weather_bundle(location_name)
+    fallback_now = datetime.now()
+    fallback_base_temp = float(fallback_weather["temp"])
+    fallback_condition = fallback_weather["description"]
+
+    def format_hour_label(value):
+        return value.strftime("%I %p").lstrip("0") or value.strftime("%I %p")
+
+    fallback_payload = {
+        "location": location_name,
+        "requested_location": location_name,
+        "matched_location": (
+            fallback_weather["city"]
+            if normalize_weather_place_name(fallback_weather["city"]) != normalize_weather_place_name(location_name)
+            else ""
+        ),
+        "updated_at": fallback_weather["updated_at"],
+        "current": {
+            "temp": fallback_weather["temp"],
+            "feels_like": fallback_weather["feels_like"],
+            "humidity": fallback_weather["humidity"],
+            "wind_speed": fallback_weather["wind_speed_kmh"],
+            "wind_deg": fallback_weather["wind_deg"],
+            "condition": fallback_weather["description"],
+            "icon": fallback_weather["icon_url"],
+            "pressure": fallback_weather["pressure"],
+        },
+        "hourly": [
+            {
+                "time": format_hour_label(fallback_now + timedelta(hours=index * 3)),
+                "temp": round(fallback_base_temp + (-2 if index < 2 else min(index, 4) - 1)),
+                "rain_prob": max(15, min(70, 18 + (index % 4) * 12)),
+                "icon": fallback_weather["icon_url"],
+                "condition": fallback_condition,
+            }
+            for index in range(8)
+        ],
+        "daily": [
+            {
+                "day": (fallback_now + timedelta(days=index)).strftime("%a"),
+                "min": round(fallback_base_temp - 2 + (-1 if index % 2 == 0 else 0)),
+                "max": round(fallback_base_temp + 2 + (1 if index % 3 == 0 else 0)),
+                "icon": fallback_weather["icon_url"],
+                "condition": fallback_condition,
+            }
+            for index in range(7)
+        ],
+        "aqi": {"value": 2, "level": "Moderate", "color": "#f59e0b", "bar_width": 58},
+        "insights": [
+            "Weather data is running in fallback mode right now.",
+            "Use crop scouting and field checks before spray or irrigation decisions.",
+        ],
+        "source": "fallback",
+    }
+
+    if not OPENWEATHER_API_KEY:
+        return fallback_payload
+
+    resolved_location = resolve_openweather_location(location_name)
+    current_params = {
+        "appid": OPENWEATHER_API_KEY,
+        "units": "metric",
+    }
+    if resolved_location:
+        current_params["lat"] = resolved_location["lat"]
+        current_params["lon"] = resolved_location["lon"]
+    else:
+        current_params["q"] = location_name
+
+    current_payload = fetch_json(
+        "https://api.openweathermap.org/data/2.5/weather",
+        params=current_params,
+    )
+    if not current_payload or str(current_payload.get("cod", "200")) != "200":
+        return fallback_payload
+
+    coord = current_payload.get("coord") or {}  # type: ignore
+    lat = coord.get("lat")
+    lon = coord.get("lon")
+    timezone_offset = int(current_payload.get("timezone", 0) or 0)  # type: ignore
+    forecast_payload = None
+    aqi_source = None
+    if lat is not None and lon is not None:
+        forecast_payload = fetch_json(
+            "https://api.openweathermap.org/data/2.5/forecast",
+            params={
+                "lat": lat,
+                "lon": lon,
+                "appid": OPENWEATHER_API_KEY,
+                "units": "metric",
+            },
+        )
+        aqi_source = fetch_json(
+            "https://api.openweathermap.org/data/2.5/air_pollution",
+            params={
+                "lat": lat,
+                "lon": lon,
+                "appid": OPENWEATHER_API_KEY,
+            },
+        )
+
+    main = current_payload.get("main") or {}  # type: ignore
+    wind = current_payload.get("wind") or {}  # type: ignore
+    weather_info = (current_payload.get("weather") or [{}])[0]  # type: ignore
+    hourly_points = build_weather_hourly_data(forecast_payload, timezone_offset)
+    daily_points = build_weather_daily_data(current_payload, forecast_payload, timezone_offset)
+    aqi_data = map_aqi_index((((aqi_source or {}).get("list") or [{}])[0].get("main") or {}).get("aqi"))  # type: ignore
+
+    merged_payload = {
+        "location": location_name,
+        "requested_location": location_name,
+        "matched_location": (
+            (resolved_location or {}).get("name") or current_payload.get("name", location_name)  # type: ignore
+        ),
+        "updated_at": format_weather_local_timestamp(current_payload.get("dt"), timezone_offset, "%d %b, %I:%M %p"),
+        "current": {
+            "temp": round(float(main.get("temp", fallback_weather["temp"]))),  # type: ignore
+            "feels_like": round(float(main.get("feels_like", fallback_weather["feels_like"]))),  # type: ignore
+            "humidity": int(main.get("humidity", fallback_weather["humidity"])),  # type: ignore
+            "wind_speed": round(float(wind.get("speed", fallback_weather["wind_speed"])) * 3.6, 1),  # type: ignore
+            "wind_deg": int(wind.get("deg", fallback_weather["wind_deg"])),  # type: ignore
+            "condition": weather_info.get("description", fallback_weather["description"]).title(),  # type: ignore
+            "icon": build_weather_icon_url(weather_info.get("icon", fallback_weather["icon_code"])),  # type: ignore
+            "pressure": int(main.get("pressure", fallback_weather["pressure"])),  # type: ignore
+        },
+        "hourly": hourly_points,
+        "daily": daily_points,
+        "aqi": aqi_data,
+        "insights": build_weather_insights_payload(
+            {
+                "temp": round(float(main.get("temp", fallback_weather["temp"]))),  # type: ignore
+                "humidity": int(main.get("humidity", fallback_weather["humidity"])),  # type: ignore
+                "wind_speed": float(wind.get("speed", fallback_weather["wind_speed"])),  # type: ignore
+            },
+            hourly_points,
+            daily_points,
+            aqi_data,
+        ),
+        "source": "openweather",
+    }
+    if normalize_weather_place_name(str(merged_payload["matched_location"])) == normalize_weather_place_name(location_name):
+        merged_payload["matched_location"] = ""
+    set_cached_weather_api_payload(location_name, merged_payload)
+    return merged_payload
+
+
 def fetch_weather_bundle(location):
     fallback_chart, fallback_polyline = build_chart_series()
     fallback = {
@@ -7106,13 +8568,20 @@ def fetch_weather_bundle(location):
     if not OPENWEATHER_API_KEY or not location:
         return fallback
 
+    resolved_location = resolve_openweather_location(location)
+    current_params = {
+        "appid": OPENWEATHER_API_KEY,
+        "units": "metric",
+    }
+    if resolved_location:
+        current_params["lat"] = resolved_location["lat"]
+        current_params["lon"] = resolved_location["lon"]
+    else:
+        current_params["q"] = location
+
     current_data = fetch_json(
         "https://api.openweathermap.org/data/2.5/weather",
-        params={
-            "q": location,
-            "appid": OPENWEATHER_API_KEY,
-            "units": "metric",
-        },
+        params=current_params,
     )
 
     if not current_data or str(current_data.get("cod", "200")) != "200":
@@ -7148,7 +8617,7 @@ def fetch_weather_bundle(location):
     wind_speed = float((current_data.get("wind") or {}).get("speed", fallback["wind_speed"]))  # type: ignore
 
     return {
-        "city": current_data.get("name", location),  # type: ignore
+        "city": (resolved_location or {}).get("name") or current_data.get("name", location),  # type: ignore
         "country": (current_data.get("sys") or {}).get("country", ""),  # type: ignore
         "temp": round(float(main.get("temp", fallback["temp"]))),  # type: ignore
         "description": weather_items[0].get("description", fallback["description"]).title(),  # type: ignore
@@ -7174,10 +8643,52 @@ def fetch_weather_bundle(location):
 def build_soil_profile(user, weather):
     seed_source = f"{user.id}-{user.email}-{user.location or ''}-{user.crop_type or ''}"
     seed = sum((index + 1) * ord(char) for index, char in enumerate(seed_source))
+    lat = float(weather.get("lat") or 20.0)
+    lon = float(weather.get("lon") or 78.0)
+    humidity = float(weather.get("humidity", 60) or 60)
+    rainfall = float(weather.get("rainfall_mm", 0) or 0)
+    temperature = float(weather.get("temp", 30) or 30)
+    pressure = float(weather.get("pressure", 1008) or 1008)
+    clouds = float(weather.get("clouds", 30) or 30)
 
-    ph_value = round(clamp(5.6 + (int(seed) % 13) / 10, 5.5, 7.2), 1)
-    nitrogen = clamp(int(42 + (int(seed) % 22) - float(weather["humidity"]) / 8), 24, 88)
-    moisture = clamp(int(weather["humidity"] * 0.82 + weather["rainfall_mm"] * 2.4 + (int(seed) % 10)), 28, 96)
+    geo_bias = ((abs(lat) * 1.7) + (abs(lon) * 0.55) + (seed % 11)) % 8
+    ph_value = round(
+        clamp(
+            5.5
+            + (pressure - 1000) * 0.018
+            - rainfall * 0.025
+            + humidity * 0.004
+            - abs(lat) * 0.006
+            + geo_bias * 0.09,
+            5.2,
+            7.8,
+        ),
+        1,
+    )
+    nitrogen = clamp(
+        int(
+            26
+            + humidity * 0.28
+            + rainfall * 1.9
+            - temperature * 0.42
+            + clouds * 0.08
+            + (abs(lat) % 9)
+            + (seed % 7)
+        ),
+        18,
+        96,
+    )
+    moisture = clamp(
+        int(
+            humidity * 0.72
+            + rainfall * 3.6
+            - temperature * 0.35
+            + clouds * 0.12
+            + (abs(lon) % 6)
+        ),
+        20,
+        98,
+    )
 
     return {
         "ph": ph_value,
@@ -7557,16 +9068,38 @@ def build_soil_page_context(user):
 
     seed_source = f"{user.id}-{user.email}-{user.location or ''}-{user.crop_type or ''}-soil"
     seed = sum((index + 3) * ord(char) for index, char in enumerate(seed_source))
+    lat = float(weather.get("lat") or 20.0)
+    lon = float(weather.get("lon") or 78.0)
+    humidity = float(weather.get("humidity", 60) or 60)
+    rainfall = float(weather.get("rainfall_mm", 0) or 0)
+    pressure = float(weather.get("pressure", 1008) or 1008)
+    temperature = float(weather.get("temp", 30) or 30)
 
     phosphorus = clamp(
-        int(34 + (int(seed) % 24) + float(soil["moisture"]) * 0.12 - float(weather["rainfall_mm"]) * 0.35),  # type: ignore
+        int(
+            18
+            + float(soil["moisture"]) * 0.28
+            + humidity * 0.12
+            + (pressure - 1000) * 0.45
+            - rainfall * 0.6
+            + (abs(lat) % 10)
+            + (seed % 5)
+        ),
         20,
-        88,
+        96,
     )
     potassium = clamp(
-        int(58 + (int(seed) % 40) + float(weather["temp"]) * 0.7 - abs(float(soil["ph"]) - 6.4) * 8),  # type: ignore
+        int(
+            32
+            + temperature * 1.1
+            + humidity * 0.18
+            + (abs(lon) % 14)
+            + float(soil["nitrogen"]) * 0.18
+            - abs(float(soil["ph"]) - 6.5) * 11
+            + (seed % 6)
+        ),
         35,
-        128,
+        132,
     )
 
     ph_label, ph_tone = describe_ph_balance(soil["ph"])
@@ -7653,9 +9186,9 @@ def build_soil_page_context(user):
             {"label": "Weather", "value": weather["description"]},
         ],
         "location": {
-            "name": user.location or weather["city"],
+            "name": weather["city"] or user.location or weather["city"],
             "maps_search_url": "https://www.google.com/maps/search/?api=1&"
-            + urlencode({"query": user.location or weather["city"]}),
+            + urlencode({"query": weather["city"] or user.location or weather["city"]}),
         },
         "gauge": {
             "value": soil["ph"],
@@ -9781,12 +11314,18 @@ def register():
         
         otp = generate_otp()
         email_sent, failure_reason = send_otp_email(email, otp)
+        whatsapp_sent, whatsapp_reason = send_otp_whatsapp(phone, otp)
         update_otp_session_state(
             otp,
             email,
             "register",
-            email_sent=email_sent,
-            notice=build_otp_notice(email_sent, failure_reason),
+            email_sent=(email_sent or whatsapp_sent),
+            notice=build_otp_notice(
+                email_sent,
+                failure_reason,
+                whatsapp_sent=whatsapp_sent,
+                whatsapp_reason=whatsapp_reason,
+            ),
         )
         return redirect("/verify-otp")
 
@@ -9901,13 +11440,21 @@ def resend_otp():
     target_email = session.get("otp_target")
     otp_type = session.get("otp_type")
 
+    pending_user = session.get("pending_user", {})
+    target_phone = pending_user.get("phone") if isinstance(pending_user, dict) else ""
     email_sent, failure_reason = send_otp_email(target_email, otp)
+    whatsapp_sent, whatsapp_reason = send_otp_whatsapp(target_phone, otp)
     update_otp_session_state(
         otp,
         target_email,
         otp_type,
-        email_sent=email_sent,
-        notice=build_otp_notice(email_sent, failure_reason),
+        email_sent=(email_sent or whatsapp_sent),
+        notice=build_otp_notice(
+            email_sent,
+            failure_reason,
+            whatsapp_sent=whatsapp_sent,
+            whatsapp_reason=whatsapp_reason,
+        ),
     )
     return render_template("verify_otp.html", **get_otp_page_context())
 
@@ -10250,7 +11797,8 @@ def add_farm_task():
     )
     db.session.add(task)
     db.session.commit()
-    upsert_task_reminder_alert(task, force_notify=True)
+    upsert_task_reminder_alert(task, force_notify=False, send_channels=False)
+    send_task_status_email(user, task, "created")
 
     remember_notice("farms_notice", f"Task '{title}' added to your planner.")
     return redirect("/farms#task-planner")
@@ -10271,13 +11819,18 @@ def update_task_status(task_id):
     if new_status not in {"todo", "in_progress", "done"}:
         new_status = "todo"
 
+    previous_status = str(task.status or "todo")
     task.status = new_status
     task.completed_at = datetime.now(timezone.utc) if new_status == "done" else None
     db.session.commit()
     if new_status == "done":
         deactivate_task_reminder_alert(task.id, user_id=user.id)
+        if previous_status != "done":
+            send_task_status_email(user, task, "completed")
     else:
-        upsert_task_reminder_alert(task, force_notify=False)
+        upsert_task_reminder_alert(task, force_notify=False, send_channels=False)
+        if new_status == "in_progress" and previous_status != "in_progress":
+            send_task_status_email(user, task, "started")
 
     remember_notice("farms_notice", f"Task '{task.title}' moved to {new_status.replace('_', ' ')}.")
     return redirect("/farms#task-planner")
@@ -10308,18 +11861,192 @@ def weather_monitoring():
     if not user:
         return redirect("/login")
 
-    weather_page = build_weather_page_context(user)
-    return render_template("weather.html", user=user, weather_page=weather_page)
+    initial_city = (request.args.get("city") or user.location or "Bhubaneswar").strip() or "Bhubaneswar"
+    return render_template("weather.html", user=user, initial_weather_city=initial_city)
 
 
-@app.route("/soil-health")
+@app.route("/download/weather-report")
+def download_weather_report():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    requested_city = (request.args.get("city") or user.location or "Bhubaneswar").strip() or "Bhubaneswar"
+    weather_payload = build_openweather_monitor_payload(requested_city)
+    current = weather_payload.get("current", {})
+    current_temp = current.get("temp", "-")
+    current_condition = current.get("condition", "Not available")
+    current_humidity = current.get("humidity", "-")
+    current_wind = current.get("wind_speed", "-")
+    current_pressure = current.get("pressure", "-")
+    aqi = weather_payload.get("aqi", {})
+
+    hourly_items = [
+        f"{item.get('time', 'Time')}: {item.get('temp', '-')}" + " C, "
+        + f"rain {item.get('rain_prob', '-')}%, {item.get('condition', 'forecast')}"
+        for item in (weather_payload.get("hourly") or [])[:8]
+    ]
+    daily_items = [
+        f"{item.get('day', 'Day')}: {item.get('min', '-')}" + " C to "
+        + f"{item.get('max', '-')}" + f" C, {item.get('condition', 'forecast')}"
+        for item in (weather_payload.get("daily") or [])[:7]
+    ]
+
+    return build_pdf_download_response(
+        filename=f"weather-report-{weather_payload.get('location') or requested_city}",
+        title=f"Weather Report - {weather_payload.get('location') or requested_city}",
+        meta_lines=[
+            f"Farmer: {user.name or 'User'}",
+            f"Location: {weather_payload.get('location') or requested_city}",
+            f"Updated: {weather_payload.get('updated_at') or datetime.now().strftime('%d %b %Y, %I:%M %p')}",
+            f"Source: {'Live OpenWeather' if weather_payload.get('source') == 'openweather' else 'Fallback weather model'}",
+        ],
+        sections=[
+            {
+                "heading": "Current Conditions",
+                "items": [
+                    f"Temperature: {current_temp} C",
+                    f"Condition: {current_condition}",
+                    f"Feels like: {current.get('feels_like', '-')} C",
+                    f"Humidity: {current_humidity}%",
+                    f"Wind: {current_wind} km/h",
+                    f"Pressure: {current_pressure} hPa",
+                    f"AQI: {aqi.get('level', 'Unknown')} ({aqi.get('value', '-')})",
+                ],
+            },
+            {"heading": "Hourly Outlook", "items": hourly_items or ["Hourly forecast unavailable."]},
+            {"heading": "Weekly Outlook", "items": daily_items or ["Daily forecast unavailable."]},
+            {
+                "heading": "AI Advisory",
+                "items": compact_pdf_list(weather_payload.get("insights") or [], limit=6, item_length=180)
+                or ["No advisory available right now."],
+            },
+        ],
+    )
+
+
+@app.route("/api/weather")
+def api_weather_monitoring():
+    requested_city = (request.args.get("city") or "").strip()
+    user = get_current_user()
+    fallback_city = user.location if user else ""
+    city = requested_city or fallback_city or "Bhubaneswar"
+    payload = build_openweather_monitor_payload(city)
+
+    if user is not None and requested_city:
+        persisted_location = requested_city
+        if persisted_location:
+            changed = False
+            if persisted_location != str(user.location or "").strip():
+                user.location = persisted_location
+                changed = True
+
+            primary_farm = (
+                Farm.query.filter_by(user_id=user.id, is_primary=True)
+                .order_by(Farm.created_at.asc())
+                .first()
+            )
+            if primary_farm is not None and persisted_location != str(primary_farm.location or "").strip():
+                primary_farm.location = persisted_location
+                changed = True
+
+            if changed:
+                db.session.commit()
+    return jsonify(payload)
+
+
+@app.route("/soil-health", methods=["GET", "POST"])
 def soil_health_monitoring():
     user = get_current_user()
     if not user:
         return redirect("/login")
 
+    submitted_location = ""
+    if request.method == "POST":
+        submitted_location = str(request.form.get("location") or "").strip()
+    elif (request.args.get("apply_location") or "").strip() == "1":
+        submitted_location = str(request.args.get("location") or "").strip()
+
+    update_requested = bool(submitted_location) or request.method == "POST"
+    if update_requested:
+        new_location = submitted_location
+        if new_location:
+            user.location = new_location
+            primary_farm = (
+                Farm.query.filter_by(user_id=user.id, is_primary=True)
+                .order_by(Farm.created_at.asc())
+                .first()
+            )
+            if primary_farm is not None:
+                primary_farm.location = new_location
+            db.session.commit()
+            db.session.refresh(user)
+            return redirect("/soil-health?updated=1")
+        return redirect("/soil-health?updated=0")
+
+    location_notice = None
+    update_flag = (request.args.get("updated") or "").strip()
+    if update_flag == "1":
+        location_notice = {
+            "tone": "success",
+            "text": "Location update ho gaya. Soil pH, NPK, moisture, aur weather metrics naye place ke hisaab se refresh ho gaye."
+        }
+    elif update_flag == "0":
+        location_notice = {
+            "tone": "warning",
+            "text": "Please ek valid location enter karo."
+        }
+
     soil_page = build_soil_page_context(user)
-    return render_template("soil.html", user=user, soil_page=soil_page)
+    return render_template("soil.html", user=user, soil_page=soil_page, location_notice=location_notice)
+
+
+@app.route("/download/soil-report")
+def download_soil_report():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    soil_page = build_soil_page_context(user)
+    location_name = soil_page["location"]["name"]
+    nutrient_items = [
+        f"{card['title']}: {card['value']} {card['unit']} ({card['label']})"
+        for card in soil_page.get("nutrient_cards", [])
+    ]
+    summary_items = [f"{item['label']}: {item['value']}" for item in soil_page.get("summary_metrics", [])]
+    legend_items = [f"{item['label']}: {item['value']}" for item in soil_page.get("map_card", {}).get("legend", [])]
+    recommendation_items = compact_pdf_list(
+        soil_page.get("health_panel", {}).get("recommendations", []),
+        limit=5,
+        item_length=180,
+    )
+
+    return build_pdf_download_response(
+        filename=f"soil-report-{location_name}",
+        title=f"Soil Health Report - {location_name}",
+        meta_lines=[
+            f"Farmer: {user.name or 'User'}",
+            f"Location: {location_name}",
+            f"Crop focus: {user.crop_type or 'Mixed Crop'}",
+            f"Weather window: {soil_page.get('weather', {}).get('description', 'Current conditions')}",
+            f"Generated: {datetime.now().strftime('%d %b %Y, %I:%M %p')}",
+        ],
+        sections=[
+            {
+                "heading": "Current Field Snapshot",
+                "items": [
+                    f"Soil pH: {soil_page['gauge']['value']:.1f} ({soil_page['gauge']['label']})",
+                    f"Field moisture: {soil_page['soil']['moisture']}%",
+                    f"Nitrogen estimate: {soil_page['soil']['nitrogen']} kg/ha",
+                    *[f"{item['label']}: {item['value']}" for item in soil_page.get("toolbar_items", [])],
+                ],
+            },
+            {"heading": "Nutrient Snapshot", "items": nutrient_items},
+            {"heading": "Recommendations", "items": recommendation_items or ["Continue weekly sampling and compare zone-wise readings."]},
+            {"heading": "Summary Metrics", "items": summary_items},
+            {"heading": "Map Legend", "items": legend_items},
+        ],
+    )
 
 
 @app.route("/crop-monitoring")
@@ -10473,14 +12200,154 @@ def crop_detail(crop_slug):
     return render_template("crop_detail.html", user=user, crop=crop, related_crops=related_crops)
 
 
+def build_track_order_context(user):
+    orders = StoreOrder.query.filter_by(user_id=user.id).order_by(StoreOrder.created_at.desc()).all()
+    counts = {
+        "total": len(orders),
+        "awaiting_payment": 0,
+        "pending": 0,
+        "confirmed": 0,
+        "delivered": 0,
+    }
+    order_cards = []
+
+    for order in orders:
+        product = getattr(order, "product", None)
+        payment_status = str(getattr(order, "status", "created") or "created").strip().lower()
+        fulfillment_status = get_fulfillment_status(order)
+        if payment_status == "paid":
+            counts[fulfillment_status] += 1
+        else:
+            counts["awaiting_payment"] += 1
+
+        timeline = build_order_timeline(order)
+        completed_steps = sum(1 for item in timeline if item["completed"])
+        progress_percent = int(round((completed_steps / max(len(timeline), 1)) * 100))
+        created_at = normalize_timestamp(getattr(order, "created_at", None))
+        last_update = normalize_timestamp(getattr(order, "updated_at", None) or getattr(order, "created_at", None))
+
+        if payment_status != "paid":
+            status_label = "Awaiting payment"
+            status_tone = "payment"
+            helper_text = "Payment is still pending, so admin confirmation has not started yet."
+        elif fulfillment_status == "pending":
+            status_label = "Pending confirmation"
+            status_tone = "pending"
+            helper_text = "Your payment is received and the admin team still needs to confirm the order."
+        elif fulfillment_status == "confirmed":
+            status_label = "Confirmed"
+            status_tone = "confirmed"
+            helper_text = "The admin team has confirmed the order. Delivery is the next stage."
+        else:
+            status_label = "Delivered"
+            status_tone = "delivered"
+            helper_text = "This order has been marked as delivered."
+
+        order_cards.append(
+            {
+                "id": order.id,
+                "product_name": get_order_product_name(order, product),
+                "image_url": str(getattr(product, "image_url", "") or "/static/brand/agrovision-email-logo.png"),
+                "amount_label": build_order_amount_label(order),
+                "payment_status_label": payment_status.replace("_", " ").title(),
+                "status_label": status_label,
+                "status_tone": status_tone,
+                "helper_text": helper_text,
+                "progress_percent": progress_percent,
+                "created_at_label": created_at.strftime("%d %b %Y, %I:%M %p") if created_at else "Just now",
+                "last_update_label": format_relative_time(last_update),
+                "timeline": [
+                    {
+                        "label": item["label"],
+                        "detail": item["detail"],
+                        "completed": item["completed"],
+                        "timestamp_label": (
+                            item["timestamp"].strftime("%d %b %Y, %I:%M %p")
+                            if item["completed"] and item.get("timestamp")
+                            else "Waiting"
+                        ),
+                    }
+                    for item in timeline
+                ],
+            }
+        )
+
+    return {
+        "active_page": "track_order",
+        "title": "Track Order",
+        "description": "See whether each product order is pending, confirmed, or delivered from one place.",
+        "counts": counts,
+        "orders": order_cards,
+    }
+
+
 @app.route("/farm-twin")
 def farm_twin():
+    return redirect("/track-order")
+
+
+@app.route("/track-order")
+def track_order():
     user = get_current_user()
     if not user:
         return redirect("/login")
 
-    farm_twin_page = build_farm_twin_context(user)
-    return render_template("farm_twin.html", user=user, farm_twin=farm_twin_page)
+    track_order_page = build_track_order_context(user)
+    return render_template("track_order.html", user=user, track_order=track_order_page)
+
+
+@app.route("/download/order-invoice/<int:order_id>")
+def download_order_invoice(order_id):
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    order = StoreOrder.query.filter_by(id=order_id, user_id=user.id).first()
+    if order is None:
+        abort(404)
+
+    order_card = next(
+        (item for item in build_track_order_context(user)["orders"] if int(item.get("id") or 0) == int(order_id)),
+        None,
+    )
+    if order_card is None:
+        abort(404)
+
+    payment_reference = str(
+        getattr(order, "razorpay_payment_id", "")
+        or getattr(order, "razorpay_order_id", "")
+        or f"order-{order_id}"
+    ).strip()
+
+    return build_pdf_download_response(
+        filename=f"order-invoice-{order_id}",
+        title=f"Order Invoice - #{order_id}",
+        meta_lines=[
+            f"Customer: {user.name or 'User'}",
+            f"Email: {user.email or 'Not available'}",
+            f"Order ID: #{order_id}",
+            f"Generated: {datetime.now().strftime('%d %b %Y, %I:%M %p')}",
+        ],
+        sections=[
+            {
+                "heading": "Order Summary",
+                "items": [
+                    f"Product: {order_card['product_name']}",
+                    f"Amount paid: {order_card['amount_label']}",
+                    f"Payment status: {order_card['payment_status_label']}",
+                    f"Fulfillment status: {order_card['status_label']}",
+                    f"Order placed: {order_card['created_at_label']}",
+                    f"Last update: {order_card['last_update_label']}",
+                    f"Payment reference: {payment_reference}",
+                ],
+            },
+            {
+                "heading": "Status Guidance",
+                "paragraphs": [order_card["helper_text"]],
+                "items": [f"{item['label']}: {item['detail']} ({item['timestamp_label']})" for item in order_card.get("timeline", [])],
+            },
+        ],
+    )
 
 
 @app.route("/disease-detection", methods=["GET"])
@@ -10501,7 +12368,73 @@ def disease_detection():
         upload_name=None,
         error_message=None,
     )
-    return render_template("disease_detection.html", user=user, disease_page=disease_page, history=history_records)
+    cached_disease_report = session.get("last_disease_report_pdf")
+    has_cached_pdf = (
+        isinstance(cached_disease_report, dict)
+        and int(cached_disease_report.get("user_id", 0) or 0) == int(user.id)
+    ) or bool(history_records)
+    return render_template(
+        "disease_detection.html",
+        user=user,
+        disease_page=disease_page,
+        history=history_records,
+        has_cached_pdf=has_cached_pdf,
+    )
+
+
+@app.route("/download/disease-report")
+def download_disease_report():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    cached_payload = session.get("last_disease_report_pdf")
+    if not isinstance(cached_payload, dict) or int(cached_payload.get("user_id", 0) or 0) != int(user.id):
+        cached_payload = build_fallback_disease_pdf_payload(user)
+    if not cached_payload:
+        abort(404)
+
+    disease_name = cached_payload.get("disease") or "crop-disease"
+    sections = [
+        {
+            "heading": "Diagnosis Summary",
+            "items": [
+                f"Crop: {cached_payload.get('crop') or user.crop_type or 'Crop'}",
+                f"Disease: {disease_name}",
+                f"Confidence: {cached_payload.get('confidence') or 'Not available'}",
+                f"Risk level: {cached_payload.get('risk_level') or 'Needs review'}",
+                f"Source: {cached_payload.get('analysis_source') or 'AI diagnosis'}",
+            ],
+            "paragraphs": [cached_payload.get("diagnostic_reason") or "Diagnosis summary not available."],
+        },
+        {
+            "heading": "Etiology",
+            "items": [
+                f"Cause: {cached_payload.get('cause') or 'Field confirmation required'}",
+                f"Pathogen: {cached_payload.get('pathogen') or 'Not available'}",
+                f"Environment: {cached_payload.get('environment') or 'Not available'}",
+                f"Transmission: {cached_payload.get('transmission') or 'Monitor nearby plants'}",
+            ],
+        },
+        {"heading": "Symptoms", "items": cached_payload.get("symptoms") or ["Symptoms were not cached in the last report."]},
+        {"heading": "Organic Solution", "items": cached_payload.get("organic_solutions") or ["Organic guidance not available."]},
+        {"heading": "Chemical Solution", "items": cached_payload.get("chemical_solutions") or ["Chemical guidance not available."]},
+        {"heading": "Prevention Tips", "items": cached_payload.get("prevention_tips") or ["Review field hygiene and rescout the patch."]},
+        {"heading": "Do This Now", "items": cached_payload.get("do_now_checklist") or ["Inspect nearby leaves before treating the full block."]},
+    ]
+    if cached_payload.get("suggested_products"):
+        sections.append({"heading": "Suggested Products", "items": cached_payload["suggested_products"]})
+
+    return build_pdf_download_response(
+        filename=f"disease-report-{disease_name}",
+        title=cached_payload.get("report_title") or f"{disease_name} Disease Report",
+        meta_lines=[
+            f"Farmer: {user.name or 'User'}",
+            f"Location: {cached_payload.get('location') or user.location or 'Unknown'}",
+            f"Generated: {cached_payload.get('generated_at') or datetime.now().strftime('%d %b %Y, %I:%M %p')}",
+        ],
+        sections=sections,
+    )
 
 
 @app.route("/market", methods=["GET"])
@@ -10683,6 +12616,7 @@ def store_payment_success():
         )
         db.session.add(order_record)
 
+    was_paid = str(getattr(order_record, "status", "") or "").strip().lower() == "paid"
     notes = get_order_notes(order_record)
     notes.setdefault("fulfillment_status", "pending")
 
@@ -10705,11 +12639,17 @@ def store_payment_success():
         }
     )
     set_order_notes(order_record, notes)
+    if not get_order_status_timestamps(order_record).get("pending"):
+        set_order_status_timestamp(order_record, "pending")
 
-    user.loyalty_points = int(user.loyalty_points or 0) + max(5, int(product.price / 40))
+    if not was_paid:
+        user.loyalty_points = int(user.loyalty_points or 0) + max(5, int(product.price / 40))
     db.session.commit()
 
-    send_admin_order_email(order_record, user, product)
+    if not was_paid:
+        send_admin_order_email(order_record, user, product)
+        send_user_order_email(order_record, user, product, "placed")
+        upsert_order_status_alert(user, order_record, product, "placed")
 
     return jsonify(
         {
@@ -10774,8 +12714,8 @@ def admin_dashboard():
 @app.route("/admin/products", methods=["GET", "POST"])
 @admin_required
 def admin_products():
-    error = None
-    success = None
+    error = (request.args.get("error") or "").strip() or None
+    success = (request.args.get("success") or "").strip() or None
 
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
@@ -10830,13 +12770,33 @@ def admin_products():
             success = "Product added."
 
     products = StoreProduct.query.order_by(StoreProduct.updated_at.desc(), StoreProduct.created_at.desc()).all()
+    product_summary = {
+        "total": len(products),
+        "organic": sum(1 for product in products if (product.category or "") == "Organic"),
+        "active": sum(1 for product in products if bool(product.is_active)),
+        "low_stock": sum(1 for product in products if int(product.stock or 0) <= 5),
+    }
     return render_template(
         "admin/products.html",
         products=products,
         categories=[c for c in STORE_CATEGORY_ORDER if c != "All"],
+        product_summary=product_summary,
         error=error,
         success=success,
     )
+
+
+@app.route("/admin/products/sync", methods=["POST"])
+@admin_required
+def admin_sync_products():
+    try:
+        seeded_count = seed_store_products()
+        message = f"Agro Market dataset synced. {seeded_count} products refreshed from database seed."
+        return redirect(f"/admin/products?success={quote(message)}")
+    except Exception as exc:
+        db.session.rollback()
+        message = f"Sync failed: {exc}"
+        return redirect(f"/admin/products?error={quote(message)}")
 
 
 @app.route("/admin/products/<int:product_id>/edit", methods=["GET", "POST"])
@@ -10955,12 +12915,18 @@ def admin_update_order_fulfillment(order_id):
         abort(404)
 
     new_status = (request.form.get("fulfillment_status") or "").strip().lower()
+    previous_status = get_fulfillment_status(order)
     try:
         set_fulfillment_status(order, new_status)
     except ValueError:
         return redirect("/admin/orders")
 
+    if previous_status != new_status:
+        set_order_status_timestamp(order, new_status)
     db.session.commit()
+    if previous_status != new_status and new_status in {"confirmed", "delivered"}:
+        send_user_order_email(order, getattr(order, "buyer", None), getattr(order, "product", None), new_status)
+        upsert_order_status_alert(getattr(order, "buyer", None), order, getattr(order, "product", None), new_status)
     return redirect("/admin/orders")
 
 
@@ -11066,19 +13032,31 @@ def predict_disease():
     filename_diagnosis = build_filename_dataset_diagnosis(uploaded_file.filename, user.crop_type or "Crop")
     if filename_diagnosis is not None:
         save_scan_history(user, filename_diagnosis)
-        return jsonify(attach_store_recommendation(build_scan_response_payload(filename_diagnosis, preview_url), filename_diagnosis.get("best_product", "")))
+        response_payload = attach_store_recommendation(
+            build_scan_response_payload(filename_diagnosis, preview_url),
+            filename_diagnosis.get("best_product", ""),
+        )
+        return jsonify_disease_result(user, response_payload)
 
     reference_diagnosis = build_reference_image_diagnosis(image, user.crop_type or "Crop", weather)
     if reference_diagnosis is not None and int(reference_diagnosis.get("confidence") or 0) >= 66:
         reference_diagnosis["explanation_hinglish"] = "Diagnosis generated from uploaded leaf pattern and dataset reference images."
         save_scan_history(user, reference_diagnosis)
-        return jsonify(attach_store_recommendation(build_scan_response_payload(reference_diagnosis, preview_url), reference_diagnosis.get("best_product", "")))
+        response_payload = attach_store_recommendation(
+            build_scan_response_payload(reference_diagnosis, preview_url),
+            reference_diagnosis.get("best_product", ""),
+        )
+        return jsonify_disease_result(user, response_payload)
 
     kaggle_diagnosis = build_kaggle_dataset_diagnosis(image, user.crop_type or "Crop", weather)
     if kaggle_diagnosis is not None and int(kaggle_diagnosis.get("confidence") or 0) >= 58:
         kaggle_diagnosis.setdefault("explanation_hinglish", "Diagnosis generated from Kaggle/PlantVillage disease references.")
         save_scan_history(user, kaggle_diagnosis)
-        return jsonify(attach_store_recommendation(build_scan_response_payload(kaggle_diagnosis, preview_url), kaggle_diagnosis.get("best_product", "")))
+        response_payload = attach_store_recommendation(
+            build_scan_response_payload(kaggle_diagnosis, preview_url),
+            kaggle_diagnosis.get("best_product", ""),
+        )
+        return jsonify_disease_result(user, response_payload)
     
     crop_input = (user.crop_type or "generic").lower().strip()
     if crop_input in ["paddy", "peddy", "dhan", "paddi"]:
@@ -11183,7 +13161,11 @@ def predict_disease():
 
     diagnosis["analysis_source"] = diagnosis.get("analysis_source") or ("Groq vision" if groq_used else "Expert AI" if success else "Visual fallback")
     save_scan_history(user, diagnosis)
-    return jsonify(attach_store_recommendation(build_scan_response_payload(diagnosis, preview_url), diagnosis.get("best_product", "")))
+    response_payload = attach_store_recommendation(
+        build_scan_response_payload(diagnosis, preview_url),
+        diagnosis.get("best_product", ""),
+    )
+    return jsonify_disease_result(user, response_payload)
 
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -11491,41 +13473,8 @@ def ai_chat():
     if not query:
         return jsonify({"success": False, "error": "No query provided"}), 400
 
-    history = sanitize_ai_chat_history(payload.get("history"))
-    context_query = build_ai_chat_context_query(query, history)
-    dataset_reply = lookup_ai_crop_doctor_local_qa(context_query)
-    if dataset_reply:
-        return jsonify({"success": True, "response": dataset_reply, "provider": "local_knowledge"})
-
-    fallback_reply = build_kisan_dost_reply(user, query, history=history)
-    groq_reply = ask_groq_ai_crop_doctor(user, query, history)
-    if groq_reply:
-        return jsonify({"success": True, "response": groq_reply, "provider": "groq"})
-
-    use_gemini_chat = os.getenv("USE_GEMINI_CHAT", "").strip().lower() in {"1", "true", "yes"}
-
-    if use_gemini_chat and GEMINI_API_KEY:
-        try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            recent_conversation = format_ai_chat_history_for_prompt(history)
-            persona = f"""
-            You are 'Kisan Dost', a friendly AI Agriculture Expert assistant.
-            The farmer is asking you questions via voice or text.
-            Understand follow-up questions using the recent conversation.
-            Keep your answers concise (max 4 sentences), practical, helpful, and in simple Hinglish (Hindi + English).
-            If the user asks a vague follow-up, infer the topic from the recent conversation before replying.
-            Farmer context: Location: {user.location or 'India'}, Crop: {user.crop_type or 'General'}.
-            """
-            prompt_parts = [persona.strip()]
-            if recent_conversation:
-                prompt_parts.append(f"Recent conversation:\n{recent_conversation}")
-            prompt_parts.append(f"Farmer Query: {query}")
-            response = model.generate_content("\n\n".join(prompt_parts))
-            return jsonify({"success": True, "response": response.text.strip(), "provider": "gemini"})
-        except Exception as e:
-            print(f"Chat API Error: {e}")
-
-    return jsonify({"success": True, "response": fallback_reply, "provider": "fallback"})
+    result = resolve_ai_chat_response(user, query, payload.get("history"))
+    return jsonify({"success": True, "response": result["response"], "provider": result["provider"]})
 
 
 @app.route("/ai-insights")

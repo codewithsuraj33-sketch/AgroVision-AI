@@ -1,9 +1,15 @@
 {% extends "admin/base.html" %}
 {% block title %}Products{% endblock %}
 {% block content %}
-  <section class="admin-page-head">
-    <h1>Products</h1>
-    <p>Add, edit, or delete store products.</p>
+  <section class="admin-page-head admin-page-head-split">
+    <div>
+      <h1>Agro Market Products</h1>
+      <p>Dataset, database, and admin listings ko yahin se sync aur manage karo.</p>
+    </div>
+    <form method="post" action="/admin/products/sync" class="admin-inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="admin-btn admin-btn-primary" type="submit">Sync Dataset Products</button>
+    </form>
   </section>
 
   {% if error %}
@@ -13,8 +19,27 @@
     <div class="admin-alert admin-alert-success">{{ success }}</div>
   {% endif %}
 
+  <section class="admin-cards">
+    <article class="admin-card admin-card-accent">
+      <div class="admin-card-label">Total Products</div>
+      <div class="admin-card-value">{{ product_summary.total }}</div>
+    </article>
+    <article class="admin-card">
+      <div class="admin-card-label">Organic Products</div>
+      <div class="admin-card-value">{{ product_summary.organic }}</div>
+    </article>
+    <article class="admin-card">
+      <div class="admin-card-label">Active Listings</div>
+      <div class="admin-card-value">{{ product_summary.active }}</div>
+    </article>
+    <article class="admin-card">
+      <div class="admin-card-label">Low Stock</div>
+      <div class="admin-card-value">{{ product_summary.low_stock }}</div>
+    </article>
+  </section>
+
   <section class="admin-panel">
-    <h2 class="admin-panel-title">Add Product</h2>
+    <h2 class="admin-panel-title">Add Agro Market Product</h2>
     <form method="post" enctype="multipart/form-data" class="admin-form admin-form-grid">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="admin-field">
@@ -66,7 +91,8 @@
   </section>
 
   <section class="admin-panel">
-    <h2 class="admin-panel-title">All Products</h2>
+    <h2 class="admin-panel-title">All Agro Market Products</h2>
+    <p class="admin-panel-copy">Organic products bhi isi table me category-wise dikhenge, aur dataset sync ke baad yahin refresh ho jayenge.</p>
     <div class="admin-table-wrap">
       <table class="admin-table">
         <thead>

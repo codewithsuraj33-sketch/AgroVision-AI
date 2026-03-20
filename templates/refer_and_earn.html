@@ -159,6 +159,26 @@
             gap: 0.75rem;
             margin-top: 1rem;
         }
+        .referral-share-target {
+            scroll-margin-top: 120px;
+        }
+        .referral-share-target:target {
+            animation: referralTargetPulse 0.8s ease;
+        }
+        @keyframes referralTargetPulse {
+            0% {
+                transform: translateY(0);
+                box-shadow: 0 0 0 0 rgba(125, 255, 46, 0.22);
+            }
+            60% {
+                transform: translateY(-1px);
+                box-shadow: 0 0 0 12px rgba(125, 255, 46, 0);
+            }
+            100% {
+                transform: translateY(0);
+                box-shadow: none;
+            }
+        }
         .refer-share-btn {
             display: inline-flex;
             align-items: center;
@@ -280,7 +300,10 @@
                 <button class="copy-btn" onclick="copyLink()">Copy Link</button>
             </div>
 
-            <div class="refer-actions">
+            <div class="refer-actions referral-share-target" id="referralShareCard">
+                <button class="refer-share-btn" type="button" onclick="shareReferral()">
+                    <i class="fas fa-share-nodes"></i> Share Referral
+                </button>
                 <a class="refer-share-btn" href="https://wa.me/?text={{ referral_link|urlencode }}" target="_blank" rel="noreferrer">
                     <i class="fab fa-whatsapp"></i> Share on WhatsApp
                 </a>
@@ -329,15 +352,72 @@
     </main>
 
     <script>
-        function copyCode() {
-            const code = document.getElementById('ref-code').innerText;
-            navigator.clipboard.writeText(code);
-            alert("Referral code copy ho gaya hai: " + code);
+        async function copyTextSafely(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (error) {
+                }
+            }
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.setAttribute('readonly', '');
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            textArea.style.pointerEvents = 'none';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            let copied = false;
+            try {
+                copied = document.execCommand('copy');
+            } catch (error) {
+                copied = false;
+            }
+            document.body.removeChild(textArea);
+            return copied;
         }
-        function copyLink() {
+        function openReferralShareWindow(text) {
+            const shareUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(shareUrl, '_blank', 'noopener');
+        }
+        async function copyCode() {
+            const code = document.getElementById('ref-code').innerText;
+            const copied = await copyTextSafely(code);
+            alert(copied ? "Referral code copy ho gaya hai: " + code : "Referral code select karke manually copy kar lo: " + code);
+        }
+        async function copyLink() {
             const link = document.getElementById('ref-link').innerText;
-            navigator.clipboard.writeText(link);
-            alert("Referral link copy ho gaya hai.");
+            const copied = await copyTextSafely(link);
+            alert(copied ? "Referral link copy ho gaya hai." : "Referral link manually copy kar lo.");
+        }
+        async function shareReferral() {
+            const link = document.getElementById('ref-link').innerText.trim();
+            const code = document.getElementById('ref-code').innerText.trim();
+            const shareData = {
+                title: 'AgroVision AI Referral',
+                text: `AgroVision AI join karo. Mera referral code use karo: ${code}`,
+                url: link
+            };
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                    return;
+                }
+            } catch (error) {
+                if (error && error.name === 'AbortError') {
+                    return;
+                }
+            }
+            const shareMessage = `${shareData.text}\n${shareData.url}`;
+            const copied = await copyTextSafely(shareMessage);
+            if (copied) {
+                alert("Referral details copy ho gaye. Ab aap manually share kar sakte ho.");
+                return;
+            }
+            openReferralShareWindow(shareMessage);
+            alert("Direct share window open kar diya gaya hai.");
         }
     </script>
 

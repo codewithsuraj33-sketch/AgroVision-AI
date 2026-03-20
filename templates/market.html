@@ -9,7 +9,7 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Store - AgroVision AI</title>
+  <title>Agro Market - AgroVision AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -38,8 +38,8 @@
     >
       <header class="store-hero">
         <div class="store-hero-copy">
-          <span class="store-kicker">AgroVision AI Smart Store</span>
-          <h1>Agro Vision Market</h1>
+          <span class="store-kicker">Agro Market</span>
+          <h1>Agro Market</h1>
           <p>Browse pesticides, fertilizers, seeds, tools, and organic inputs with smart disease-linked recommendations and instant Razorpay checkout.</p>
         </div>
 
@@ -62,22 +62,6 @@
           </article>
         </div>
       </header>
-
-      {% if store_page.recommended_product %}
-        <section class="agro-card store-ai-banner">
-          <div class="store-ai-banner-copy">
-            <span class="store-ai-label">AI Recommended</span>
-            <h2>{{ store_page.recommended_product.name }}</h2>
-            <p>{{ store_page.recommended_product.short_description }}</p>
-          </div>
-          <div class="store-ai-banner-actions">
-            <a class="store-secondary-button" href="{{ store_page.recommended_product.detail_url }}">View details</a>
-            <button class="store-primary-button" type="button" data-buy-product="{{ store_page.recommended_product.id }}" data-buy-source="store-banner">
-              Buy Now
-            </button>
-          </div>
-        </section>
-      {% endif %}
 
       <section class="agro-card store-toolbar">
         <form class="store-toolbar-form" action="/market" method="get" id="storeFilterForm">
@@ -108,7 +92,7 @@
         </form>
 
         <div class="store-toolbar-meta">
-          <strong id="storeResultsCount">{{ store_page.count }} products</strong>
+          <strong id="storeResultsCount">{{ store_page.total_count }} products</strong>
           <span>Search, diagnosis tags, aur crop-specific filtering se fast shortlist banao.</span>
         </div>
       </section>
@@ -143,8 +127,24 @@
         {% endfor %}
       </section>
 
+      {% if store_page.recommended_product %}
+        <section class="agro-card store-ai-banner">
+          <div class="store-ai-banner-copy">
+            <span class="store-ai-label">AI Recommended</span>
+            <h2>{{ store_page.recommended_product.name }}</h2>
+            <p>{{ store_page.recommended_product.short_description }}</p>
+          </div>
+          <div class="store-ai-banner-actions">
+            <a class="store-secondary-button" href="{{ store_page.recommended_product.detail_url }}">View details</a>
+            <button class="store-primary-button" type="button" data-buy-product="{{ store_page.recommended_product.id }}" data-buy-source="store-banner">
+              Buy Now
+            </button>
+          </div>
+        </section>
+      {% endif %}
+
       <section class="store-grid" id="storeGrid" aria-live="polite">
-        {% for product in store_page.all_products %}
+        {% for product in store_page.catalog_products %}
           <article
             class="store-card is-loading{% if store_page.recommended_product and product.slug == store_page.recommended_product.slug %} is-recommended{% endif %}"
             data-product-id="{{ product.id }}"

@@ -19,15 +19,27 @@
   <style>
     .settings-shell {
       display: grid;
-      gap: 20px;
+      gap: 22px;
     }
     .settings-flash {
-      padding: 14px 18px;
-      border-radius: 16px;
-      background: rgba(34, 185, 120, 0.16);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(34, 185, 120, 0.16), rgba(82, 206, 154, 0.1));
       color: #0f5132;
-      font-weight: 700;
+      font-weight: 800;
       border: 1px solid rgba(15, 81, 50, 0.12);
+      box-shadow: 0 16px 34px rgba(21, 94, 63, 0.08);
+    }
+    .settings-flash i {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(15, 81, 50, 0.08);
     }
     .settings-summary-grid {
       display: grid;
@@ -36,13 +48,38 @@
     }
     .settings-summary-card,
     .settings-card {
-      background: rgba(255, 255, 255, 0.94);
-      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.92));
+      border-radius: 24px;
       border: 1px solid rgba(15, 23, 42, 0.06);
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+      box-shadow: 0 20px 42px rgba(15, 23, 42, 0.06);
+      transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+      backdrop-filter: blur(14px);
     }
     .settings-summary-card {
-      padding: 18px;
+      padding: 18px 18px 16px;
+    }
+    .settings-summary-card:hover,
+    .settings-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 28px 52px rgba(15, 23, 42, 0.08);
+      border-color: rgba(59, 130, 246, 0.12);
+    }
+    .settings-summary-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .settings-summary-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #1d4ed8;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
     }
     .settings-summary-card span {
       color: #607087;
@@ -54,9 +91,13 @@
       font-size: 1.9rem;
       color: #162032;
     }
+    .settings-summary-card small {
+      color: #607087;
+      line-height: 1.55;
+    }
     .settings-layout {
       display: grid;
-      grid-template-columns: 280px minmax(0, 1fr);
+      grid-template-columns: 290px minmax(0, 1fr);
       gap: 20px;
       align-items: start;
     }
@@ -65,44 +106,139 @@
       display: grid;
       gap: 12px;
     }
+    .settings-nav {
+      position: sticky;
+      top: 24px;
+      padding: 10px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      backdrop-filter: blur(14px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
+    }
     .settings-card {
-      padding: 22px;
+      padding: 24px;
     }
     .settings-nav-link {
-      display: flex;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
       align-items: center;
       gap: 12px;
-      padding: 14px 16px;
-      border-radius: 16px;
+      padding: 14px 14px;
+      border-radius: 18px;
       text-decoration: none;
       color: #334155;
       font-weight: 700;
-      background: rgba(255, 255, 255, 0.72);
+      background: rgba(255, 255, 255, 0.68);
       border: 1px solid rgba(15, 23, 42, 0.06);
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .settings-nav-link i {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #33557e;
+      background: rgba(226, 236, 248, 0.88);
+    }
+    .settings-nav-copy {
+      display: grid;
+      gap: 2px;
+    }
+    .settings-nav-copy strong {
+      font-size: 0.96rem;
+    }
+    .settings-nav-copy small {
+      color: #6b7d95;
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+    .settings-nav-link em {
+      font-style: normal;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #8ba0ba;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .settings-nav-link:hover {
+      transform: translateX(2px);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
     }
     .settings-nav-link.is-active {
       background: linear-gradient(135deg, rgba(20, 184, 111, 0.14), rgba(52, 211, 153, 0.22));
       color: #0f5132;
       border-color: rgba(20, 184, 111, 0.22);
+      box-shadow: 0 18px 32px rgba(20, 184, 111, 0.1);
+    }
+    .settings-nav-link.is-active i {
+      color: #0f7a4d;
+      background: rgba(209, 250, 229, 0.92);
+    }
+    .settings-nav-link.is-active em {
+      color: #0f7a4d;
     }
     .settings-panel {
       display: none;
+      opacity: 0;
+      transform: translateY(6px);
     }
     .settings-panel.is-active {
       display: grid;
+      animation: settingsPanelIn 0.32s ease forwards;
     }
     .panel-head {
       display: flex;
       justify-content: space-between;
       gap: 12px;
       align-items: start;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
     }
     .panel-head p,
     .muted-text,
     .history-item small,
     .task-preview small {
       color: #607087;
+    }
+    .panel-head h2 {
+      margin: 0 0 6px;
+      font-size: 1.4rem;
+      color: #15263f;
+      letter-spacing: -0.03em;
+    }
+    .settings-notice-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .settings-notice-card {
+      display: grid;
+      gap: 8px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      background: linear-gradient(180deg, rgba(248, 251, 255, 0.92), rgba(240, 247, 252, 0.92));
+    }
+    .settings-notice-card span {
+      color: #6b7d95;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .settings-notice-card strong {
+      color: #14243e;
+      font-size: 1rem;
+    }
+    .settings-notice-card small {
+      color: #607087;
+      line-height: 1.5;
     }
     .settings-form-grid,
     .farm-summary-grid,
@@ -115,56 +251,185 @@
     .settings-form-grid .full {
       grid-column: 1 / -1;
     }
+    .field-card {
+      display: grid;
+      gap: 8px;
+    }
     .field-label {
       display: block;
-      margin-bottom: 6px;
       font-size: 0.82rem;
       font-weight: 700;
       color: #334155;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .field-shell {
+      position: relative;
     }
     .field-input,
     .field-textarea {
       width: 100%;
-      border-radius: 14px;
+      border-radius: 16px;
       border: 1px solid rgba(15, 23, 42, 0.12);
-      padding: 12px 14px;
+      padding: 13px 16px 13px 44px;
       font: inherit;
-      background: #fff;
+      background: rgba(255, 255, 255, 0.88);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    .field-textarea {
+      min-height: 110px;
+      padding-left: 16px;
+      resize: vertical;
+    }
+    .field-shell i {
+      position: absolute;
+      top: 50%;
+      left: 16px;
+      transform: translateY(-50%);
+      color: #6b7d95;
+      pointer-events: none;
+    }
+    .field-input:focus,
+    .field-textarea:focus {
+      outline: none;
+      border-color: rgba(37, 99, 235, 0.34);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      transform: translateY(-1px);
     }
     .toggle-list,
     .history-list,
     .task-preview-list {
       display: grid;
-      gap: 12px;
+      gap: 14px;
     }
     .toggle-row,
     .history-item,
     .task-preview,
     .mini-info-card {
-      border-radius: 18px;
+      border-radius: 20px;
       border: 1px solid rgba(15, 23, 42, 0.08);
-      background: #f8fafc;
+      background: linear-gradient(180deg, #f8fafc, #f1f6fb);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
     }
     .toggle-row {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
+      gap: 16px;
       align-items: center;
-      padding: 16px;
+      padding: 18px;
+      cursor: pointer;
+    }
+    .toggle-row:hover,
+    .history-item:hover,
+    .task-preview:hover,
+    .mini-info-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.05);
+      border-color: rgba(37, 99, 235, 0.12);
+    }
+    .toggle-copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+    .toggle-eyebrow {
+      color: #1d4ed8;
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
     .toggle-row strong {
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 0;
+      color: #13253e;
+      font-size: 1rem;
+    }
+    .toggle-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .toggle-state {
+      position: relative;
+      min-width: 80px;
+      padding: 6px 12px 6px 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(226, 232, 240, 0.62));
+      color: #607389;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 8px 18px rgba(15, 23, 42, 0.05);
+      transition:
+        background 0.24s ease,
+        color 0.24s ease,
+        border-color 0.24s ease,
+        box-shadow 0.24s ease,
+        transform 0.24s ease;
+    }
+    .toggle-state::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 58%);
+      pointer-events: none;
+    }
+    .toggle-state::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.72;
+      box-shadow: 0 0 0 4px rgba(100, 116, 139, 0.08);
+    }
+    .toggle-pill:checked + .toggle-state,
+    .toggle-state.is-on {
+      background: linear-gradient(135deg, rgba(20, 184, 111, 0.16), rgba(16, 150, 96, 0.08));
+      color: #0f7a4d;
+      border-color: rgba(20, 184, 111, 0.18);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.28),
+        0 12px 22px rgba(20, 184, 111, 0.12);
+      transform: translateY(-1px);
     }
     .toggle-pill {
       appearance: none;
-      width: 52px;
+      width: 72px;
       height: 30px;
       border-radius: 999px;
-      background: rgba(148, 163, 184, 0.35);
+      background: linear-gradient(180deg, rgba(203, 213, 225, 0.95), rgba(148, 163, 184, 0.46));
       position: relative;
+      overflow: hidden;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: background 0.24s ease, box-shadow 0.24s ease, transform 0.18s ease;
+      border: none;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 0 0 1px rgba(100, 116, 139, 0.14),
+        0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+    .toggle-pill::before {
+      content: "";
+      position: absolute;
+      inset: 5px 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.06));
+      opacity: 0.95;
+      transition: opacity 0.24s ease, transform 0.24s ease;
     }
     .toggle-pill::after {
       content: "";
@@ -174,21 +439,54 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: #fff;
-      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
-      transition: transform 0.2s ease;
+      background: radial-gradient(circle at 30% 30%, #ffffff, #eef4fb 68%, #dbe6f3 100%);
+      box-shadow:
+        0 8px 16px rgba(15, 23, 42, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.92),
+        0 0 0 1px rgba(148, 163, 184, 0.12);
+      transition:
+        transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.24s ease;
+    }
+    .toggle-pill:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.74),
+        inset 0 0 0 1px rgba(100, 116, 139, 0.16),
+        0 12px 22px rgba(15, 23, 42, 0.1);
     }
     .toggle-pill:checked {
-      background: #14b86f;
+      background: linear-gradient(135deg, #18c976, #109660);
+      box-shadow:
+        inset 0 0 0 1px rgba(16, 150, 96, 0.12),
+        inset 0 10px 16px rgba(255, 255, 255, 0.1),
+        0 14px 26px rgba(20, 184, 111, 0.24);
+    }
+    .toggle-pill:checked::before {
+      transform: translateX(6px);
+      opacity: 0.55;
     }
     .toggle-pill:checked::after {
-      transform: translateX(22px);
+      transform: translateX(42px);
+      box-shadow:
+        0 10px 18px rgba(8, 145, 92, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.94),
+        0 0 0 1px rgba(16, 150, 96, 0.14);
+    }
+    .toggle-pill:focus-visible {
+      outline: none;
+      box-shadow:
+        0 0 0 4px rgba(20, 184, 111, 0.16),
+        0 14px 24px rgba(20, 184, 111, 0.12);
+    }
+    .toggle-pill:active {
+      transform: scale(0.98);
     }
     .save-btn,
     .ghost-link {
       border: none;
-      border-radius: 14px;
-      padding: 12px 16px;
+      border-radius: 16px;
+      padding: 12px 18px;
       font-weight: 700;
       cursor: pointer;
       text-decoration: none;
@@ -196,14 +494,33 @@
       align-items: center;
       gap: 8px;
       width: fit-content;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     }
     .save-btn {
       background: linear-gradient(135deg, #14b86f, #0f9f5e);
       color: #fff;
+      box-shadow: 0 18px 30px rgba(20, 184, 111, 0.22);
     }
     .ghost-link {
-      background: rgba(59, 130, 246, 0.12);
+      background: rgba(59, 130, 246, 0.1);
       color: #1d4ed8;
+      border: 1px solid rgba(59, 130, 246, 0.12);
+    }
+    .save-btn:hover,
+    .ghost-link:hover {
+      transform: translateY(-1px);
+    }
+    .settings-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .settings-action-row small {
+      color: #607087;
+      line-height: 1.6;
     }
     .history-item {
       display: grid;
@@ -255,18 +572,181 @@
     .empty-state {
       padding: 24px 18px;
       border-radius: 18px;
-      background: #f8fafc;
+      background: linear-gradient(180deg, #f8fafc, #eff5fb);
       color: #607087;
       text-align: center;
+    }
+    @keyframes settingsPanelIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .settings-summary-card,
+      .settings-card,
+      .settings-nav-link,
+      .toggle-row,
+      .history-item,
+      .task-preview,
+      .mini-info-card,
+      .save-btn,
+      .ghost-link,
+      .field-input,
+      .field-textarea,
+      .toggle-state,
+      .toggle-pill,
+      .toggle-pill::before,
+      .toggle-pill::after {
+        transition: none;
+      }
+      .settings-panel.is-active {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+    }
+    [data-theme="dark"] .settings-flash {
+      color: #d3ffe8;
+      background: linear-gradient(135deg, rgba(17, 94, 89, 0.34), rgba(16, 185, 129, 0.16));
+      border-color: rgba(94, 234, 212, 0.14);
+    }
+    [data-theme="dark"] .settings-summary-card,
+    [data-theme="dark"] .settings-card,
+    [data-theme="dark"] .settings-nav,
+    [data-theme="dark"] .settings-notice-card,
+    [data-theme="dark"] .toggle-row,
+    [data-theme="dark"] .history-item,
+    [data-theme="dark"] .task-preview,
+    [data-theme="dark"] .mini-info-card,
+    [data-theme="dark"] .empty-state {
+      background: linear-gradient(180deg, rgba(11, 30, 47, 0.92), rgba(14, 39, 61, 0.92));
+      border-color: rgba(148, 163, 184, 0.12);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+    }
+    [data-theme="dark"] .settings-nav-link {
+      background: rgba(15, 35, 54, 0.74);
+      color: #d9ebff;
+      border-color: rgba(148, 163, 184, 0.08);
+    }
+    [data-theme="dark"] .settings-nav-link i {
+      background: rgba(30, 58, 85, 0.94);
+      color: #b8d7ff;
+    }
+    [data-theme="dark"] .settings-nav-link:hover {
+      background: rgba(20, 44, 67, 0.94);
+    }
+    [data-theme="dark"] .settings-nav-copy small,
+    [data-theme="dark"] .panel-head p,
+    [data-theme="dark"] .muted-text,
+    [data-theme="dark"] .history-item small,
+    [data-theme="dark"] .task-preview small,
+    [data-theme="dark"] .settings-summary-card span,
+    [data-theme="dark"] .settings-summary-card small,
+    [data-theme="dark"] .settings-notice-card span,
+    [data-theme="dark"] .settings-notice-card small,
+    [data-theme="dark"] .toggle-state,
+    [data-theme="dark"] .mini-info-card span,
+    [data-theme="dark"] .task-preview span,
+    [data-theme="dark"] .history-time,
+    [data-theme="dark"] .empty-state,
+    [data-theme="dark"] .settings-action-row small {
+      color: #90a9c7;
+    }
+    [data-theme="dark"] .settings-summary-card strong,
+    [data-theme="dark"] .panel-head h2,
+    [data-theme="dark"] .toggle-row strong,
+    [data-theme="dark"] .settings-notice-card strong,
+    [data-theme="dark"] .mini-info-card strong,
+    [data-theme="dark"] .history-item strong,
+    [data-theme="dark"] .task-preview strong,
+    [data-theme="dark"] .field-label {
+      color: #eef6ff;
+    }
+    [data-theme="dark"] .field-input,
+    [data-theme="dark"] .field-textarea {
+      background: rgba(10, 25, 39, 0.9);
+      border-color: rgba(148, 163, 184, 0.14);
+      color: #f3f8ff;
+    }
+    [data-theme="dark"] .field-shell i {
+      color: #9ab5d5;
+    }
+    [data-theme="dark"] .toggle-pill {
+      background: linear-gradient(180deg, rgba(71, 85, 105, 0.9), rgba(30, 41, 59, 0.88));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 0 0 1px rgba(148, 163, 184, 0.12),
+        0 10px 18px rgba(2, 6, 23, 0.26);
+    }
+    [data-theme="dark"] .toggle-pill::before {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+    }
+    [data-theme="dark"] .toggle-pill:checked {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+    [data-theme="dark"] .toggle-state {
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.88), rgba(15, 23, 42, 0.78));
+      color: #a9bdd5;
+      border-color: rgba(148, 163, 184, 0.16);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 10px 18px rgba(2, 6, 23, 0.18);
+    }
+    [data-theme="dark"] .toggle-state::before {
+      box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.08);
+    }
+    [data-theme="dark"] .toggle-pill:checked + .toggle-state,
+    [data-theme="dark"] .toggle-state.is-on {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.12));
+      color: #b8ffe1;
+      border-color: rgba(16, 185, 129, 0.16);
     }
     @media (max-width: 1100px) {
       .settings-summary-grid,
       .settings-layout,
+      .settings-notice-strip,
       .settings-form-grid,
       .farm-summary-grid,
       .security-grid,
       .account-grid {
         grid-template-columns: 1fr;
+      }
+      .settings-nav {
+        position: static;
+      }
+      .settings-action-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+    @media (max-width: 780px) {
+      .settings-card {
+        padding: 18px;
+      }
+      .settings-nav-link {
+        grid-template-columns: 42px minmax(0, 1fr);
+      }
+      .settings-nav-link em {
+        display: none;
+      }
+      .panel-head {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .toggle-row {
+        align-items: flex-start;
+      }
+      .history-item {
+        grid-template-columns: 1fr;
+      }
+      .toggle-control {
+        width: 100%;
+        justify-content: space-between;
       }
     }
   </style>
@@ -295,27 +775,42 @@
       </header>
 
       {% if success %}
-        <div class="settings-flash">{{ success }}</div>
+        <div class="settings-flash">
+          <i class="fas fa-circle-check" aria-hidden="true"></i>
+          <span>{{ success }}</span>
+        </div>
       {% endif %}
 
       <section class="settings-summary-grid">
         <article class="settings-summary-card">
-          <span>Enabled Alerts</span>
+          <div class="settings-summary-top">
+            <span>Enabled Alerts</span>
+            <div class="settings-summary-icon"><i class="fas fa-bell"></i></div>
+          </div>
           <strong>{{ settings_page.enabled_alert_count }}</strong>
           <small>Crop, disease, weather, and data triggers</small>
         </article>
         <article class="settings-summary-card">
-          <span>Notification Channels</span>
+          <div class="settings-summary-top">
+            <span>Notification Channels</span>
+            <div class="settings-summary-icon"><i class="fas fa-tower-broadcast"></i></div>
+          </div>
           <strong>{{ settings_page.enabled_channel_count }}</strong>
           <small>Email, SMS, and daily briefing options</small>
         </article>
         <article class="settings-summary-card">
-          <span>Farm Records</span>
+          <div class="settings-summary-top">
+            <span>Farm Records</span>
+            <div class="settings-summary-icon"><i class="fas fa-tractor"></i></div>
+          </div>
           <strong>{{ settings_page.farm_count }}</strong>
           <small>{{ settings_page.primary_farm.name if settings_page.primary_farm else 'Primary farm pending' }}</small>
         </article>
         <article class="settings-summary-card">
-          <span>Open Tasks</span>
+          <div class="settings-summary-top">
+            <span>Open Tasks</span>
+            <div class="settings-summary-icon"><i class="fas fa-list-check"></i></div>
+          </div>
           <strong>{{ settings_page.task_summary.open_count }}</strong>
           <small>{{ settings_page.task_summary.overdue_count }} overdue now</small>
         </article>
@@ -323,25 +818,45 @@
 
       <section class="settings-layout">
         <div class="settings-nav">
-          <a href="#" class="settings-nav-link is-active" data-tab="notifications">
+          <a href="#notifications" class="settings-nav-link is-active" data-tab="notifications">
             <i class="fas fa-bell"></i>
-            <span>Notifications</span>
+            <span class="settings-nav-copy">
+              <strong>Notifications</strong>
+              <small>Alerts and delivery channels</small>
+            </span>
+            <em>01</em>
           </a>
-          <a href="#" class="settings-nav-link" data-tab="history">
+          <a href="#history" class="settings-nav-link" data-tab="history">
             <i class="fas fa-clock-rotate-left"></i>
-            <span>History</span>
+            <span class="settings-nav-copy">
+              <strong>History</strong>
+              <small>Recent account and farm activity</small>
+            </span>
+            <em>02</em>
           </a>
-          <a href="#" class="settings-nav-link" data-tab="account">
+          <a href="#account" class="settings-nav-link" data-tab="account">
             <i class="fas fa-user"></i>
-            <span>Account</span>
+            <span class="settings-nav-copy">
+              <strong>Account</strong>
+              <small>Identity and owner details</small>
+            </span>
+            <em>03</em>
           </a>
-          <a href="#" class="settings-nav-link" data-tab="farm">
+          <a href="#farm" class="settings-nav-link" data-tab="farm">
             <i class="fas fa-tractor"></i>
-            <span>Farm Ops</span>
+            <span class="settings-nav-copy">
+              <strong>Farm Ops</strong>
+              <small>Farm summary and planner preview</small>
+            </span>
+            <em>04</em>
           </a>
-          <a href="#" class="settings-nav-link" data-tab="security">
+          <a href="#security" class="settings-nav-link" data-tab="security">
             <i class="fas fa-shield-halved"></i>
-            <span>Security</span>
+            <span class="settings-nav-copy">
+              <strong>Security</strong>
+              <small>Password and account health</small>
+            </span>
+            <em>05</em>
           </a>
         </div>
 
@@ -354,80 +869,135 @@
               </div>
             </div>
 
+            <div class="settings-notice-strip">
+              <article class="settings-notice-card">
+                <span>Live Alert Status</span>
+                <strong>{{ settings_page.enabled_alert_count }} alerts enabled</strong>
+                <small>Crop, disease, weather, and refresh triggers are tracked from here.</small>
+              </article>
+              <article class="settings-notice-card">
+                <span>Delivery Mix</span>
+                <strong>{{ settings_page.enabled_channel_count }} active channels</strong>
+                <small>Email, SMS, and daily briefing can be mixed based on urgency.</small>
+              </article>
+              <article class="settings-notice-card">
+                <span>Daily Briefing</span>
+                <strong>{% if settings_page.preferences.daily_briefing %}Enabled{% else %}Paused{% endif %}</strong>
+                <small>Use daily briefing for one compact farm summary instead of many interruptions.</small>
+              </article>
+            </div>
+
             <form method="POST">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <div class="toggle-list">
                 <label class="toggle-row">
-                  <div>
+                  <div class="toggle-copy">
+                    <span class="toggle-eyebrow">Field signals</span>
                     <strong>Crop alerts</strong>
                     <span class="muted-text">Growth, stage, and crop-specific nudges</span>
                   </div>
-                  <input class="toggle-pill" type="checkbox" name="crop_alerts" {% if settings_page.preferences.crop_alerts %}checked{% endif %}>
+                  <div class="toggle-control">
+                    <input class="toggle-pill" type="checkbox" name="crop_alerts" {% if settings_page.preferences.crop_alerts %}checked{% endif %}>
+                    <span class="toggle-state" data-off="Off" data-on="On"></span>
+                  </div>
                 </label>
 
                 <label class="toggle-row">
-                  <div>
+                  <div class="toggle-copy">
+                    <span class="toggle-eyebrow">Plant health</span>
                     <strong>Disease alerts</strong>
                     <span class="muted-text">Follow-up reminders after scans and disease risk notices</span>
                   </div>
-                  <input class="toggle-pill" type="checkbox" name="disease_alerts" {% if settings_page.preferences.disease_alerts %}checked{% endif %}>
+                  <div class="toggle-control">
+                    <input class="toggle-pill" type="checkbox" name="disease_alerts" {% if settings_page.preferences.disease_alerts %}checked{% endif %}>
+                    <span class="toggle-state" data-off="Off" data-on="On"></span>
+                  </div>
                 </label>
 
                 <label class="toggle-row">
-                  <div>
+                  <div class="toggle-copy">
+                    <span class="toggle-eyebrow">Climate watch</span>
                     <strong>Weather alerts</strong>
                     <span class="muted-text">Rain, heat, and sudden condition changes</span>
                   </div>
-                  <input class="toggle-pill" type="checkbox" name="weather_alerts" {% if settings_page.preferences.weather_alerts %}checked{% endif %}>
+                  <div class="toggle-control">
+                    <input class="toggle-pill" type="checkbox" name="weather_alerts" {% if settings_page.preferences.weather_alerts %}checked{% endif %}>
+                    <span class="toggle-state" data-off="Off" data-on="On"></span>
+                  </div>
                 </label>
 
                 <label class="toggle-row">
-                  <div>
+                  <div class="toggle-copy">
+                    <span class="toggle-eyebrow">Dashboard sync</span>
                     <strong>Data update alerts</strong>
                     <span class="muted-text">Fresh insights when dashboard data refreshes</span>
                   </div>
-                  <input class="toggle-pill" type="checkbox" name="data_updates" {% if settings_page.preferences.data_updates %}checked{% endif %}>
+                  <div class="toggle-control">
+                    <input class="toggle-pill" type="checkbox" name="data_updates" {% if settings_page.preferences.data_updates %}checked{% endif %}>
+                    <span class="toggle-state" data-off="Off" data-on="On"></span>
+                  </div>
                 </label>
               </div>
 
               <div class="settings-form-grid" style="margin-top:18px;">
-                <div>
+                <div class="field-card">
                   <label class="field-label" for="alertEmail">Alert Email</label>
-                  <input class="field-input" id="alertEmail" name="alert_email" type="email" value="{{ settings_page.preferences.alert_email or user.email or '' }}" placeholder="you@example.com">
+                  <div class="field-shell">
+                    <i class="fas fa-envelope"></i>
+                    <input class="field-input" id="alertEmail" name="alert_email" type="email" value="{{ settings_page.preferences.alert_email or user.email or '' }}" placeholder="you@example.com">
+                  </div>
                 </div>
-                <div>
+                <div class="field-card">
                   <label class="field-label" for="alertPhone">Alert Phone</label>
-                  <input class="field-input" id="alertPhone" name="alert_phone" type="tel" value="{{ settings_page.preferences.alert_phone or user.phone or '' }}" placeholder="+91 9876543210">
+                  <div class="field-shell">
+                    <i class="fas fa-phone-volume"></i>
+                    <input class="field-input" id="alertPhone" name="alert_phone" type="tel" value="{{ settings_page.preferences.alert_phone or user.phone or '' }}" placeholder="+91 9876543210">
+                  </div>
                 </div>
 
                 <label class="toggle-row full">
-                  <div>
+                  <div class="toggle-copy">
+                    <span class="toggle-eyebrow">Primary route</span>
                     <strong>Email delivery</strong>
                     <span class="muted-text">Send important alerts and summaries to email</span>
                   </div>
-                  <input class="toggle-pill" type="checkbox" name="email_alerts" {% if settings_page.preferences.email_alerts %}checked{% endif %}>
+                  <div class="toggle-control">
+                    <input class="toggle-pill" type="checkbox" name="email_alerts" {% if settings_page.preferences.email_alerts %}checked{% endif %}>
+                    <span class="toggle-state" data-off="Off" data-on="On"></span>
+                  </div>
                 </label>
 
                 <label class="toggle-row full">
-                  <div>
+                  <div class="toggle-copy">
+                    <span class="toggle-eyebrow">Urgent route</span>
                     <strong>SMS / WhatsApp delivery</strong>
                     <span class="muted-text">Receive urgent phone alerts through your configured Twilio channel</span>
                   </div>
-                  <input class="toggle-pill" type="checkbox" name="sms_alerts" {% if settings_page.preferences.sms_alerts %}checked{% endif %}>
+                  <div class="toggle-control">
+                    <input class="toggle-pill" type="checkbox" name="sms_alerts" {% if settings_page.preferences.sms_alerts %}checked{% endif %}>
+                    <span class="toggle-state" data-off="Off" data-on="On"></span>
+                  </div>
                 </label>
 
                 <label class="toggle-row full">
-                  <div>
+                  <div class="toggle-copy">
+                    <span class="toggle-eyebrow">Digest mode</span>
                     <strong>Daily briefing</strong>
                     <span class="muted-text">Compact daily summary of tasks, alerts, and crop conditions</span>
                   </div>
-                  <input class="toggle-pill" type="checkbox" name="daily_briefing" {% if settings_page.preferences.daily_briefing %}checked{% endif %}>
+                  <div class="toggle-control">
+                    <input class="toggle-pill" type="checkbox" name="daily_briefing" {% if settings_page.preferences.daily_briefing %}checked{% endif %}>
+                    <span class="toggle-state" data-off="Off" data-on="On"></span>
+                  </div>
                 </label>
               </div>
 
-              <button type="submit" class="save-btn" style="margin-top:18px;">
-                <i class="fas fa-floppy-disk"></i> Save Settings
-              </button>
+              <div class="settings-action-row">
+                <small>Only notification preferences and delivery fields update from this form. Other tabs remain unchanged.</small>
+                <button type="submit" class="save-btn">
+                  <i class="fas fa-floppy-disk"></i> Save Settings
+                </button>
+              </div>
             </form>
           </section>
 
@@ -560,13 +1130,32 @@
         farm: document.getElementById('panel-farm'),
         security: document.getElementById('panel-security')
       };
+      const toggleInputs = Array.from(document.querySelectorAll('.toggle-pill'));
 
-      function activateTab(tabKey) {
-        navLinks.forEach((link) => link.classList.toggle('is-active', link.dataset.tab === tabKey));
+      function syncToggleState(input) {
+        const state = input.parentElement && input.parentElement.querySelector('.toggle-state');
+        if (!state) return;
+        const isChecked = !!input.checked;
+        state.textContent = isChecked ? (state.dataset.on || 'Enabled') : (state.dataset.off || 'Paused');
+        state.classList.toggle('is-on', isChecked);
+      }
+
+      function activateTab(tabKey, syncHash = true) {
+        const nextTab = Object.prototype.hasOwnProperty.call(panels, tabKey) ? tabKey : 'notifications';
+        navLinks.forEach((link) => {
+          const isActive = link.dataset.tab === nextTab;
+          link.classList.toggle('is-active', isActive);
+          link.setAttribute('aria-current', isActive ? 'page' : 'false');
+        });
         Object.entries(panels).forEach(([key, panel]) => {
           if (!panel) return;
-          panel.classList.toggle('is-active', key === tabKey);
+          const isActive = key === nextTab;
+          panel.classList.toggle('is-active', isActive);
+          panel.toggleAttribute('hidden', !isActive);
         });
+        if (syncHash) {
+          window.history.replaceState(null, '', `#${nextTab}`);
+        }
       }
 
       navLinks.forEach((link) => {
@@ -574,6 +1163,21 @@
           event.preventDefault();
           activateTab(link.dataset.tab || 'notifications');
         });
+      });
+
+      toggleInputs.forEach((input) => {
+        syncToggleState(input);
+        input.addEventListener('change', () => syncToggleState(input));
+      });
+
+      const initialTab = (window.location.hash || '').replace('#', '');
+      activateTab(initialTab || 'notifications', false);
+
+      window.addEventListener('hashchange', () => {
+        const hashTab = (window.location.hash || '').replace('#', '');
+        if (hashTab) {
+          activateTab(hashTab, false);
+        }
       });
     });
   </script>
