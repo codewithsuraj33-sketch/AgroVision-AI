@@ -26,7 +26,7 @@ from urllib.request import Request, urlopen
 
 import google.generativeai as genai  # type: ignore
 import numpy as np  # type: ignore
-from flask import Flask, Response, abort, jsonify, redirect, render_template, request, session  # type: ignore
+from flask import Flask, Response, abort, has_app_context, jsonify, redirect, render_template, request, send_file, session  # type: ignore
 from flask_sqlalchemy import SQLAlchemy  # type: ignore
 from PIL import Image, ImageOps, UnidentifiedImageError  # type: ignore
 from werkzeug.security import check_password_hash, generate_password_hash  # type: ignore
@@ -97,8 +97,8 @@ def normalize_pdf_text(value, max_length=None):
     if not text:
         return ""
     if max_length is not None and max_length > 3 and len(text) > max_length:
-        text = text[: max_length - 3].rstrip() + "..."
-    return text.encode("ascii", "replace").decode("ascii")
+        text = str(text)[0 : int(max_length) - 3].rstrip() + "..."
+    return str(text.encode("ascii", "replace").decode("ascii"))
 
 
 def slugify_download_token(value, default="report"):
@@ -217,7 +217,7 @@ def build_pdf_blocks(meta_lines=None, sections=None):
 
         chunk_size = 13
         for chunk_index in range(0, len(section_lines), chunk_size):
-            chunk_lines = section_lines[chunk_index:chunk_index + chunk_size]
+            chunk_lines = list(section_lines or [])[int(chunk_index) : int(chunk_index) + int(chunk_size)]
             chunk_heading = heading if chunk_index == 0 else f"{heading} (cont.)"
             blocks.append(
                 {
@@ -266,7 +266,7 @@ def build_pdf_page_commands(title, blocks, page_number, page_count):
     commands.extend(build_pdf_rect_command(0, 676, page_width, 116, fill_color=(0.07, 0.32, 0.22)))
     commands.extend(build_pdf_rect_command(0, 664, page_width, 12, fill_color=(0.95, 0.73, 0.16)))
 
-    title_lines = wrap_pdf_line(title, width=34, bullet=False)[:2]
+    title_lines = list(wrap_pdf_line(title, width=34, bullet=False) or [])[0:2]
     commands.extend(build_pdf_text_commands(["AgroVision AI"], margin_x, 756, font="F2", size=11, leading=13, color=(1, 1, 1)))
     commands.extend(build_pdf_text_commands(title_lines, margin_x, 730, font="F2", size=22, leading=24, color=(1, 1, 1)))
     commands.extend(
@@ -410,7 +410,7 @@ def build_text_pdf_bytes(title, meta_lines=None, sections=None):
     xref_offset = len(pdf)
     pdf.extend(f"xref\n0 {len(offsets)}\n".encode("ascii"))
     pdf.extend(b"0000000000 65535 f \n")
-    for offset in offsets[1:]:
+    for offset in list(offsets)[int(1) : len(list(offsets))]:
         pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
     pdf.extend(
         (
@@ -424,10 +424,13 @@ def build_text_pdf_bytes(title, meta_lines=None, sections=None):
 def build_pdf_download_response(filename, title, meta_lines=None, sections=None):
     safe_filename = f"{slugify_download_token(filename)}.pdf"
     pdf_bytes = build_text_pdf_bytes(title, meta_lines=meta_lines, sections=sections)
-    return Response(
-        pdf_bytes,
+    download_requested = str(request.args.get("download") or "").strip().lower() in {"1", "true", "yes", "on"}
+    return send_file(
+        BytesIO(pdf_bytes),
         mimetype="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'},
+        as_attachment=download_requested,
+        download_name=safe_filename,
+        max_age=0,
     )
 
 
@@ -564,7 +567,7 @@ else:
 
 database_url = (os.getenv("DATABASE_URL") or "").strip()
 if database_url.startswith("postgres://"):
-    database_url = "postgresql://" + database_url[len("postgres://"):]
+    database_url = "postgresql://" + str(database_url)[len("postgres://") :]
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -1985,7 +1988,7 @@ def save_profile_photo_upload(file_storage, prefix):
     if suffix not in ALLOWED_IMAGE_SUFFIXES:
         raise ValueError("Only PNG, JPG, JPEG, or WEBP images are allowed.")
 
-    file_name = f"{prefix}_{uuid.uuid4().hex[:12]}{suffix}"
+    file_name = f"{prefix}_{str(uuid.uuid4().hex)[0:12]}{suffix}"
     save_path = UPLOADS_DIR / file_name
     file_storage.save(str(save_path))
     return file_name
@@ -1998,8 +2001,8 @@ def save_product_image_upload(file_storage, slug_hint="product"):
     if suffix not in ALLOWED_IMAGE_SUFFIXES:
         raise ValueError("Only PNG, JPG, JPEG, or WEBP images are allowed.")
 
-    safe_hint = slugify_crop_name(slug_hint or "product")[:28] or "product"
-    file_name = f"{safe_hint}_{uuid.uuid4().hex[:12]}.jpg"
+    safe_hint = str(slugify_crop_name(slug_hint or "product"))[0:28] or "product"
+    file_name = f"{safe_hint}_{str(uuid.uuid4().hex)[0:12]}.jpg"
     save_path = PRODUCTS_UPLOAD_DIR / file_name
 
     # Normalize all uploads to a square JPEG for consistent store UI.
@@ -2189,6 +2192,7 @@ def send_resend_email(target_email, subject, text_content, html_content=None, *,
     request_headers = {
         "Authorization": f"Bearer {RESEND_API_KEY}",
         "Content-Type": "application/json",
+        "User-Agent": f"{APP_DISPLAY_NAME}/1.0",
     }
 
     try:
@@ -2209,7 +2213,8 @@ def send_resend_email(target_email, subject, text_content, html_content=None, *,
     except HTTPError as exc:
         error_body = ""
         try:
-            error_payload = json.loads(exc.read().decode("utf-8"))
+            raw_error = exc.read().decode("utf-8")
+            error_payload = json.loads(raw_error)
             if isinstance(error_payload, dict):
                 error_body = str(error_payload.get("message") or error_payload.get("error") or error_payload).strip()
             else:
@@ -2289,7 +2294,8 @@ def send_otp_email(target_email, otp):
     if OTP_EMAIL_EMBED_LOGO:
         logo_bytes = load_email_logo_bytes()
         if logo_bytes:
-            logo_cid = make_msgid(domain="agrovisionai.local")[1:-1]
+            logo_cid = str(make_msgid(domain="agrovisionai.local"))[1:-1]
+
 
     msg = EmailMessage()
     msg["Subject"] = subject
@@ -2301,15 +2307,13 @@ def send_otp_email(target_email, otp):
     msg.add_alternative(build_otp_email_html(otp, logo_cid=logo_cid), subtype="html")
 
     if logo_bytes and logo_cid:
-        html_part = msg.get_payload()[-1]
-        html_part.add_related(
+        msg.add_related(
             logo_bytes,
             maintype="image",
             subtype=EMAIL_LOGO_SUBTYPE,
             cid=f"<{logo_cid}>",
             filename=EMAIL_LOGO_FILENAME,
         )
-
     return send_smtp_message(msg, label="otp email")
 
 
@@ -2391,15 +2395,45 @@ def calculate_carbon_credits(user):
     }
     
     crop_type = (user.crop_type or "generic").lower()
+
+
+def clamp(value, lower, upper):
+    return max(lower, min(value, upper))
+
+def calculate_carbon_credits(user):
+    """
+    Simulates carbon credit calculation based on farm size and crop type.
+    """
+    # Logic: 1 hectare of farm sequestrates roughly 1-3 tonnes of CO2 per year depending on crop
+    farm_size_str = user.farm_size or "1"
+    try:
+        # Extract number from "5 Acres" or "2 Hectares"
+        size = float(farm_size_str.split()[0])
+        # Convert to hectares if needed (rough estimation)
+        if "acre" in farm_size_str.lower():
+            size = size * 0.404
+    except:
+        size = 1.0
+        
+    # Standard rates (simulated)
+    crop_multipliers = {
+        "rice": 1.8,
+        "wheat": 2.2,
+        "maize": 2.5,
+        "sugarcane": 3.5,
+        "generic": 2.0
+    }
+    
+    crop_type = (user.crop_type or "generic").lower()
     multiplier = crop_multipliers.get(crop_type, 2.0)
     
     total_co2 = size * multiplier
     credits = total_co2 * 0.85 # Efficiency factor
     
     return {
-        "co2_tonnes": round(total_co2, 2), # type: ignore
-        "credits": round(credits, 1), # type: ignore
-        "impact_level": "Outstanding" if credits > 10 else ("Significant" if credits > 5 else "Good")
+        "co2_tonnes": float(int(float(total_co2 or 0) * 100) / 100.0),
+        "credits": float(int(float(credits or 0) * 10) / 10.0),
+        "impact_level": "Outstanding" if (credits or 0) > 10 else ("Significant" if (credits or 0) > 5 else "Good")
     }
 
 
@@ -2712,6 +2746,9 @@ AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS = {
     "agriculture", "farming", "farm", "crop", "plant", "technology", "system",
 }
 
+AI_CROP_DOCTOR_FUZZY_TOKEN_THRESHOLD = 0.82
+AI_CROP_DOCTOR_FUZZY_PHRASE_THRESHOLD = 0.86
+
 
 AI_CROP_DOCTOR_CHAT_INTENT_ALIAS_MAP = {
     "fallback_help": "general_help",
@@ -2766,8 +2803,8 @@ def normalize_ai_crop_doctor_match_text(text):
     tokens = []
     for raw_token in re.findall(r"[a-z0-9\u0900-\u097f]+", normalized_source):
         token = AI_CROP_DOCTOR_LOCAL_QA_TOKEN_ALIASES.get(raw_token, raw_token)
-        if token.endswith("s") and len(token) > 4 and token not in {"ph", "tips"}:
-            token = token[:-1]
+        if token and token.endswith("s") and len(token) > 4 and token not in {"ph", "tips"}:
+            token = str(token)[:-1]
         tokens.append(token)
     return " ".join(tokens).strip()
 
@@ -2779,6 +2816,78 @@ def extract_ai_crop_doctor_match_tokens(text):
         for token in normalized_text.split()
         if token and token not in AI_CROP_DOCTOR_LOCAL_QA_STOPWORDS
     }
+
+
+def build_ai_crop_doctor_token_signature(text):
+    return " ".join(sorted(extract_ai_crop_doctor_match_tokens(text)))
+
+
+def compute_ai_crop_doctor_fuzzy_similarity(left, right):
+    normalized_left = normalize_ai_crop_doctor_match_text(left)
+    normalized_right = normalize_ai_crop_doctor_match_text(right)
+    if not normalized_left or not normalized_right:
+        return 0.0
+
+    compact_left = normalized_left.replace(" ", "")
+    compact_right = normalized_right.replace(" ", "")
+    token_signature_left = build_ai_crop_doctor_token_signature(normalized_left)
+    token_signature_right = build_ai_crop_doctor_token_signature(normalized_right)
+
+    similarity_scores = [
+        SequenceMatcher(None, normalized_left, normalized_right).ratio(),
+        SequenceMatcher(None, compact_left, compact_right).ratio(),
+    ]
+    if token_signature_left and token_signature_right:
+        similarity_scores.append(SequenceMatcher(None, token_signature_left, token_signature_right).ratio())
+
+    shorter_text = normalized_left if len(normalized_left) <= len(normalized_right) else normalized_right
+    longer_text = normalized_right if shorter_text == normalized_left else normalized_left
+    if len(shorter_text) >= 5 and shorter_text in longer_text:
+        similarity_scores.append(min(1.0, 0.9 + (len(shorter_text) / max(len(longer_text), 1)) * 0.08))
+
+    return max(similarity_scores)
+
+
+def count_ai_crop_doctor_fuzzy_token_matches(query_tokens, candidate_tokens, threshold=AI_CROP_DOCTOR_FUZZY_TOKEN_THRESHOLD):
+    normalized_query_tokens = [str(token or "").strip() for token in (query_tokens or []) if str(token or "").strip()]
+    normalized_candidate_tokens = [str(token or "").strip() for token in (candidate_tokens or []) if str(token or "").strip()]
+    if not normalized_query_tokens or not normalized_candidate_tokens:
+        return 0
+
+    match_count = 0
+    used_candidates = set()
+    for query_token in normalized_query_tokens:
+        if len(query_token) < 5:
+            continue
+        best_index = None
+        best_score = 0.0
+        for index, candidate_token in enumerate(normalized_candidate_tokens):
+            if index in used_candidates or len(candidate_token) < 5:
+                continue
+            if abs(len(query_token) - len(candidate_token)) > 4:
+                continue
+            similarity_score = SequenceMatcher(None, query_token, candidate_token).ratio()
+            if similarity_score > best_score:
+                best_score = similarity_score
+                best_index = index
+        if best_index is not None and best_score >= threshold:
+            used_candidates.add(best_index)
+            match_count += 1
+    return match_count
+
+
+def get_ai_crop_doctor_best_fuzzy_score(query_text, candidates):
+    normalized_query = normalize_ai_crop_doctor_match_text(query_text)
+    if len(normalized_query.replace(" ", "")) < 5:
+        return 0.0
+
+    best_score = 0.0
+    for candidate in candidates or []:
+        normalized_candidate = normalize_ai_crop_doctor_match_text(candidate)
+        if len(normalized_candidate.replace(" ", "")) < 4:
+            continue
+        best_score = max(best_score, compute_ai_crop_doctor_fuzzy_similarity(normalized_query, normalized_candidate))
+    return best_score
 
 
 def format_ai_crop_doctor_products(products):
@@ -2801,7 +2910,7 @@ def join_ai_crop_doctor_list(values, limit=3):
     cleaned_values = [str(value or "").strip() for value in values if str(value or "").strip()]
     if not cleaned_values:
         return ""
-    return ", ".join(cleaned_values[:limit])
+    return ", ".join(list(cleaned_values)[:limit])
 
 
 def format_ai_crop_doctor_structured_answer(answer, language="Hinglish", follow_up=None):
@@ -3013,10 +3122,16 @@ def load_ai_crop_doctor_chat_match_entries():
             continue
         expected_intent = str(item.get("expected_intent") or "").strip().lower()
         resolved_tag = AI_CROP_DOCTOR_CHAT_INTENT_ALIAS_MAP.get(expected_intent, expected_intent)
-        target_entry = intent_index.get(resolved_tag)
+        target_entry = None
+        if isinstance(intent_index, dict):
+            target_entry = intent_index.get(resolved_tag)
         if target_entry is not None:
-            if question not in target_entry["patterns"]:
-                target_entry["patterns"].append(question)
+            patterns = target_entry.get("patterns", [])
+            if not isinstance(patterns, list):
+                patterns = []
+                target_entry["patterns"] = patterns
+            if question not in patterns:
+                patterns.append(question)
 
     AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE = entries
     return AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE
@@ -3057,6 +3172,7 @@ def lookup_ai_crop_doctor_disease_dataset_answer(query_text, language="Hinglish"
     best_score = 0.0
     best_overlap = 0
     best_name_hit = False
+    best_fuzzy_score = 0.0
 
     for entry in load_disease_dataset().values():
         disease_name = str(entry.get("name") or "").strip()
@@ -3081,6 +3197,7 @@ def lookup_ai_crop_doctor_disease_dataset_answer(query_text, language="Hinglish"
         signature_tokens = extract_ai_crop_doctor_match_tokens(" ".join(signature_parts))
         overlap = len(strong_query_tokens & signature_tokens)
         disease_overlap = len(strong_query_tokens & disease_name_tokens)
+        fuzzy_overlap = count_ai_crop_doctor_fuzzy_token_matches(strong_query_tokens, signature_tokens)
         name_hit = bool(
             disease_name_normalized
             and (
@@ -3088,13 +3205,26 @@ def lookup_ai_crop_doctor_disease_dataset_answer(query_text, language="Hinglish"
                 or normalized_query in disease_name_normalized
             )
         )
+        fuzzy_score = get_ai_crop_doctor_best_fuzzy_score(
+            normalized_query,
+            [
+                disease_name,
+                " ".join(signature_parts[:6]),
+                *entry.get("symptoms", [])[:4],
+                *entry.get("prevention", [])[:2],
+            ],
+        )
 
-        if not overlap and not disease_overlap and not name_hit:
+        if not overlap and not disease_overlap and not name_hit and not fuzzy_overlap and fuzzy_score < AI_CROP_DOCTOR_FUZZY_PHRASE_THRESHOLD:
             continue
 
         score = overlap * 2.0 + disease_overlap * 4.0
         if name_hit:
             score += 8.0
+        if fuzzy_overlap:
+            score += float(fuzzy_overlap) * 2.5
+        if fuzzy_score >= AI_CROP_DOCTOR_FUZZY_PHRASE_THRESHOLD:
+            score += fuzzy_score * 8.0
 
         for symptom in entry.get("symptoms", [])[:4]:
             symptom_normalized = normalize_ai_crop_doctor_match_text(symptom)
@@ -3106,11 +3236,15 @@ def lookup_ai_crop_doctor_disease_dataset_answer(query_text, language="Hinglish"
             best_score = score
             best_overlap = overlap
             best_name_hit = name_hit
+            best_fuzzy_score = fuzzy_score
 
     if best_entry is None:
         return None
 
-    if not best_name_hit and (best_overlap < 3 or best_score < 7.0):
+    if not best_name_hit and best_fuzzy_score < AI_CROP_DOCTOR_FUZZY_PHRASE_THRESHOLD and (best_overlap < 3 or best_score < 7.0):
+        return None
+
+    if not isinstance(best_entry, dict):
         return None
 
     pathogen = str((best_entry.get("etiology") or {}).get("pathogen") or "").strip()
@@ -3121,11 +3255,11 @@ def lookup_ai_crop_doctor_disease_dataset_answer(query_text, language="Hinglish"
     answer = {
         "disease": best_entry.get("name"),
         "confidence_hint": best_entry.get("confidence"),
-        "symptoms": best_entry.get("symptoms", []),
+        "symptoms": list(best_entry.get("symptoms", [])),
         "cause": cause_text,
         "solution": best_entry.get("solution", {}),
-        "prevention": best_entry.get("prevention", []),
-        "products": best_entry.get("products", []),
+        "prevention": list(best_entry.get("prevention", [])),
+        "products": list(best_entry.get("products", [])),
         "recommendation": "Image ya close symptom detail se isko aur confirm kiya ja sakta hai.",
     }
     return format_ai_crop_doctor_structured_answer(answer, language=language)
@@ -3225,10 +3359,17 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
                 phrase_match = True
                 pattern_phrase_match = True
                 keyword_hits += 1
-            elif normalized_tag in normalized_query or normalized_query in normalized_tag:
+            elif (normalized_tag and normalized_query and normalized_tag in normalized_query) or (normalized_query and normalized_tag and normalized_query in normalized_tag):
                 score += 6
                 phrase_match = True
                 pattern_phrase_match = True
+            else:
+                tag_fuzzy_score = compute_ai_crop_doctor_fuzzy_similarity(normalized_query, normalized_tag)
+                if tag_fuzzy_score >= 0.9:
+                    score += tag_fuzzy_score * 10.0
+                    phrase_match = True
+                    pattern_phrase_match = True
+                    keyword_hits += 1
 
         for pattern in entry.get("patterns", []):
             normalized_pattern = normalize_ai_crop_doctor_match_text(pattern)
@@ -3244,9 +3385,18 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
                 score += 7
                 phrase_match = True
                 pattern_phrase_match = True
-            overlap = len(query_tokens & pattern_tokens)
+            else:
+                pattern_fuzzy_score = compute_ai_crop_doctor_fuzzy_similarity(normalized_query, normalized_pattern)
+                if pattern_fuzzy_score >= AI_CROP_DOCTOR_FUZZY_PHRASE_THRESHOLD:
+                    score += pattern_fuzzy_score * 8.0
+                    phrase_match = True
+                    pattern_phrase_match = True
+            overlap = len(set(query_tokens) & set(pattern_tokens))
             if overlap:
-                score += min(5, overlap * 1.5)
+                score += float(min(5.0, float(overlap) * 1.5))
+            fuzzy_overlap = count_ai_crop_doctor_fuzzy_token_matches(query_tokens, pattern_tokens)
+            if fuzzy_overlap:
+                score += float(min(4.0, float(fuzzy_overlap) * 1.5))
 
         for keyword in entry.get("keywords", []):
             normalized_keyword = normalize_ai_crop_doctor_match_text(keyword)
@@ -3257,26 +3407,38 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
             if normalized_keyword in normalized_query or str(keyword).strip().lower() in query_lower:
                 score += 5
                 phrase_match = True
-                keyword_hits += 1
-            overlap = len(query_tokens & keyword_tokens)
+                keyword_hits = int(keyword_hits) + 1
+            else:
+                keyword_fuzzy_score = compute_ai_crop_doctor_fuzzy_similarity(normalized_query, normalized_keyword)
+                if keyword_fuzzy_score >= 0.9:
+                    score += keyword_fuzzy_score * 6.0
+                    phrase_match = True
+                    keyword_hits = int(keyword_hits) + 1
+            overlap = len(set(query_tokens) & set(keyword_tokens))
             if overlap:
-                score += min(4, overlap * 2)
+                score += float(min(4.0, float(overlap) * 2.0))
+            fuzzy_overlap = count_ai_crop_doctor_fuzzy_token_matches(query_tokens, keyword_tokens)
+            if fuzzy_overlap:
+                score += float(min(3.0, float(fuzzy_overlap) * 1.5))
 
         tag_text = str(entry.get("tag") or "").replace("_", " ").strip().lower()
         tag_tokens = extract_ai_crop_doctor_match_tokens(tag_text)
         signature_tokens.update(tag_tokens)
 
-        strong_query_tokens = query_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
-        strong_signature_tokens = signature_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
+        strong_query_tokens = set(query_tokens) - set(AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS)
+        strong_signature_tokens = set(signature_tokens) - set(AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS)
         strong_overlap = len(strong_query_tokens & strong_signature_tokens)
-        if not phrase_match and strong_overlap == 0:
+        fuzzy_strong_overlap = count_ai_crop_doctor_fuzzy_token_matches(strong_query_tokens, strong_signature_tokens)
+        if not phrase_match and strong_overlap == 0 and fuzzy_strong_overlap == 0:
             continue
         if entry.get("category") == "advanced_faq" and not pattern_phrase_match and strong_overlap < 2:
             continue
 
         score += strong_overlap * 3
+        if fuzzy_strong_overlap:
+            score += float(fuzzy_strong_overlap) * 2.0
         if strong_query_tokens:
-            score += round((strong_overlap / max(len(strong_query_tokens), 1)) * 4, 2)
+            score += float(int((strong_overlap / max(len(strong_query_tokens), 1)) * 400) / 100.0)
         if tag_text and any(token in tag_text for token in strong_query_tokens):
             score += 1
         if entry.get("category") and str(entry.get("category")) in query_lower:
@@ -3354,7 +3516,7 @@ def lookup_ai_crop_doctor_local_qa(query_text):
         return structured_answer
 
     best_entry = None
-    best_score = 0
+    best_score = 0.0
     best_strong_overlap = 0
     best_phrase_match = False
     for entry in load_ai_crop_doctor_local_qa():
@@ -3366,15 +3528,20 @@ def lookup_ai_crop_doctor_local_qa(query_text):
         question_lower = question.lower()
         normalized_question = normalize_ai_crop_doctor_match_text(question)
         question_tokens = extract_ai_crop_doctor_match_tokens(question)
-        overlap = len(query_tokens & question_tokens)
-        score = 0
+        overlap = len(set(query_tokens) & set(question_tokens))
+        score = 0.0
         phrase_match = False
         if normalized_query == normalized_question:
-            score += 12
+            score += 12.0
             phrase_match = True
         elif normalized_question and (normalized_question in normalized_query or normalized_query in normalized_question):
-            score += 6
+            score += 6.0
             phrase_match = True
+        else:
+            question_fuzzy_score = compute_ai_crop_doctor_fuzzy_similarity(normalized_query, normalized_question)
+            if question_fuzzy_score >= AI_CROP_DOCTOR_FUZZY_PHRASE_THRESHOLD:
+                score += question_fuzzy_score * 8.0
+                phrase_match = True
 
         keywords = entry.get("keywords", [])
         keyword_tokens = set()
@@ -3386,31 +3553,42 @@ def lookup_ai_crop_doctor_local_qa(query_text):
                 if not keyword_lower:
                     continue
                 if keyword_lower in query_lower or (normalized_keyword and normalized_keyword in normalized_query):
-                    score += 5
+                    score = float(score) + 5.0
                     phrase_match = True
+                else:
+                    keyword_fuzzy_score = compute_ai_crop_doctor_fuzzy_similarity(normalized_query, normalized_keyword)
+                    if keyword_fuzzy_score >= 0.9:
+                        score += keyword_fuzzy_score * 5.0
+                        phrase_match = True
                 current_keyword_tokens = extract_ai_crop_doctor_match_tokens(keyword_text)
                 keyword_tokens.update(current_keyword_tokens)
                 if current_keyword_tokens:
-                    score += min(4, len(query_tokens & current_keyword_tokens) * 2)
+                    score += float(min(4.0, float(len(set(query_tokens) & set(current_keyword_tokens))) * 2.0))
+                    fuzzy_overlap = count_ai_crop_doctor_fuzzy_token_matches(query_tokens, current_keyword_tokens)
+                    if fuzzy_overlap:
+                        score += float(min(3.0, float(fuzzy_overlap) * 1.5))
 
         category = str(entry.get("category") or "").strip().lower()
         if category and category in query_lower:
-            score += 2
+            score += 2.0
 
         signature_tokens = set(question_tokens) | keyword_tokens
-        strong_query_tokens = query_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
-        strong_signature_tokens = signature_tokens - AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS
+        strong_query_tokens = set(query_tokens) - set(AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS)
+        strong_signature_tokens = set(signature_tokens) - set(AI_CROP_DOCTOR_LOW_SIGNAL_TOKENS)
         strong_overlap = len(strong_query_tokens & strong_signature_tokens)
-        if not phrase_match and strong_overlap == 0:
+        fuzzy_strong_overlap = count_ai_crop_doctor_fuzzy_token_matches(strong_query_tokens, strong_signature_tokens)
+        if not phrase_match and strong_overlap == 0 and fuzzy_strong_overlap == 0:
             continue
-        score += overlap
+        score += float(overlap)
         if strong_overlap:
-            score += strong_overlap * 3
-            score += round((strong_overlap / max(len(strong_query_tokens), 1)) * 4, 2)
+            score += float(strong_overlap) * 3.0
+            score += float(int((strong_overlap / max(len(strong_query_tokens), 1)) * 400) / 100.0)
+        if fuzzy_strong_overlap:
+            score += float(fuzzy_strong_overlap) * 2.0
 
         if score > best_score:
-            best_score = score
             best_entry = entry
+            best_score = score
             best_strong_overlap = strong_overlap
             best_phrase_match = phrase_match
 
@@ -3462,15 +3640,7 @@ def find_store_product_by_asset_hint(product_hint):
         "yellow-rust": "Propiconazole 25 EC",
         "common_rust": "Propiconazole 25 EC",
         "common-rust": "Propiconazole 25 EC",
-        "rice_blast": "Tricyclazole 75 WP",
-        "rice-blast": "Tricyclazole 75 WP",
         "copper": "Copper Oxychloride 50% WP",
-        "pesticide": "Pesticide Spray",
-        "irrigation": "Drip Pipes",
-        "fertilizer": "NPK Fertilizer",
-        "fertilizer.jpg": "NPK Fertilizer",
-        "soil_booster": "Soil Health Booster",
-        "soil-booster": "Soil Health Booster",
     }
     mapped_name = alias_map.get(hint)
     if mapped_name:
@@ -3480,11 +3650,14 @@ def find_store_product_by_asset_hint(product_hint):
 
     for product in get_all_store_products():
         haystack = " ".join(
-            [
-                str(getattr(product, "name", "") or ""),
-                str(getattr(product, "description", "") or ""),
-                " ".join(getattr(product, "tags", []) or []),
-            ]
+            filter(
+                None,
+                [
+                    str(getattr(product, "name", "") or ""),
+                    str(getattr(product, "description", "") or ""),
+                    " ".join(getattr(product, "tags", []) or []),
+                ]
+            )
         ).lower()
         if hint.replace("_", " ") in haystack or hint.replace("-", " ") in haystack:
             return product
@@ -3498,17 +3671,17 @@ def match_disease_symptom_rule(*values):
 
     best_key = None
     best_rule = None
-    best_score = 0
+    best_score = 0.0
     for raw_key, raw_rule in load_disease_symptom_rules().items():
         key = str(raw_key or "").strip().lower()
         if not key or not isinstance(raw_rule, dict):
             continue
-        score = 0
-        if key in diagnostic_text:
-            score += 5
+        score = 0.0
+        if key and str(key) in str(diagnostic_text):
+            score = float(score) + 5.0
         key_tokens = set(re.findall(r"[a-z0-9]+", key))
         text_tokens = set(re.findall(r"[a-z0-9]+", diagnostic_text))
-        score += len(key_tokens & text_tokens)
+        score += float(len(key_tokens & text_tokens))
         if score > best_score:
             best_score = score
             best_key = key
@@ -3516,7 +3689,9 @@ def match_disease_symptom_rule(*values):
 
     if best_rule is None or best_score < 2:
         return None
-    return {"key": best_key, **best_rule}
+    return {"key": str(best_key), **dict(best_rule)}
+
+
 
 
 def slugify_crop_name(name):
@@ -3613,7 +3788,7 @@ def pick_related_crops(crop_slug, category, life_cycle, soil_type, limit=6):
         related_candidates.append((score, entry["name"], entry))
 
     related_candidates.sort(key=lambda item: (-item[0], item[1]))
-    return [item[2] for item in related_candidates[:limit]]
+    return [item[2] for item in list(related_candidates)[0:limit]]
 
 
 def load_crop_library():
@@ -3977,11 +4152,12 @@ def build_library_stage_sections(items):
         grouped.setdefault(item["type"], []).append(item)
     sections = []
     for label in ("Fungus", "Bacteria", "Virus", "Insect"):
-        section_items = grouped.get(label, [])
-        if section_items:
-            sections.append({"label": label, "items": section_items[:8]})
+        raw_items = grouped.get(label, [])
+        if isinstance(raw_items, list) and raw_items:
+            sections.append({"label": str(label), "items": [raw_items[i] for i in range(min(len(raw_items), 8))]})
     if not sections:
-        sections.append({"label": "Popular Guides", "items": items[:8]})
+        raw_list = items if isinstance(items, list) else []
+        sections.append({"label": "Popular Guides", "items": [raw_list[i] for i in range(min(len(raw_list), 8))]})
     return sections
 
 
@@ -3997,11 +4173,11 @@ def build_library_home_context():
         "disease_count": len(disease_items),
         "tip_task_count": len(tips.get("tasks", [])),
         "tip_stage_count": len(tips.get("stages", [])),
-        "covered_crop_count": len({item["crops"][0] for item in disease_items if item["crops"]}),
-        "fungus_count": type_counts.get("Fungus", 0),
-        "bacteria_count": type_counts.get("Bacteria", 0),
-        "virus_count": type_counts.get("Virus", 0),
-        "insect_count": type_counts.get("Insect", 0),
+        "covered_crop_count": len({str(item.get("crops", ["none"])[0]) for item in disease_items if isinstance(item.get("crops"), list) and item.get("crops")}),
+        "fungus_count": int(type_counts.get("Fungus", 0)),
+        "bacteria_count": int(type_counts.get("Bacteria", 0)),
+        "virus_count": int(type_counts.get("Virus", 0)),
+        "insect_count": int(type_counts.get("Insect", 0)),
     }
 
 
@@ -4047,14 +4223,14 @@ def build_library_tips_data(active_crop):
     crop_name = crop_entry["name"] if crop_entry is not None else (active_crop if active_crop and active_crop != "All" else "your crop")
     crop_text = str(crop_name)
 
-    if crop_entry is not None:
+    if crop_entry is not None and isinstance(crop_entry, dict):
         profile_cards = [
-            {"icon": "fa-seedling", "label": "Planting", "value": crop_entry["planting_method"]},
-            {"icon": "fa-ruler-combined", "label": "Spacing", "value": f"{crop_entry['row_spacing']} rows | {crop_entry['plant_spacing']} plants"},
-            {"icon": "fa-mountain-sun", "label": "Soil & pH", "value": f"{crop_entry['soil_type']} | pH {crop_entry['ph_range']}"},
-            {"icon": "fa-cloud-sun-rain", "label": "Climate", "value": f"{crop_entry['temperature']} | {crop_entry['rainfall']}"},
-            {"icon": "fa-sun-plant-wilt", "label": "Sun & Humidity", "value": f"{crop_entry['sunlight']} | {crop_entry['humidity']}"},
-            {"icon": "fa-flask", "label": "NPK Target", "value": f"N {crop_entry['nitrogen']} | P {crop_entry['phosphorus']} | K {crop_entry['potassium']}"},
+            {"icon": "fa-seedling", "label": "Planting", "value": str(crop_entry.get("planting_method", "N/A"))},
+            {"icon": "fa-ruler-combined", "label": "Spacing", "value": f"{crop_entry.get('row_spacing', 'N/A')} rows | {crop_entry.get('plant_spacing', 'N/A')} plants"},
+            {"icon": "fa-mountain-sun", "label": "Soil & pH", "value": f"{crop_entry.get('soil_type', 'N/A')} | pH {crop_entry.get('ph_range', 'N/A')}"},
+            {"icon": "fa-cloud-sun-rain", "label": "Climate", "value": f"{crop_entry.get('temperature', 'N/A')} | {crop_entry.get('rainfall', 'N/A')}"},
+            {"icon": "fa-sun-plant-wilt", "label": "Sun & Humidity", "value": f"{crop_entry.get('sunlight', 'N/A')} | {crop_entry.get('humidity', 'N/A')}"},
+            {"icon": "fa-flask", "label": "NPK Target", "value": f"N {crop_entry.get('nitrogen', 'N/A')} | P {crop_entry.get('phosphorus', 'N/A')} | K {crop_entry.get('potassium', 'N/A')}"},
         ]
         crop_guides = [
             {
@@ -4076,14 +4252,14 @@ def build_library_tips_data(active_crop):
             {
                 "title": "Companion planning",
                 "items": [
-                    f"Good companion crops: {', '.join(crop_entry['good_companions'][:4]) or 'No companion guidance available yet.'}",
-                    f"Avoid pairing with: {', '.join(crop_entry['bad_companions'][:4]) or 'No avoid-list available yet.'}",
-                    f"Life cycle: {crop_entry['life_cycle']} crop, so keep labour and harvest planning aligned with that cycle.",
+                    f"Good companion crops: {', '.join([str(crop_entry.get('good_companions', [])[i]) for i in range(min(len(list(crop_entry.get('good_companions', []))), 4))]) or 'No companion guidance available yet.'}",
+                    f"Avoid pairing with: {', '.join([str(crop_entry.get('bad_companions', [])[i]) for i in range(min(len(list(crop_entry.get('bad_companions', []))), 4))]) or 'No avoid-list available yet.'}",
+                    f"Life cycle: {str(crop_entry.get('life_cycle', 'annual'))} crop, so keep labour and harvest planning aligned with that cycle.",
                 ],
             },
             {
                 "title": "Crop-specific reminders",
-                "items": list(crop_entry["farming_tips"][:5]),
+                "items": [str(crop_entry.get("farming_tips", [])[i]) for i in range(min(len(list(crop_entry.get("farming_tips", []))), 5))],
             },
         ]
     else:
@@ -4104,7 +4280,8 @@ def build_library_tips_data(active_crop):
         ]
 
     tasks = []
-    for raw_task in base_data.get("tasks", []):
+    raw_tasks = base_data.get("tasks", []) if isinstance(base_data, dict) else []
+    for raw_task in raw_tasks:
         if not isinstance(raw_task, dict):
             continue
         tasks.append(
@@ -4140,7 +4317,8 @@ def build_library_tips_data(active_crop):
     )
 
     stages = []
-    for raw_stage in base_data.get("stages", []):
+    raw_stages = base_data.get("stages", []) if isinstance(base_data, dict) else []
+    for raw_stage in raw_stages:
         if not isinstance(raw_stage, dict):
             continue
         items = [str(item).strip() for item in raw_stage.get("items", []) if str(item).strip()]
@@ -4253,7 +4431,7 @@ def build_admin_audit_context():
         tags = safe_json_loads(getattr(product, "tags_json", ""), [])
         clean_tags = [str(tag).strip() for tag in tags if str(tag).strip()]
         if len(clean_tags) < 2:
-            weak_tag_product_count += 1
+            weak_tag_product_count = int(weak_tag_product_count) + 1
 
     missing_mappings = []
     missing_content = []
@@ -4286,14 +4464,18 @@ def build_admin_audit_context():
             }
         )
 
+    missing_mappings_list = [m for m in missing_mappings]
+    missing_content_list = [c for c in missing_content]
+    recommendation_review_list = [r for r in recommendation_review]
+
     return {
         "mapping_count": len(mappings),
         "unmapped_count": len(missing_mappings),
         "missing_content_count": len(missing_content),
-        "weak_tag_product_count": weak_tag_product_count,
-        "missing_mappings": missing_mappings[:12],
-        "missing_content": missing_content[:12],
-        "recommendation_review": recommendation_review[:10],
+        "weak_tag_product_count": int(weak_tag_product_count),
+        "missing_mappings": [missing_mappings_list[i] for i in range(min(len(missing_mappings_list), 12))],
+        "missing_content": [missing_content_list[i] for i in range(min(len(missing_content_list), 12))],
+        "recommendation_review": [recommendation_review_list[i] for i in range(min(len(recommendation_review_list), 10))],
     }
 
 
@@ -4334,14 +4516,14 @@ def estimate_store_mrp(price, category):
     }
     base_price = max(int(price or 0), 1)
     markup = markups.get(category, 0.15)
-    estimated = int(round(base_price * (1 + markup)))
+    estimated = int(float(int(base_price * (1 + markup) * 100) / 100.0))
     return max(base_price + 20, estimated)
 
 
 def compute_store_discount(price, mrp):
     base_price = max(int(price or 0), 1)
     base_mrp = max(int(mrp or 0), base_price)
-    return max(0, int(round((base_mrp - base_price) * 100 / base_mrp)))
+    return max(0, int(float(int((base_mrp - base_price) * 10000 / base_mrp) / 100.0)))
 
 
 def get_store_category_meta(category):
@@ -4406,7 +4588,7 @@ def seed_store_products():
 
         rating_value = raw_product.get("rating", 4.2)
         try:
-            rating = round(float(rating_value), 1)
+            rating = float(int(float(rating_value) * 10) / 10.0)
         except (TypeError, ValueError):
             rating = 4.2
 
@@ -4487,7 +4669,7 @@ def seed_disease_product_mappings():
         else:
             mapping.disease_label = disease_label
             mapping.product_id = product.id
-        seeded_count += 1
+        seeded_count = int(seeded_count) + 1
 
     if seeded_count:
         db.session.commit()
@@ -4544,7 +4726,7 @@ def serialize_store_product(product):
         tags = []
 
     description = str(product.description or "").strip()
-    rating_value = round(float(product.rating or 0), 1)
+    rating_value = float(int(float(product.rating or 0) * 10) / 10.0)
     search_text = " ".join(
         [
             str(product.name or ""),
@@ -4573,7 +4755,7 @@ def serialize_store_product(product):
         "rating_label": f"{rating_value:.1f}",
         "rating_count": 48 + (product.id * 13),
         "image_url": (
-            str(product.image_url or "").strip() 
+            str(product.image_url or "").strip()
             if str(product.image_url or "").strip()
             and str(product.image_url or "").strip() != STORE_PRODUCT_FALLBACK_IMAGE
             and not str(product.image_url or "").strip().lower().startswith("/static/images/store/")
@@ -4691,7 +4873,7 @@ def build_store_page_context(search_query="", active_category="All", sort_option
                 "accent": "all",
                 "description": "Browse the full agro-input catalog in one place.",
             }
-            count = len(serialized_products)
+            count = sum(1 for product in serialized_products)
         else:
             meta = get_store_category_meta(category_name)
             count = sum(1 for product in serialized_products if product["category"] == category_name)
@@ -4709,9 +4891,9 @@ def build_store_page_context(search_query="", active_category="All", sort_option
 
     top_rated = max((product["rating"] for product in serialized_products), default=0)
     avg_rating = round(
-        sum(product["rating"] for product in serialized_products) / max(len(serialized_products), 1),
+        float(sum(product["rating"] for product in serialized_products)) / max(len(serialized_products), 1),
         1,
-    ) if serialized_products else 0
+    ) if serialized_products else 0.0
     has_active_filters = bool(str(search_query or "").strip()) or active_category != "All" or sort_option != "featured"
     organic_products = [product for product in serialized_products if product["category"] == "Organic"]
     organic_featured = organic_products[0] if organic_products else None
@@ -4786,7 +4968,7 @@ def get_order_status_timestamps(order):
 
 
 def set_order_status_timestamp(order, status, timestamp=None):
-    if order is None:
+    if order == None:
         return
 
     normalized_status = str(status or "").strip().lower()
@@ -5183,12 +5365,12 @@ def build_dynamic_product_description(product_name, disease_name, disease_type, 
 
 def build_dynamic_product_benefits(disease_name, solution_bucket, symptoms, prevention, etiology):
     benefits = [f"Recommended for {str(disease_name or 'crop disease').strip()} management."]
-    if symptoms:
-        benefits.append(f"Targets visible issues like {str(symptoms[0]).strip().lower()}.")
+    if symptoms and len(list(symptoms)) > 0:
+        benefits.append(f"Targets visible issues like {str(list(symptoms)[0]).strip().lower()}.")
     if str((etiology or {}).get("environment") or "").strip():
         benefits.append(f"Useful during {str(etiology['environment']).strip().lower()} conditions.")
-    elif prevention:
-        benefits.append(f"Supports prevention steps such as {str(prevention[0]).strip().lower()}.")
+    elif prevention and len(list(prevention)) > 0:
+        benefits.append(f"Supports prevention steps such as {str(list(prevention)[0]).strip().lower()}.")
     benefits.append(f"Fits a {solution_bucket.lower()} treatment plan for rapid field action.")
     return unique_crop_list(benefits)[:3]
 
@@ -5293,7 +5475,10 @@ def build_dataset_do_now_checklist(disease_entry):
     if prevention:
         actions.append(prevention[0])
     actions.append("Review the affected patch again within 24 to 48 hours.")
-    return unique_crop_list(actions)[:4]
+    items_5319 = unique_crop_list(actions)
+    if not isinstance(items_5319, list):
+        items_5319 = list(items_5319 or [])
+    return items_5319[:4]
 
 
 def resolve_dataset_store_products(disease_entry):
@@ -5323,7 +5508,7 @@ def build_disease_product_card(product_asset_name, disease_entry, payload, store
     category = serialized_product["category"] if serialized_product is not None else ("Organic" if solution_bucket == "Organic" else "Pesticides")
     brand = serialized_product["seller"] if serialized_product is not None else default_store_seller(category)
     price_seed = int(sha1(f"{disease_name}|{product_name}".encode()).hexdigest(), 16)
-    rating = serialized_product["rating"] if serialized_product is not None else round(4.3 + (price_seed % 5) * 0.1, 1)
+    rating = serialized_product["rating"] if serialized_product is not None else round(float(4.3 + (price_seed % 5) * 0.1), 1)
     price = serialized_product["price"] if serialized_product is not None else (249 if solution_bucket == "Organic" else 399) + (price_seed % 7) * 35
     detail_url = serialized_product["detail_url"] if serialized_product is not None else virtual_product["detail_url"]
     image_url = resolve_local_product_image_url(
@@ -5342,13 +5527,13 @@ def build_disease_product_card(product_asset_name, disease_entry, payload, store
         etiology,
     )
     return {
-        "id": serialized_product["id"] if serialized_product is not None else None,
+        "id": serialized_product.get("id") if serialized_product is not None else None,
         "name": product_name,
         "brand": brand,
         "category": category,
         "solution_type": f"{solution_bucket} Solution",
         "rating": rating,
-        "rating_label": f"{float(rating):.1f}",
+        "rating_label": f"{float(str(rating or 0)):.1f}",
         "price": int(price),
         "description": description,
         "benefits": benefits,
@@ -5356,7 +5541,7 @@ def build_disease_product_card(product_asset_name, disease_entry, payload, store
         "fallback_image": STORE_PRODUCT_FALLBACK_IMAGE,
         "detail_url": detail_url,
         "buy_url": detail_url,
-        "buy_product_id": serialized_product["id"] if serialized_product is not None else None,
+        "buy_product_id": serialized_product.get("id") if serialized_product is not None else None,
         "reason": f"Selected for {crop_name} because it supports the treatment plan for {disease_name}.",
         "asset_name": str(product_asset_name or "").strip(),
     }
@@ -5399,7 +5584,11 @@ def build_disease_report_context(payload, recommended_product=None, best_product
         "etiology": etiology,
     }
     suggested_products = []
-    for asset_name in list(disease_entry.get("products", [])) if disease_entry is not None else []:
+    product_refs = disease_entry.get("products") if disease_entry is not None else []
+    if not isinstance(product_refs, list):
+        product_refs = []
+
+    for asset_name in product_refs:
         matched_product = find_store_product_by_asset_hint(asset_name)
         suggested_products.append(build_disease_product_card(asset_name, card_seed, payload, store_product=matched_product))
 
@@ -5473,7 +5662,10 @@ def build_do_now_checklist(payload, library_item=None):
         actions.append("Rescout this patch within the next 24 hours.")
     else:
         actions.append("Review this patch again within 48 hours.")
-    return unique_crop_list(actions)[:4]
+    items_5503 = unique_crop_list(actions)
+    if not isinstance(items_5503, list):
+        items_5503 = list(items_5503 or [])
+    return items_5503[:4]
 
 
 def score_store_product_for_diagnosis(product, disease_type, diagnostic_text, crop_name=""):
@@ -5488,12 +5680,12 @@ def score_store_product_for_diagnosis(product, disease_type, diagnostic_text, cr
             score += weight
 
     crop_tokens = set(re.findall(r"[a-z0-9]+", str(crop_name or "").lower()))
-    product_tokens = set(re.findall(r"[a-z0-9]+", search_text))
+    product_tokens = set(re.findall(r"[a-z0-9]+", str(search_text or "").lower()))
     if crop_tokens:
         score += len(crop_tokens & product_tokens) * 1.5
 
     if diagnostic_text:
-        diagnostic_tokens = set(re.findall(r"[a-z0-9]+", diagnostic_text))
+        diagnostic_tokens = set(re.findall(r"[a-z0-9]+", str(diagnostic_text or "").lower()))
         score += len(diagnostic_tokens & product_tokens) * 0.25
 
     return score
@@ -5513,6 +5705,32 @@ def build_store_recommendation_reason(payload, serialized_product, disease_type)
     }
     approach = approach_map.get(disease_type, approach_map["general"])
     return f"{serialized_product['name']} is the closest in-catalog match for {crop_name} because this diagnosis suggests {approach} for {disease_name}."
+
+
+
+def resolve_store_recommendation(disease_name=None, cause=None, organic_solution=None, chemical_solution=None, best_product_name="", crop_name=None):
+    if best_product_name:
+        product = find_store_product_by_name(best_product_name)
+        if product:
+            return product
+
+    diagnostic_text = " ".join(filter(None, [str(disease_name or ""), str(cause or ""), str(organic_solution or ""), str(chemical_solution or "")])).lower()
+    disease_type = infer_disease_type_from_text(diagnostic_text)
+
+    if disease_name:
+        mapping = DiseaseProductMapping.query.filter_by(disease_key=normalize_disease_key(disease_name)).first()
+        if mapping and getattr(mapping, "product_id", None):
+            product = StoreProduct.query.get(mapping.product_id)
+            if product:
+                return product
+
+    scored_matches = []
+    for product in get_all_store_products():
+        score = score_store_product_for_diagnosis(product, disease_type, diagnostic_text, crop_name=crop_name)
+        scored_matches.append((score, float(product.rating or 0), product))
+
+    scored_matches.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    return scored_matches[0][2] if scored_matches and scored_matches[0][0] > 0 else None
 
 
 def enrich_disease_response_payload(payload):
@@ -5542,7 +5760,7 @@ def enrich_disease_response_payload(payload):
         enriched["organic_solution"] = "; ".join(organic_solutions)
         enriched["chemical_solution"] = "; ".join(chemical_solutions)
         enriched["prevention"] = prevention
-        enriched["matched_symptoms"] = symptoms[:4]
+        enriched["matched_symptoms"] = list(symptoms or [])[:4]
         enriched["why_this_result"] = str(enriched.get("diagnostic_reason") or "Matched with disease_data.json entry.").strip()
         enriched["consult_expert"] = build_consult_expert_note(enriched["confidence"], risk_level)
         enriched["do_now_checklist"] = build_dataset_do_now_checklist(dataset_entry)
@@ -5552,120 +5770,17 @@ def enrich_disease_response_payload(payload):
         disease_name=enriched.get("disease"),
         crop_name=enriched.get("crop"),
     )
-    matched_symptoms = list(library_item.get("symptoms", [])) if library_item is not None else extract_guidance_points(enriched.get("symptoms"))
-    prevention = enriched.get("prevention")
-    if not isinstance(prevention, list):
-        prevention = extract_guidance_points(prevention)
-    prevention = unique_crop_list(
-        [
-            *(prevention or []),
-            *(library_item.get("prevention", []) if library_item is not None else []),
-        ]
-    )[:4]
-
-    if not prevention:
-        prevention = unique_crop_list(
-            extract_guidance_points(enriched.get("organic_solution"), enriched.get("chemical_solution"), enriched.get("cause"), limit=4)
-        )
-
-    symptom_summary = str(enriched.get("symptoms") or "").strip()
-    if not symptom_summary:
-        symptom_summary = "; ".join(matched_symptoms) if matched_symptoms else str(enriched.get("cause") or "").strip()
-
-    symptom_rule = match_disease_symptom_rule(
-        enriched.get("disease"),
-        enriched.get("symptoms"),
-        enriched.get("cause"),
-        enriched.get("organic_solution"),
-        enriched.get("chemical_solution"),
-    )
-    if symptom_rule:
-        rule_issue = str(symptom_rule.get("issue") or "").strip()
-        rule_cause = str(symptom_rule.get("cause") or "").strip()
-        rule_solution = str(symptom_rule.get("solution") or "").strip()
-        rule_prevention = str(symptom_rule.get("prevention") or "").strip()
-        if rule_issue and rule_issue.lower() not in symptom_summary.lower():
-            symptom_summary = f"{symptom_summary}; {rule_issue}" if symptom_summary else rule_issue
-        if rule_cause and str(enriched.get("cause") or "").strip().lower() in {"", "no disease", "requires expert field inspection"}:
-            enriched["cause"] = rule_cause
-        if rule_solution and not str(enriched.get("chemical_solution") or "").strip():
-            enriched["chemical_solution"] = rule_solution
-        if rule_solution and not str(enriched.get("organic_solution") or "").strip():
-            enriched["organic_solution"] = rule_solution
-        if rule_prevention:
-            prevention = unique_crop_list([*(prevention or []), rule_prevention])[:4]
-        if not matched_symptoms and symptom_rule.get("key"):
-            matched_symptoms = [str(symptom_rule.get("key"))]
-        if str(enriched.get("best_product") or "").strip().lower() in {"", "n/a", "na", "none"}:
-            product_hints = symptom_rule.get("products")
-            if isinstance(product_hints, list):
-                for hint in product_hints:
-                    hinted_product = find_store_product_by_asset_hint(hint)
-                    if hinted_product is not None:
-                        enriched["best_product"] = str(getattr(hinted_product, "name", "") or "").strip()
-                        break
-
-    enriched["confidence"] = confidence
-    enriched["risk_level"] = risk_level
-    enriched["analysis_source"] = str(enriched.get("analysis_source") or "AI diagnosis").strip()
-    enriched["confidence_label"] = build_confidence_label(confidence)
-    enriched["why_this_result"] = str(enriched.get("diagnostic_reason") or enriched.get("explanation_hinglish") or "Leaf pattern matched known disease signals.").strip()
-    enriched["consult_expert"] = build_consult_expert_note(confidence, risk_level)
-    enriched["matched_symptoms"] = matched_symptoms[:4]
-    enriched["prevention"] = prevention
-    enriched["symptoms"] = symptom_summary
-    enriched["do_now_checklist"] = build_do_now_checklist(enriched, library_item=library_item)
-    if library_item is not None:
-        enriched["library_url"] = f"/library/disease/{library_item['slug']}"
+    if library_item:
+        enriched["disease"] = library_item.get("name") or enriched.get("disease")
     return enriched
-
-
-def resolve_store_recommendation(disease_name="", cause="", organic_solution="", chemical_solution="", best_product_name="", crop_name=""):
-    diagnostic_summary = " ".join(
-        [
-            str(disease_name or ""),
-            str(cause or ""),
-            str(organic_solution or ""),
-            str(chemical_solution or ""),
-        ]
-    ).lower()
-    if any(term in diagnostic_summary for term in ("healthy", "no disease", "routine care", "continue monitoring")):
-        return None
-
-    admin_mapped = get_admin_mapped_product_for_disease(disease_name)
-    if admin_mapped is not None:
-        return admin_mapped
-
-    if best_product_name and str(best_product_name).strip().lower() not in {"n/a", "na", "none"}:
-        direct_product = find_store_product_by_name(best_product_name)
-        if direct_product:
-            return direct_product
-
-    diagnostic_text = diagnostic_summary
-    disease_type = infer_disease_type_from_text(disease_name, cause, organic_solution, chemical_solution)
-
-    for keywords, mapped_name in STORE_DISEASE_PRODUCT_RULES:
-        if any(keyword in diagnostic_text for keyword in keywords):
-            if not mapped_name:
-                return None
-            mapped_product = find_store_product_by_name(mapped_name)
-            if mapped_product:
-                return mapped_product
-
-    scored_matches = []
-    for product in get_all_store_products():
-        score = score_store_product_for_diagnosis(product, disease_type, diagnostic_text, crop_name=crop_name)
-        scored_matches.append((score, float(product.rating or 0), product))
-
-    scored_matches.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    return scored_matches[0][2] if scored_matches and scored_matches[0][0] > 0 else None
 
 
 def attach_store_recommendation(payload, best_product_name=""):
     payload = enrich_disease_response_payload(payload)
-    dataset_entry = find_disease_dataset_entry(payload.get("disease"))
+    disease_name = payload.get("disease")
+    dataset_entry = find_disease_dataset_entry(disease_name)
     disease_type = infer_disease_type_from_text(
-        payload.get("disease"),
+        disease_name,
         payload.get("cause"),
         payload.get("organic_solution"),
         payload.get("chemical_solution"),
@@ -5673,10 +5788,12 @@ def attach_store_recommendation(payload, best_product_name=""):
     recommended_product = None
     if dataset_entry is not None:
         dataset_products = resolve_dataset_store_products(dataset_entry)
-        recommended_product = dataset_products[0] if dataset_products else None
+        if dataset_products:
+            recommended_product = dataset_products[0]
+
     if recommended_product is None:
         recommended_product = resolve_store_recommendation(
-            disease_name=payload.get("disease"),
+            disease_name=disease_name,
             cause=payload.get("cause"),
             organic_solution=payload.get("organic_solution"),
             chemical_solution=payload.get("chemical_solution"),
@@ -5689,22 +5806,25 @@ def attach_store_recommendation(payload, best_product_name=""):
         serialized_product = serialize_store_product(recommended_product)
         serialized_product["reason"] = build_store_recommendation_reason(payload, serialized_product, disease_type)
         payload["recommended_product"] = serialized_product
-        payload["best_product"] = serialized_product["name"]
-        payload["product_link"] = serialized_product["detail_url"]
+        payload["best_product"] = serialized_product.get("name", "")
+        payload["product_link"] = serialized_product.get("detail_url", "")
     else:
         payload["recommended_product"] = None
         payload.setdefault("best_product", "")
         payload.setdefault("product_link", "")
 
-    payload.update(
-        build_disease_report_context(
-            payload,
-            recommended_product=serialized_product,
-            best_product_name=best_product_name,
-        )
+    context = build_disease_report_context(
+        payload,
+        recommended_product=serialized_product,
+        best_product_name=best_product_name,
     )
-    if payload.get("suggested_products") and not payload.get("product_link"):
-        payload["product_link"] = payload["suggested_products"][0].get("detail_url", "/market")
+    if isinstance(context, dict):
+        for k, v in context.items():
+            payload[k] = v
+
+    suggested = list(payload.get("suggested_products") or [])
+    if suggested:
+        payload["product_link"] = suggested[0].get("detail_url", "/market")
     return payload
 
 
@@ -5896,7 +6016,7 @@ def is_ai_chat_low_context_query(query_text):
 
 def format_ai_chat_history_for_prompt(history):
     lines = []
-    for item in history[-6:]:
+    for item in list(history or [])[-6:]:
         role = "Farmer" if item.get("role") == "user" else "Assistant"
         content = str(item.get("content") or "").strip()
         if content:
@@ -5988,15 +6108,22 @@ def ask_groq_ai_crop_doctor(user, query, history):
     return content or None
 
 
-def build_kisan_dost_reply(user, query, history=None):
+def build_kisan_dost_reply(user, query, history=None, allow_generic_fallback=True):
     crop_name = normalize_kisan_dost_crop_name(user.crop_type or "crop")
     location_name = user.location or "aapke area"
     history = sanitize_ai_chat_history(history)
     query_text = build_ai_chat_context_query(query, history)
     query_lower = query_text.lower()
     answer_language = detect_ai_chat_language(query_text)
-    _, farms = ensure_user_farm_setup(user)
-    task_summary = build_task_summary(user, limit=2)
+    farms = []
+    task_summary = {"open_count": 0, "overdue_count": 0, "preview": []}
+    if has_app_context():
+        try:
+            _, farms = ensure_user_farm_setup(user)
+            task_summary = build_task_summary(user, limit=2)
+        except Exception:
+            farms = []
+            task_summary = {"open_count": 0, "overdue_count": 0, "preview": []}
     weather_intent_terms = [
         "weather",
         "mausam",
@@ -6015,6 +6142,7 @@ def build_kisan_dost_reply(user, query, history=None):
     ]
     weather_value_terms = ["temp", "temperature", "tapman", "taapman", "humidity", "rain", "barish", "baarish", "wind", "hawa"]
     weather_advisory_terms = ["garmi", "heat", "barish", "baarish", "rain", "wind", "hawa", "thand", "drainage", "waterlogging"]
+    weather_report_terms = ["report", "forecast", "update", "today", "aaj", "kal", "tomorrow", "weekly", "week"]
     weather_query = any(word in query_lower for word in weather_intent_terms)
 
     assistant_weather = {
@@ -6143,8 +6271,15 @@ def build_kisan_dost_reply(user, query, history=None):
         if any(word in query_lower for word in weather_value_terms):
             return (
                 f"{assistant_weather['city']} me abhi temperature {assistant_weather['temp']} C hai aur feels like {assistant_weather['feels_like']} C jaisa lag raha hai. "
-                f"Humidity {assistant_weather['humidity']}% hai aur weather {assistant_weather['description']} hai. "
+                f"Humidity {assistant_weather['humidity']}% hai, estimated rainfall {assistant_weather['rainfall_mm']} mm hai, aur weather {assistant_weather['description']} hai. "
                 f"Agar chaho to main barish ya irrigation advice bhi bata sakta hoon."
+            )
+        if any(word in query_lower for word in weather_report_terms):
+            return (
+                f"{assistant_weather['city']} ka latest weather update: temperature {assistant_weather['temp']} C, humidity {assistant_weather['humidity']}%, "
+                f"rainfall around {assistant_weather['rainfall_mm']} mm, aur wind {round(float(assistant_weather['wind_speed_kmh']), 1)} km/h ke aas paas hai. "
+                f"Current condition {assistant_weather['description']} hai aur last update {assistant_weather['updated_at']} ka hai. "
+                f"Aise weather me spray se pehle leaf dryness aur field drainage check karna useful rahega."
             )
         if knowledge_answer and any(word in query_lower for word in weather_advisory_terms):
             return knowledge_answer
@@ -6168,6 +6303,9 @@ def build_kisan_dost_reply(user, query, history=None):
 
     if project_faq_answer:
         return project_faq_answer
+
+    if not allow_generic_fallback:
+        return None
 
     if is_ai_chat_low_context_query(query_text):
         return build_ai_chat_uncertain_query_reply(language=answer_language)
@@ -6197,6 +6335,15 @@ def resolve_ai_chat_response(user, query, history=None):
     dataset_reply = lookup_ai_crop_doctor_local_qa(context_query)
     if dataset_reply:
         return {"response": dataset_reply, "provider": "local_knowledge"}
+
+    contextual_reply = build_kisan_dost_reply(
+        user,
+        query,
+        sanitized_history,
+        allow_generic_fallback=False,
+    )
+    if contextual_reply:
+        return {"response": contextual_reply, "provider": "contextual_assistant"}
 
     return {"response": build_ai_chat_unknown_reply(query), "provider": "fallback"}
 
@@ -8124,7 +8271,7 @@ def build_dashboard_onboarding(user, farms, task_summary):
 
     completed_count = sum(1 for step in steps if step["done"])
     total_count = len(steps)
-    progress_pct = int(round((completed_count / total_count) * 100)) if total_count else 0
+    progress_pct = int(((completed_count / total_count) * 100) + 0.5) if total_count else 0
 
     return {
         "steps": steps,
@@ -8811,18 +8958,21 @@ def build_soil_profile(user, weather):
     clouds = float(weather.get("clouds", 30) or 30)
 
     geo_bias = ((abs(lat) * 1.7) + (abs(lon) * 0.55) + (seed % 11)) % 8
-    ph_value = round(
-        clamp(
-            5.5
-            + (pressure - 1000) * 0.018
-            - rainfall * 0.025
-            + humidity * 0.004
-            - abs(lat) * 0.006
-            + geo_bias * 0.09,
-            5.2,
-            7.8,
-        ),
-        1,
+    ph_value = float(
+        int(
+            clamp(
+                5.5
+                + (pressure - 1000) * 0.018
+                - rainfall * 0.025
+                + humidity * 0.004
+                - abs(lat) * 0.006
+                + geo_bias * 0.09,
+                5.2,
+                7.8,
+            )
+            * 10
+        )
+        / 10.0
     )
     nitrogen = clamp(
         int(
@@ -9227,12 +9377,12 @@ def build_soil_page_context(user):
 
     seed_source = f"{user.id}-{user.email}-{user.location or ''}-{user.crop_type or ''}-soil"
     seed = sum((index + 3) * ord(char) for index, char in enumerate(seed_source))
-    lat = float(weather.get("lat") or 20.0)
-    lon = float(weather.get("lon") or 78.0)
-    humidity = float(weather.get("humidity", 60) or 60)
-    rainfall = float(weather.get("rainfall_mm", 0) or 0)
-    pressure = float(weather.get("pressure", 1008) or 1008)
-    temperature = float(weather.get("temp", 30) or 30)
+    lat = float(str(weather.get("lat") or 20.0))
+    lon = float(str(weather.get("lon") or 78.0))
+    humidity = float(str(weather.get("humidity", 60) or 60))
+    rainfall = float(str(weather.get("rainfall_mm", 0) or 0))
+    pressure = float(str(weather.get("pressure", 1008) or 1008))
+    temperature = float(str(weather.get("temp", 30) or 30))
 
     phosphorus = clamp(
         int(
@@ -11301,7 +11451,13 @@ def build_dashboard_context(user):
     soil = build_soil_profile(user, weather)
     crop_health = build_crop_health(user, weather, soil)
     recommendations = build_recommendations(user, weather, soil, crop_health)
-    alerts = [serialize_alert_record(item) for item in alert_context["active_alerts"][:3]]
+    active_alerts = alert_context.get("active_alerts", [])
+    if not isinstance(active_alerts, list):
+        active_alerts = []
+    
+    alerts = []
+    for i in range(min(len(active_alerts), 3)):
+        alerts.append(serialize_alert_record(active_alerts[i]))
     if not alerts:
         alerts = build_alerts(weather, soil, crop_health)
 
@@ -11315,7 +11471,7 @@ def build_dashboard_context(user):
         "crop_health": crop_health,
         "recommendations": recommendations,
         "alerts": alerts,
-        "yield_prediction": crop_health["yield_prediction"],
+        "yield_prediction": crop_health.get("yield_prediction") or "Prediction pending",
         "lat": dashboard_map_center["lat"],
         "lon": dashboard_map_center["lng"],
         "map_embed_url": build_map_embed_url(user.location, dashboard_map_center["lat"], dashboard_map_center["lng"]),
@@ -12549,7 +12705,13 @@ def download_disease_report():
         return redirect("/login")
 
     cached_payload = session.get("last_disease_report_pdf")
-    if not isinstance(cached_payload, dict) or int(cached_payload.get("user_id", 0) or 0) != int(user.id):
+    is_valid_cache = isinstance(cached_payload, dict)
+    if is_valid_cache:
+        cached_user_id = int(str(cached_payload.get("user_id") or 0))
+        if cached_user_id != int(user.id):
+            is_valid_cache = False
+
+    if not is_valid_cache:
         cached_payload = build_fallback_disease_pdf_payload(user)
     if not cached_payload:
         abort(404)
@@ -12659,7 +12821,10 @@ def market_recommendation_detail(product_slug):
         disease_entry,
         {"disease": disease_name or disease_entry.get("name"), "crop": crop_name},
     )
-    related_products = build_store_page_context(search_query=product_data["name"]).get("products", [])[:4]
+    raw_related = build_store_page_context(search_query=product_data["name"]).get("products", [])
+    related_products = []
+    if isinstance(raw_related, list):
+        related_products = [raw_related[i] for i in range(min(len(raw_related), 4))]
     return render_template(
         "market_product_detail.html",
         user=user,
@@ -13200,8 +13365,9 @@ def predict_disease():
         return jsonify_disease_result(user, response_payload)
 
     reference_diagnosis = build_reference_image_diagnosis(image, user.crop_type or "Crop", weather)
-    if reference_diagnosis is not None and int(reference_diagnosis.get("confidence") or 0) >= 66:
-        reference_diagnosis["explanation_hinglish"] = "Diagnosis generated from uploaded leaf pattern and dataset reference images."
+    if reference_diagnosis is not None and int(str(reference_diagnosis.get("confidence") or 0)) >= 66:
+        if isinstance(reference_diagnosis, dict):
+            reference_diagnosis["explanation_hinglish"] = "Diagnosis generated from uploaded leaf pattern and dataset reference images."
         save_scan_history(user, reference_diagnosis)
         response_payload = attach_store_recommendation(
             build_scan_response_payload(reference_diagnosis, preview_url),

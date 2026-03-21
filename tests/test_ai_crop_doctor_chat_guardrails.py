@@ -2,6 +2,8 @@ import app as app_module
 
 
 class DummyUser:
+    id = 1
+    email = "farmer@example.com"
     crop_type = "Rice"
     location = "Bhubaneswar"
 
@@ -52,6 +54,13 @@ def test_lookup_ai_crop_doctor_chat_knowledge_matches_direct_tag_name():
     assert "Bacterial Spot" in reply
 
 
+def test_lookup_ai_crop_doctor_chat_knowledge_matches_typoed_tag_name():
+    reply = app_module.lookup_ai_crop_doctor_local_qa("bactarial_spot")
+
+    assert reply is not None
+    assert "Bacterial Spot" in reply
+
+
 def test_lookup_ai_crop_doctor_local_qa_matches_seed_definition_typo():
     reply = app_module.lookup_ai_crop_doctor_local_qa("beej kiya hai")
 
@@ -73,6 +82,16 @@ def test_lookup_ai_crop_doctor_local_qa_matches_irrigation_definition_typo():
     assert "Irrigation" in reply or "sinchai" in reply or "paani" in reply
 
 
+def test_disease_dataset_lookup_matches_typoed_powdery_mildew_query():
+    reply = app_module.lookup_ai_crop_doctor_disease_dataset_answer(
+        "leaf par powdary mildew jaisa white powder hai aur slo growth ho raha hai"
+    )
+
+    assert reply is not None
+    assert "Powdery Mildew" in reply
+    assert "Sulfur" in reply or "Neem Oil" in reply
+
+
 def test_resolve_ai_chat_response_prefers_groq_before_local(monkeypatch):
     monkeypatch.setattr(app_module, "ask_groq_ai_crop_doctor", lambda user, query, history: "Groq answer")
     monkeypatch.setattr(app_module, "lookup_ai_crop_doctor_local_qa", lambda query: "Local answer")
@@ -91,6 +110,42 @@ def test_resolve_ai_chat_response_uses_local_when_groq_missing(monkeypatch):
 
     assert result["provider"] == "local_knowledge"
     assert result["response"] == "Local answer"
+
+
+def test_resolve_ai_chat_response_uses_contextual_assistant_for_weather(monkeypatch):
+    monkeypatch.setattr(app_module, "ask_groq_ai_crop_doctor", lambda user, query, history: None)
+    monkeypatch.setattr(app_module, "lookup_ai_crop_doctor_local_qa", lambda query: None)
+    monkeypatch.setattr(
+        app_module,
+        "fetch_weather_bundle",
+        lambda location: {
+            "city": location,
+            "temp": 29,
+            "feels_like": 31,
+            "humidity": 78,
+            "rainfall_mm": 6,
+            "wind_speed": 4.2,
+            "wind_speed_kmh": 15.1,
+            "clouds": 64,
+            "pressure": 1008,
+            "lat": None,
+            "lon": None,
+            "updated_at": "09:30 AM",
+            "chart": [],
+            "chart_polyline": "",
+            "slider_percent": 58,
+            "wind_deg": 110,
+            "description": "light rain",
+            "icon_code": "10d",
+            "icon_url": "https://example.com/icon.png",
+        },
+    )
+
+    result = app_module.resolve_ai_chat_response(DummyUser(), "aaj weather report kya hai", [])
+
+    assert result["provider"] == "contextual_assistant"
+    assert "weather update" in result["response"].lower() or "temperature" in result["response"].lower()
+    assert "humidity" in result["response"].lower()
 
 
 def test_resolve_ai_chat_response_uses_simple_fallback_last(monkeypatch):

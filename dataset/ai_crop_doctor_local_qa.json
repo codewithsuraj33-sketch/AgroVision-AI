@@ -274,5 +274,167 @@
     "category": "technology",
     "keywords": ["smart farming", "iot farming", "sensor farming", "precision farming", "digital farm"],
     "answer": "Smart farming me AI, IoT sensors, automation aur data-based decisions ka use hota hai. Iska goal paani, fertilizer aur labour ko optimize karke better output lena hai."
+  },
+  {
+    "question": "Weather kya hai",
+    "category": "weather",
+    "keywords": ["weather kya hai", "weather kiya hai", "mausam kya hai", "what is weather", "weather meaning"],
+    "answer": "Weather ya mausam ka matlab kisi jagah ka short-term temperature, hawa, badal, barish, aur humidity condition hota hai. Farming me weather samajhna important hai kyunki isi se irrigation, spray, sowing aur harvest timing decide hoti hai."
+  },
+  {
+    "question": "Humidity kya hoti hai",
+    "category": "weather",
+    "keywords": ["humidity kya hai", "humidity kiya hai", "nami kya hoti hai", "air moisture", "what is humidity"],
+    "answer": "Humidity hawa me maujood moisture ya nami ko bolte hain. High humidity se fungal disease aur leaf wetness risk badhta hai, jabki low humidity me crop me water stress aur transpiration pressure badh sakta hai."
+  },
+  {
+    "question": "Rain report kya hota hai",
+    "category": "weather",
+    "keywords": ["rain report", "barish report", "rainfall report", "barish ka report", "rain report kya hota hai"],
+    "answer": "Rain report ya rainfall report batata hai ki kitni barish hui, kab hui, aur kab expected ho sakti hai. Farmer ke liye yeh irrigation planning, spray timing, drainage, aur field entry decision me useful hota hai."
+  },
+  {
+    "question": "Weather forecast kya hota hai",
+    "category": "weather",
+    "keywords": ["weather forecast", "mausam forecast", "forecast kya hota hai", "barish kab hogi", "weather prediction basics"],
+    "answer": "Weather forecast future ke mausam ka andaza hota hai, jaise barish, temperature, hawa, ya humidity ka probable pattern. Forecast ko exact guarantee nahi samajhna chahiye, par farming planning ke liye yeh strong guidance deta hai."
+  },
+  {
+    "question": "Soil kya hoti hai",
+    "category": "soil",
+    "keywords": ["soil kya hai", "soil kiya hai", "mitti kya hai", "what is soil", "soil meaning"],
+    "answer": "Soil ya mitti wo natural medium hai jisme crop roots grow karti hain aur water, air, aur nutrients leti hain. Achhi soil structure, organic matter, aur drainage crop growth ko directly support karte hain."
+  },
+  {
+    "question": "Soil moisture kya hota hai",
+    "category": "soil",
+    "keywords": ["soil moisture kya hai", "mitti moisture", "soil nami", "root zone moisture", "what is soil moisture"],
+    "answer": "Soil moisture mitti me available paani ki quantity ko bolte hain jo roots use kar sakti hain. Isko samajhne se irrigation sahi time par hoti hai aur overwatering ya underwatering dono se bachne me madad milti hai."
+  },
+  {
+    "question": "Soil type kaise samjhe",
+    "category": "soil",
+    "keywords": ["soil type", "mitti ka type", "sandy soil", "clay soil", "loamy soil"],
+    "answer": "Basic level par soil ko sandy, clayey, ya loamy type me samjha ja sakta hai. Sandy soil jaldi dry hoti hai, clay soil pani zyada rok sakti hai, aur loamy soil balance ke liye generally best mani jati hai."
+  },
+  {
+    "question": "Pest kya hota hai",
+    "category": "pest",
+    "keywords": ["pest kya hai", "keeda kya hota hai", "insect pest meaning", "what is pest", "pest meaning"],
+    "answer": "Pest wo organism hota hai jo crop ko nuksan pahunchata hai, jaise aphid, whitefly, caterpillar, ya borer. Har pest insect nahi hota, lekin farming me zyada tar visible pest insect attack ke roop me milte hain."
+  },
+  {
+    "question": "Disease kya hoti hai crop me",
+    "category": "crop_disease",
+    "keywords": ["disease kya hai", "crop disease meaning", "bimari kya hoti hai", "plant disease", "what is plant disease"],
+    "answer": "Crop disease ya bimari tab hoti hai jab fungus, bacteria, virus, ya kabhi adverse environment ki wajah se plant ka normal growth system disturb ho jata hai. Symptoms me spots, rot, curl, yellowing, wilting, ya stunted growth dikh sakta hai."
+  },
+  {
+    "question": "Pest aur disease me difference kya hai",
+    "category": "crop_disease",
+    "keywords": ["pest vs disease", "pest aur disease difference", "keeda aur bimari", "insect vs disease", "difference between pest and disease"],
+    "answer": "Pest me aam taur par keede ya visible feeding damage milta hai, jaise holes, sucking marks, ya insects leaf ke niche. Disease me fungal, bacterial, ya viral symptoms milte hain, jaise spots, rot, powder layer, wilt, ya mosaic pattern."
+  },
+  {
+    "question": "Fertilizer kitne type ke hote hai",
+    "category": "nutrition",
+    "keywords": ["fertilizer types", "khad ke type", "organic fertilizer", "chemical fertilizer", "fertilizer categories"],
+    "answer": "Broadly fertilizer organic, chemical, aur bio-input category me samjhe ja sakte hain. Organic sources compost aur manure dete hain, chemical fertilizers fast nutrients dete hain, aur bio-fertilizers nutrient availability ko support karte hain."
+  },
+  {
+    "question": "Urea aur NPK me difference kya hai",
+    "category": "nutrition",
+    "keywords": ["urea vs npk", "npk aur urea difference", "urea kya karta hai", "npk fertilizer difference", "nitrogen fertilizer"],
+    "answer": "Urea mainly nitrogen source hota hai, jabki NPK fertilizer me nitrogen, phosphorus, aur potash ka combination hota hai. Agar blindly sirf urea diya jaye to crop ko baaki nutrients kam mil sakte hain, isliye balanced plan better hota hai."
+  },
+  {
+    "question": "Barish ke baad kya check kare",
+    "category": "weather",
+    "keywords": ["barish ke baad", "after rain what to do", "rain ke baad crop check", "field check after rain", "rainfall ke baad kya kare"],
+    "answer": "Barish ke baad field me waterlogging, leaf damage, stem lodging, aur pest ya disease flare-up check karo. Agar field me pani ruk gaya hai to drainage improve karo aur spray ka decision leaf dryness aur weather gap dekhkar lo."
+  },
+  {
+    "question": "Temperature kya hota hai farming me",
+    "category": "weather",
+    "keywords": ["temperature kya hai", "tapman kya hai", "taapman meaning", "farm temperature", "what is temperature in farming"],
+    "answer": "Temperature se pata chalta hai ki hawa ya environment kitna garam ya thanda hai. Crop growth, germination, flowering, pollination, aur disease pressure sab temperature se directly affect hote hain."
+  },
+  {
+    "question": "Rainfall kya hota hai",
+    "category": "weather",
+    "keywords": ["rainfall kya hai", "barish kya hoti hai", "rainfall meaning", "what is rainfall", "barish ka measure"],
+    "answer": "Rainfall ka matlab kisi period me hui total barish se hota hai, jise usually millimeter me measure kiya jata hai. Yeh irrigation need, drainage risk, nutrient leaching, aur disease spread samajhne me useful hota hai."
+  },
+  {
+    "question": "Wind ka effect crop par kya hai",
+    "category": "weather",
+    "keywords": ["wind effect", "hawa ka effect", "strong wind crop", "wind damage", "hawa ka asar"],
+    "answer": "Tez hawa se young plants gir sakte hain, transpiration badh sakti hai, aur spray drift bhi hota hai. Lekin halki air movement canopy ko dry rakhne me help karti hai, jo kuch fungal problems ko kam kar sakti hai."
+  },
+  {
+    "question": "Compost kya hota hai",
+    "category": "soil",
+    "keywords": ["compost kya hai", "organic compost", "compost meaning", "khaad compost", "what is compost"],
+    "answer": "Compost decomposed organic material hota hai jo soil structure, microbial activity, aur moisture holding capacity improve karta hai. Yeh instant chemical fertilizer jaisa fast effect nahi deta, par long-term soil health ke liye bahut useful hota hai."
+  },
+  {
+    "question": "Bio fertilizer kya hota hai",
+    "category": "nutrition",
+    "keywords": ["bio fertilizer kya hai", "biofertilizer", "microbial fertilizer", "what is bio fertilizer", "jaivik khad microbes"],
+    "answer": "Bio-fertilizer me useful microorganisms hote hain jo nutrient availability improve karte hain, jaise nitrogen fixation ya phosphorus solubilization. Yeh chemical fertilizer ka direct full replacement nahi hota, par nutrient efficiency improve kar sakta hai."
+  },
+  {
+    "question": "Fungicide kya hota hai",
+    "category": "crop_disease",
+    "keywords": ["fungicide kya hai", "fungicide meaning", "disease spray kya hota hai", "fungal medicine", "what is fungicide"],
+    "answer": "Fungicide wo crop protection spray hota hai jo fungal diseases ko prevent ya control karne ke liye use hota hai. Har spot ya leaf problem me fungicide sahi ho yeh zaruri nahi, isliye disease type pehle samajhna important hai."
+  },
+  {
+    "question": "Insecticide kya hota hai",
+    "category": "pest",
+    "keywords": ["insecticide kya hai", "insect medicine", "keede ki dawai", "what is insecticide", "pest spray meaning"],
+    "answer": "Insecticide pest insects ko control karne ke liye use hota hai. Agar problem fungal disease hai aur aap insecticide use karoge to result nahi milega, isliye pest aur disease ka difference samajhna zaruri hai."
+  },
+  {
+    "question": "Weed kya hota hai",
+    "category": "planning",
+    "keywords": ["weed kya hai", "ghaas problem", "unwanted plants", "weed meaning", "kharpatwar kya hota hai"],
+    "answer": "Weed ya kharpatwar wo unwanted plants hote hain jo crop ke saath nutrients, water, light, aur space ke liye compete karte hain. Early stage me weed control na ho to yield aur input efficiency dono gir sakte hain."
+  },
+  {
+    "question": "Waterlogging kya hota hai",
+    "category": "soil",
+    "keywords": ["waterlogging kya hai", "pani rukna", "field me pani bhar gaya", "water logged soil", "standing water problem"],
+    "answer": "Waterlogging tab hoti hai jab field ya root zone me pani zyada der tak ruk jata hai aur roots ko oxygen kam milti hai. Isse root rot, yellowing, nutrient imbalance, aur plant decline ka risk badh jata hai."
+  },
+  {
+    "question": "Drainage kyu important hai",
+    "category": "soil",
+    "keywords": ["drainage kya hai", "drainage important", "field drainage", "pani nikalna", "soil drainage"],
+    "answer": "Drainage field se extra pani ko bahar nikalne me help karta hai. Achha drainage root zone ko aerated rakhta hai, waterlogging rokta hai, aur especially rainy season me disease pressure ko kam kar sakta hai."
+  },
+  {
+    "question": "Soil pH kyu important hai",
+    "category": "soil",
+    "keywords": ["soil ph important", "mitti ka ph kyu", "ph importance", "acidic alkaline soil effect", "ph ka impact"],
+    "answer": "Soil pH nutrient availability ko control karta hai. Agar pH bahut low ya high ho to crop ko nutrients soil me hone ke baad bhi properly nahi milte, isliye fertilizer recommendation ko pH ke saath dekhna chahiye."
+  },
+  {
+    "question": "Spray barish se pehle kare ya baad me",
+    "category": "weather",
+    "keywords": ["spray before rain", "spray after rain", "barish se pehle spray", "barish ke baad spray", "rain spray timing"],
+    "answer": "Heavy rain expected ho to spray avoid karna better hota hai, kyunki chemical wash off ho sakta hai aur cost waste hoti hai. Rain ke baad tab spray karo jab leaves mostly dry ho jayein aur agla weather window thoda stable dikhe."
+  },
+  {
+    "question": "High humidity me kya kare",
+    "category": "weather",
+    "keywords": ["high humidity", "humidity zyada", "nami zyada hai", "humid weather me kya kare", "high moisture air"],
+    "answer": "High humidity me canopy ventilation, spacing, aur leaf wetness monitoring bahut important ho jati hai. Is weather me fungal disease risk badhta hai, isliye preventive scouting aur over-irrigation avoid karna useful rehta hai."
+  },
+  {
+    "question": "Crop scouting kya hota hai",
+    "category": "planning",
+    "keywords": ["crop scouting", "field scouting", "crop inspection", "regular monitoring", "scouting meaning"],
+    "answer": "Crop scouting ka matlab field ko regular interval par dekhkar pest, disease, nutrient stress, aur irrigation issues jaldi identify karna hota hai. Early scouting se spray aur fertilizer decision zyada accurate aur cost-effective bante hain."
   }
 ]
