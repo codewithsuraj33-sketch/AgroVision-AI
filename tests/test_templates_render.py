@@ -204,3 +204,88 @@ def test_rent_tractor_template_renders():
     assert "Farm location for service?" in html
     assert "Select Service Type" in html
     assert "Land Preparation" in html
+
+
+def test_risk_alerts_template_renders():
+    app = make_app()
+    user = Obj(name="Risk User", location="Bhubaneswar", crop_type="Rice")
+    risk_page = Obj(
+        active_page="risk_alerts",
+        location="Bhubaneswar",
+        requested_location="Bhubaneswar",
+        matched_location="Cuttack",
+        source="openweather",
+        source_label="Live OpenWeather",
+        source_note="Risk scores are using live OpenWeather data.",
+        top_risk_label="Thunderstorm",
+        top_severity="High",
+        weather=Obj(temp=31, humidity=84, wind_speed_kmh=28),
+        stats=[
+            Obj(label="Top Risk", value="Thunderstorm"),
+            Obj(label="Current Temp", value="31 C"),
+            Obj(label="Humidity", value="84%"),
+            Obj(label="Wind", value="28 km/h"),
+        ],
+        info_cards=[
+            Obj(icon="fa-cloud-bolt", title="Rule-based detection", detail="Checks weather signals."),
+            Obj(icon="fa-layer-group", title="Multi-risk ranking", detail="Shows the top risks."),
+            Obj(icon="fa-person-rays", title="Farmer-ready actions", detail="Simple next steps."),
+        ],
+        risk_module=Obj(
+            updated_at="now",
+            summary="Thunderstorm risk is high today. Avoid spraying.",
+            farmer_report="Climate Risk Prediction (Next 3-7 Days)\n\n1. Drought:\nRisk: Low (22%)",
+            assessments=[
+                Obj(
+                    type="Drought",
+                    severity="Moderate",
+                    probability="59%",
+                    trend="Increasing",
+                    expected="",
+                    reason=["Very low rainfall for 7 days", "High temperature (37 C)", "Humidity is high (88%), so drought stress may build more slowly"],
+                ),
+                Obj(
+                    type="Thunderstorm",
+                    severity="High",
+                    probability="78%",
+                    trend="",
+                    expected="Within 48 hours",
+                    reason=["High humidity (88%)", "Wind speed rising (25 km/h)", "No sharp rain burst is visible yet"],
+                ),
+            ],
+            farmer_actions=[
+                "Prepare drainage and keep channels open",
+                "Avoid pesticide spraying before risky weather windows",
+                "Secure loose pipes, sheets, and equipment",
+            ],
+            cards=[
+                Obj(
+                    type="Thunderstorm",
+                    probability="85%",
+                    severity="High",
+                    confidence="90%",
+                    reason=["High humidity (82%)", "Pressure dropping"],
+                    action=["Avoid pesticide spraying", "Secure crops and equipment"],
+                    severity_tone="high",
+                    icon="🌩️",
+                )
+            ],
+            trend=[
+                Obj(day="Today", temp=31, rainfall_mm=14, note="Rain likely", tone="medium", icon="⛅"),
+                Obj(day="Tomorrow", temp=33, rainfall_mm=4, note="Short field window", tone="low", icon="🌤️"),
+                Obj(day="Day 3", temp=34, rainfall_mm=0, note="Plan irrigation early", tone="medium", icon="☀️"),
+            ],
+            json={"location": "Bhubaneswar", "risks": [{"type": "Thunderstorm"}]},
+        ),
+    )
+
+    with app.test_request_context("/risk-alerts"):
+        html = render_template("risk_alerts.html", user=user, risk_page=risk_page)
+
+    assert "AI Risk Alert Module" in html
+    assert "Today's Risk Summary" in html
+    assert "Climate Risk Prediction (Next 3-7 Days)" in html
+    assert "Recommended Farmer Actions" in html
+    assert "Thunderstorm" in html
+    assert "Showing nearest weather match" in html
+    assert "Live OpenWeather" in html

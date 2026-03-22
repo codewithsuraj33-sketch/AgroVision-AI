@@ -46,6 +46,7 @@ This README follows the same product direction as the app: clean agriculture ton
 | Farms | Farm records, primary farm selection, tasks, and management tools |
 | Market & Orders | Storefront, recommendations, checkout, order tracking, and invoices |
 | AI Insights | AI chat and insight features powered by Gemini-style integration |
+| Switch Crop Advisor | Crop rotation guidance with estimated soil recovery analysis |
 | Alerts & Notifications | Field alerts, read-state flow, and monitoring context |
 | Subscriptions & Wallet | Upgrade flows, wallet handling, payments, and referral features |
 | Admin Panel | Admin login, products, mappings, orders, and sync utilities |
@@ -54,6 +55,8 @@ This README follows the same product direction as the app: clean agriculture ton
 
 - Weather, soil, crop monitoring, market, and alerts in one app
 - AI Crop Doctor style Q&A with local dataset fallback
+- Optional semantic reranking for AI Crop Doctor using Gemini embeddings on top of fuzzy matching
+- PostgreSQL + `pgvector` support for persistent AI Crop Doctor vector search
 - Disease detection with optional PyTorch support
 - PDF downloads for weather, soil, order invoice, and disease reports
 - Farm and task management workflow
@@ -105,6 +108,7 @@ AgroVision-AI/
 | `/track-order` | Order tracking and invoice access |
 | `/library` | Crop and disease knowledge library |
 | `/ai-insights` | AI assistant and insights |
+| `/switch-crop` | Switch crop and crop rotation advisor |
 | `/subscriptions` | Premium plan and payment flow |
 | `/admin` | Admin dashboard |
 
@@ -155,12 +159,23 @@ Then open the local URL shown in the terminal.
 | `ADMIN_EMAIL` | Admin login email |
 | `ADMIN_PASSWORD` | Admin login password |
 | `GEMINI_API_KEY` | AI features key |
+| `AI_CROP_DOCTOR_SEMANTIC_SEARCH` | Enable semantic reranking for AI Crop Doctor local matching |
+| `AI_CROP_DOCTOR_SEMANTIC_MODEL` | Embedding model for semantic search, default `models/text-embedding-004` |
+| `AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS` | Embedding dimension used for semantic search and pgvector storage |
+| `AI_CROP_DOCTOR_PGVECTOR_SEARCH` | Enable PostgreSQL pgvector-backed retrieval for AI Crop Doctor |
+| `SWITCH_CROP_PGVECTOR_SEARCH` | Enable PostgreSQL pgvector-backed retrieval for the Switch Crop Advisor |
 | `GOOGLE_API_KEY` | Alternate AI key if used |
 | `SMTP_EMAIL` | Outgoing email account |
 | `SMTP_PASSWORD` | SMTP password or app password |
 | `SMTP_SERVER` | SMTP host |
 | `SMTP_PORT` | SMTP port |
 | `DATABASE_URL` | PostgreSQL or external DB connection string |
+
+To enable semantic search for AI Crop Doctor, set `AI_CROP_DOCTOR_SEMANTIC_SEARCH=true`. The app will then rerank top fuzzy-match candidates with Gemini embeddings, which helps with paraphrased questions and intent-level matching while preserving the existing local fallback flow.
+
+If you are deploying on PostgreSQL with the `vector` extension available, also set `AI_CROP_DOCTOR_PGVECTOR_SEARCH=true`. The app will create an `ai_crop_doctor_vector_index` table automatically, sync local QA and chat-knowledge entries into `pgvector`, and use similarity search before the final answer selection. On SQLite or when the extension is unavailable, the app falls back to in-memory semantic reranking.
+
+The new Switch Crop Advisor uses `dataset/switch_crop_dataset.json`, the app's weather-linked soil estimator, and optional `pgvector` retrieval to recommend the next crop after a previous crop has likely pulled nutrients from the field.
 
 ## Development
 

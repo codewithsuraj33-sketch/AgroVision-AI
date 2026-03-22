@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Switch Crop Advisor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ '/static/style.css' | static_version }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page switch-crop-page">
+  <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+  </button>
+
+  <main class="dashboard-shell switch-crop-shell">
+    <aside class="dashboard-sidebar switch-crop-sidebar">
+      {% set active_page = 'switch_crop' %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main switch-crop-main">
+      <div class="language-switcher">
+        <div id="google_translate_element"></div>
+      </div>
+
+      <header class="switch-crop-hero agro-card">
+        <div class="switch-crop-hero-copy">
+          <span class="switch-crop-kicker">Smart Rotation Advisor</span>
+          <h1>Switch Crop Module</h1>
+          <p>Estimate how the last crop changed your soil, identify likely nutrient pressure, and plan the next crop with sustainable recovery in mind.</p>
+          <div class="switch-crop-hero-points">
+            <span><i class="fas fa-seedling"></i> Sustainable soil-first crop planning</span>
+            <span><i class="fas fa-flask-vial"></i> Estimated NPK and pH recovery outlook</span>
+            <span><i class="fas fa-brain"></i> Dataset + pgvector assisted ranking</span>
+          </div>
+        </div>
+        <div class="switch-crop-hero-side">
+          <div class="switch-crop-hero-visual" aria-hidden="true">
+            <div class="switch-crop-hero-icon-ring">
+              <i class="fas fa-arrows-rotate"></i>
+            </div>
+            <div class="switch-crop-hero-visual-note">
+              <i class="fas fa-leaf"></i>
+              <span>Recover soil, then switch smart.</span>
+            </div>
+          </div>
+
+          <div class="switch-crop-hero-tags">
+          {% for item in switch_page.location_tags %}
+            <span class="switch-crop-hero-chip">
+              <i class="fas {% if item.label == 'Temperature' %}fa-temperature-half{% elif item.label == 'Humidity' %}fa-droplet{% else %}fa-cloud-rain{% endif %}"></i>
+              <span class="switch-crop-hero-chip-copy">
+                <strong>{{ item.label }}</strong>
+                <span>{{ item.value }}</span>
+              </span>
+            </span>
+          {% endfor %}
+          <span class="switch-crop-hero-chip switch-crop-hero-chip-location">
+            <i class="fas fa-location-dot"></i>
+            <span class="switch-crop-hero-chip-copy">
+              <strong>Location</strong>
+              <span>{{ switch_page.location_name }}</span>
+            </span>
+          </span>
+        </div>
+        </div>
+      </header>
+
+      <section class="switch-crop-grid">
+        <article class="agro-card switch-crop-form-card">
+          <div class="switch-crop-card-head">
+            <h2>Previous Crop Input</h2>
+            <span>AI + soil estimate driven</span>
+          </div>
+
+          <form method="POST" action="/switch-crop" class="switch-crop-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="previous_crop">Previous Crop</label>
+            <div class="switch-crop-form-row">
+              <input id="previous_crop" name="previous_crop" list="switchCropOptions" value="{{ switch_page.selected_crop_name }}" placeholder="Enter or choose previous crop" required>
+              <button type="submit">Analyze Rotation</button>
+            </div>
+            <datalist id="switchCropOptions">
+              {% for crop in switch_page.crop_options %}
+                <option value="{{ crop }}"></option>
+              {% endfor %}
+            </datalist>
+            <p class="switch-crop-form-note">This advisor uses weather-linked soil estimation, your crop impact dataset, and optional pgvector semantic ranking where available.</p>
+          </form>
+
+          {% if switch_page.warning %}
+            <div class="switch-crop-warning">
+              {{ switch_page.warning }}
+            </div>
+          {% endif %}
+        </article>
+
+        {% if switch_page.rotation_plan %}
+          <article class="agro-card switch-crop-summary-card">
+            <div class="switch-crop-card-head">
+              <h2>Soil Condition Summary</h2>
+              <span>{{ switch_page.rotation_plan.previous_crop.name }} aftermath</span>
+            </div>
+            <strong class="switch-crop-summary-headline">{{ switch_page.rotation_plan.summary.headline }}</strong>
+            <p class="switch-crop-summary-text">{{ switch_page.rotation_plan.summary.description }}</p>
+            <div class="switch-crop-summary-chips">
+              {% for item in switch_page.rotation_plan.summary.chips %}
+                <span class="switch-crop-summary-chip">
+                  <small>{{ item.label }}</small>
+                  <strong>{{ item.value }}</strong>
+                </span>
+              {% endfor %}
+            </div>
+          </article>
+
+          <article class="agro-card switch-crop-analysis-card">
+            <div class="switch-crop-card-head">
+              <h2>Soil Impact Analysis</h2>
+              <span>Estimated, not lab-tested</span>
+            </div>
+            <div class="switch-crop-analysis-list">
+              {% for item in switch_page.rotation_plan.impact_analysis %}
+                <section class="switch-crop-analysis-item switch-crop-analysis-item-{{ item.tone }}">
+                  <div class="switch-crop-analysis-top">
+                    <strong>{{ item.title }}</strong>
+                    <span>{{ item.impact }}</span>
+                  </div>
+                  <div class="switch-crop-analysis-middle">
+                    <span class="switch-crop-analysis-value">{{ item.estimated_value }}</span>
+                    <span class="switch-crop-analysis-status">{{ item.status }}</span>
+                  </div>
+                  <p>{{ item.detail }}</p>
+                </section>
+              {% endfor %}
+            </div>
+          </article>
+
+          <article class="agro-card switch-crop-recommend-card">
+            <div class="switch-crop-card-head">
+              <h2>Recommended Crops</h2>
+              <span>Max 3 picks</span>
+            </div>
+            <div class="switch-crop-recommend-grid">
+              {% for item in switch_page.rotation_plan.recommended_crops %}
+                <section class="switch-crop-option">
+                  <div class="switch-crop-option-head">
+                    <div>
+                      <strong>{{ item.name }}</strong>
+                      <span>{{ item.badge }}</span>
+                    </div>
+                    <b>{{ "%.1f"|format(item.score) }}</b>
+                  </div>
+                  <div class="switch-crop-option-meta">
+                    <span>{{ item.suitability.climate }}</span>
+                    <span>{{ item.suitability.season }}</span>
+                    <span>pH {{ item.suitability.pH_range }}</span>
+                  </div>
+                  <ul class="switch-crop-option-reasons">
+                    {% for reason in item.reasons %}
+                      <li>{{ reason }}</li>
+                    {% endfor %}
+                  </ul>
+                </section>
+              {% endfor %}
+            </div>
+          </article>
+
+          <article class="agro-card switch-crop-justification-card">
+            <div class="switch-crop-card-head">
+              <h2>Justification</h2>
+              <span>Why these crops</span>
+            </div>
+            <p>{{ switch_page.rotation_plan.justification }}</p>
+          </article>
+        {% endif %}
+      </section>
+    </section>
+  </main>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle Theme">
+    <i class="fas fa-moon" id="themeIcon"></i>
+  </button>
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.setItem('theme', 'light');
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileToggle = document.getElementById('mobileMenuToggle');
+      const sidebar = document.querySelector('.dashboard-sidebar');
+      if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          sidebar.classList.toggle('sidebar-open');
+        });
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 780 && sidebar.classList.contains('sidebar-open')) {
+            if (!sidebar.contains(e.target) && e.target !== mobileToggle) {
+              sidebar.classList.remove('sidebar-open');
+            }
+          }
+        });
+      }
+    });
+  </script>
+
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement(
+        {
+          pageLanguage: 'en',
+          includedLanguages: 'en,hi,or',
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+        },
+        'google_translate_element'
+      );
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</body>
+</html>

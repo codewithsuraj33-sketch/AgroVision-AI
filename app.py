@@ -29,6 +29,7 @@ import numpy as np  # type: ignore
 from flask import Flask, Response, abort, has_app_context, jsonify, redirect, render_template, request, send_file, session  # type: ignore
 from flask_sqlalchemy import SQLAlchemy  # type: ignore
 from PIL import Image, ImageOps, UnidentifiedImageError  # type: ignore
+from sqlalchemy import text  # type: ignore
 from werkzeug.security import check_password_hash, generate_password_hash  # type: ignore
 from werkzeug.utils import secure_filename  # type: ignore
 
@@ -535,11 +536,31 @@ def get_env_int(name, default):
         return default
 
 
+def get_env_float(name, default):
+    try:
+        raw_value = (os.getenv(name) or "").strip()
+        return float(raw_value or default)
+    except (TypeError, ValueError):
+        return default
+
+
 load_local_env_file(Path(app.root_path) / ".env")
 
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
+_semantic_search_env = (os.getenv("AI_CROP_DOCTOR_SEMANTIC_SEARCH") or "").strip().lower()
+AI_CROP_DOCTOR_SEMANTIC_SEARCH_ENABLED = _semantic_search_env in {"1", "true", "yes", "on"}
+AI_CROP_DOCTOR_SEMANTIC_MODEL = (os.getenv("AI_CROP_DOCTOR_SEMANTIC_MODEL") or "models/text-embedding-004").strip()
+AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS = max(128, get_env_int("AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS", 768))
+AI_CROP_DOCTOR_SEMANTIC_SHORTLIST_SIZE = max(3, get_env_int("AI_CROP_DOCTOR_SEMANTIC_SHORTLIST_SIZE", 6))
+AI_CROP_DOCTOR_SEMANTIC_MIN_SCORE = min(0.95, max(0.2, get_env_float("AI_CROP_DOCTOR_SEMANTIC_MIN_SCORE", 0.68)))
+AI_CROP_DOCTOR_SEMANTIC_WEIGHT = max(0.0, get_env_float("AI_CROP_DOCTOR_SEMANTIC_WEIGHT", 6.0))
+_pgvector_env = (os.getenv("AI_CROP_DOCTOR_PGVECTOR_SEARCH") or "").strip().lower()
+AI_CROP_DOCTOR_PGVECTOR_SEARCH_ENABLED = _pgvector_env in {"1", "true", "yes", "on"}
+_switch_crop_pgvector_env = (os.getenv("SWITCH_CROP_PGVECTOR_SEARCH") or "").strip().lower()
+SWITCH_CROP_PGVECTOR_SEARCH_ENABLED = _switch_crop_pgvector_env in {"1", "true", "yes", "on"}
+AI_CROP_DOCTOR_PGVECTOR_TABLE = "ai_crop_doctor_vector_index"
 GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
 GROQ_MODEL = (os.getenv("GROQ_CHAT_MODEL") or "llama-3.1-8b-instant").strip()
 GROQ_VISION_MODEL = (os.getenv("GROQ_VISION_MODEL") or "llama-3.2-11b-vision-preview").strip()
@@ -599,6 +620,7 @@ KISAN_DOST_KNOWLEDGE_PATH = Path(app.root_path) / "dataset" / "kisan_dost_faq.js
 AI_CROP_DOCTOR_FAQ_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_project_faq.txt"
 AI_CROP_DOCTOR_LOCAL_QA_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_local_qa.json"
 AI_CROP_DOCTOR_CHAT_KNOWLEDGE_PATH = Path(app.root_path) / "dataset" / "ai_crop_doctor_chat_knowledge.json"
+SWITCH_CROP_DATA_PATH = Path(app.root_path) / "dataset" / "switch_crop_dataset.json"
 DISEASE_SYMPTOM_RULES_PATH = Path(app.root_path) / "dataset" / "disease_symptom_rules.json"
 CROP_LIBRARY_DATA_PATH = Path(app.root_path) / "dataset" / "crop_library.json"
 CULTIVATION_TIPS_DATA_PATH = Path(app.root_path) / "dataset" / "cultivation_tips.json"
@@ -625,6 +647,12 @@ DISEASE_REFERENCE_SIGNATURE_CACHE = None
 KAGGLE_REFERENCE_SIGNATURE_CACHE = None
 AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE = None
 AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE = None
+SWITCH_CROP_DATA_CACHE = None
+AI_CROP_DOCTOR_SEMANTIC_EMBEDDING_CACHE = {"query": {}, "document": {}, "disabled": False}
+AI_CROP_DOCTOR_SEMANTIC_CACHE_LOCK = threading.Lock()
+AI_CROP_DOCTOR_PGVECTOR_STATE = {"ready": False, "checked": False, "disabled": False}
+AI_CROP_DOCTOR_PGVECTOR_SYNC_CACHE = {}
+AI_CROP_DOCTOR_PGVECTOR_LOCK = threading.Lock()
 LOCATION_GEOCODE_CACHE = {}
 KAGGLE_REFERENCE_DATASET_DIRS = [
     Path(app.root_path) / "dataset" / "PlantVillage" / "PlantVillage",
@@ -2557,6 +2585,98 @@ def load_ai_crop_doctor_chat_knowledge():
     return AI_CROP_DOCTOR_CHAT_KNOWLEDGE_CACHE
 
 
+def load_switch_crop_dataset():
+    global SWITCH_CROP_DATA_CACHE
+
+    if SWITCH_CROP_DATA_CACHE is not None:
+        return SWITCH_CROP_DATA_CACHE
+
+    if not SWITCH_CROP_DATA_PATH.exists():
+        SWITCH_CROP_DATA_CACHE = []
+        return SWITCH_CROP_DATA_CACHE
+
+    try:
+        data = json.loads(SWITCH_CROP_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        SWITCH_CROP_DATA_CACHE = []
+        return SWITCH_CROP_DATA_CACHE
+
+    if not isinstance(data, list):
+        SWITCH_CROP_DATA_CACHE = []
+        return SWITCH_CROP_DATA_CACHE
+
+    normalized_entries = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        soil_impact = item.get("soil_impact") if isinstance(item.get("soil_impact"), dict) else {}
+        suitability = item.get("suitability") if isinstance(item.get("suitability"), dict) else {}
+        normalized_entries.append(
+            {
+                "name": name,
+                "soil_impact": {
+                    "N": str(soil_impact.get("N") or "Moderate").strip(),
+                    "P": str(soil_impact.get("P") or "Moderate").strip(),
+                    "K": str(soil_impact.get("K") or "Moderate").strip(),
+                    "pH": str(soil_impact.get("pH") or "Neutral").strip(),
+                },
+                "suitability": {
+                    "pH_range": str(suitability.get("pH_range") or "5.5-7.0").strip(),
+                    "N_level": str(suitability.get("N_level") or "Medium").strip(),
+                    "P_level": str(suitability.get("P_level") or "Medium").strip(),
+                    "K_level": str(suitability.get("K_level") or "Medium").strip(),
+                    "climate": str(suitability.get("climate") or "Warm").strip(),
+                    "season": str(suitability.get("season") or "All").strip(),
+                },
+            }
+        )
+
+    SWITCH_CROP_DATA_CACHE = normalized_entries
+    return SWITCH_CROP_DATA_CACHE
+
+
+def normalize_switch_crop_name(value):
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").strip().lower()).strip()
+
+
+def build_switch_crop_source_key(entry):
+    if not isinstance(entry, dict):
+        return None
+    return build_ai_crop_doctor_source_key("switch_crop", entry.get("name"))
+
+
+def resolve_switch_crop_entry(crop_name):
+    normalized_query = normalize_switch_crop_name(crop_name)
+    if not normalized_query:
+        return None
+
+    best_entry = None
+    best_score = 0.0
+    compact_query = normalized_query.replace(" ", "")
+    for entry in load_switch_crop_dataset():
+        normalized_name = normalize_switch_crop_name(entry.get("name"))
+        if not normalized_name:
+            continue
+        compact_name = normalized_name.replace(" ", "")
+        score = 0.0
+        if normalized_name == normalized_query or compact_name == compact_query:
+            score = 1.0
+        elif normalized_name in normalized_query or normalized_query in normalized_name:
+            score = 0.92
+        else:
+            score = SequenceMatcher(None, normalized_query, normalized_name).ratio()
+        if score > best_score:
+            best_score = score
+            best_entry = entry
+
+    if best_score >= 0.66:
+        return best_entry
+    return None
+
+
 def get_ai_crop_doctor_local_answer(entry, language="Hinglish"):
     if not isinstance(entry, dict):
         return None
@@ -3022,6 +3142,25 @@ def format_ai_crop_doctor_structured_answer(answer, language="Hinglish", follow_
     return message
 
 
+def build_ai_crop_doctor_source_key(prefix, *parts):
+    normalized_parts = [str(part or "").strip().lower() for part in parts if str(part or "").strip()]
+    raw_key = "|".join(normalized_parts)
+    if raw_key:
+        return f"{prefix}:{sha1(raw_key.encode('utf-8')).hexdigest()[:20]}"
+    return f"{prefix}:{sha1(prefix.encode('utf-8')).hexdigest()[:20]}"
+
+
+def build_ai_crop_doctor_local_qa_source_key(entry):
+    if not isinstance(entry, dict):
+        return None
+    return build_ai_crop_doctor_source_key(
+        "local_qa",
+        entry.get("question") or entry.get("q"),
+        entry.get("category"),
+        " ".join(entry.get("keywords", [])) if isinstance(entry.get("keywords"), list) else "",
+    )
+
+
 def load_ai_crop_doctor_chat_match_entries():
     global AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE
 
@@ -3033,8 +3172,10 @@ def load_ai_crop_doctor_chat_match_entries():
     intent_index = {}
 
     def build_entry(source, tag, patterns, keywords, answer, category="", follow_up=None, confidence_threshold=0.5):
+        source_key = build_ai_crop_doctor_source_key(source, tag, category, " ".join(patterns or []), " ".join(keywords or []))
         entry = {
             "source": source,
+            "source_key": source_key,
             "tag": str(tag or "").strip().lower(),
             "category": str(category or "").strip().lower(),
             "patterns": [str(item or "").strip() for item in (patterns or []) if str(item or "").strip()],
@@ -3135,6 +3276,650 @@ def load_ai_crop_doctor_chat_match_entries():
 
     AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE = entries
     return AI_CROP_DOCTOR_CHAT_MATCH_ENTRIES_CACHE
+
+
+def get_ai_crop_doctor_chat_matching_config():
+    knowledge = load_ai_crop_doctor_chat_knowledge()
+    config = knowledge.get("matching_config") if isinstance(knowledge, dict) else {}
+    return config if isinstance(config, dict) else {}
+
+
+def is_shared_semantic_embedding_enabled():
+    if not GEMINI_API_KEY:
+        return False
+    return bool(
+        AI_CROP_DOCTOR_SEMANTIC_SEARCH_ENABLED
+        or AI_CROP_DOCTOR_PGVECTOR_SEARCH_ENABLED
+        or SWITCH_CROP_PGVECTOR_SEARCH_ENABLED
+    )
+
+
+def is_ai_crop_doctor_semantic_search_enabled():
+    if not GEMINI_API_KEY or not AI_CROP_DOCTOR_SEMANTIC_SEARCH_ENABLED:
+        return False
+    config = get_ai_crop_doctor_chat_matching_config()
+    if "use_semantic_search" in config:
+        return bool(config.get("use_semantic_search"))
+    return True
+
+
+def get_ai_crop_doctor_semantic_shortlist_size():
+    config = get_ai_crop_doctor_chat_matching_config()
+    value = config.get("semantic_shortlist_size")
+    try:
+        return max(3, int(value or AI_CROP_DOCTOR_SEMANTIC_SHORTLIST_SIZE))
+    except (TypeError, ValueError):
+        return AI_CROP_DOCTOR_SEMANTIC_SHORTLIST_SIZE
+
+
+def get_ai_crop_doctor_semantic_min_score():
+    config = get_ai_crop_doctor_chat_matching_config()
+    value = config.get("semantic_min_score")
+    try:
+        return min(0.95, max(0.2, float(value or AI_CROP_DOCTOR_SEMANTIC_MIN_SCORE)))
+    except (TypeError, ValueError):
+        return AI_CROP_DOCTOR_SEMANTIC_MIN_SCORE
+
+
+def get_ai_crop_doctor_semantic_weight():
+    config = get_ai_crop_doctor_chat_matching_config()
+    value = config.get("semantic_weight")
+    try:
+        return max(0.0, float(value or AI_CROP_DOCTOR_SEMANTIC_WEIGHT))
+    except (TypeError, ValueError):
+        return AI_CROP_DOCTOR_SEMANTIC_WEIGHT
+
+
+def is_ai_crop_doctor_pgvector_enabled():
+    return is_shared_pgvector_enabled() and AI_CROP_DOCTOR_PGVECTOR_SEARCH_ENABLED
+
+
+def is_switch_crop_pgvector_enabled():
+    return is_shared_pgvector_enabled() and SWITCH_CROP_PGVECTOR_SEARCH_ENABLED
+
+
+def is_shared_pgvector_enabled():
+    if not is_shared_semantic_embedding_enabled():
+        return False
+    if not (AI_CROP_DOCTOR_PGVECTOR_SEARCH_ENABLED or SWITCH_CROP_PGVECTOR_SEARCH_ENABLED):
+        return False
+    return app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql://")
+
+
+def trim_ai_crop_doctor_semantic_cache(cache_bucket, limit=256):
+    while len(cache_bucket) > limit:
+        cache_bucket.pop(next(iter(cache_bucket)))
+
+
+def normalize_ai_crop_doctor_semantic_embedding(embedding):
+    if embedding is None:
+        return None
+
+    try:
+        vector = np.asarray(embedding, dtype=np.float32)
+    except (TypeError, ValueError):
+        return None
+
+    if vector.ndim != 1 or vector.size == 0:
+        return None
+
+    magnitude = float(np.linalg.norm(vector))
+    if magnitude <= 1e-8:
+        return None
+
+    return vector / magnitude
+
+
+def extract_ai_crop_doctor_embedding_values(response):
+    if response is None:
+        return None
+    if isinstance(response, dict):
+        embedding = response.get("embedding")
+        if isinstance(embedding, dict):
+            return embedding.get("values") or embedding.get("embedding")
+        return embedding
+    return getattr(response, "embedding", None)
+
+
+def disable_ai_crop_doctor_semantic_search():
+    with AI_CROP_DOCTOR_SEMANTIC_CACHE_LOCK:
+        AI_CROP_DOCTOR_SEMANTIC_EMBEDDING_CACHE["disabled"] = True
+
+
+def format_ai_crop_doctor_vector_literal(embedding):
+    values = np.asarray(embedding, dtype=np.float32).tolist()
+    return "[" + ",".join(f"{float(value):.8f}" for value in values) + "]"
+
+
+def get_ai_crop_doctor_semantic_embedding(text, task_type="retrieval_document", title=""):
+    normalized_text = re.sub(r"\s+", " ", str(text or "").strip())
+    if not normalized_text or not is_shared_semantic_embedding_enabled():
+        return None
+
+    bucket_key = "query" if str(task_type).strip().lower() == "retrieval_query" else "document"
+    cache_key = f"{task_type}|{AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS}|{title}|{normalized_text}"
+    with AI_CROP_DOCTOR_SEMANTIC_CACHE_LOCK:
+        if AI_CROP_DOCTOR_SEMANTIC_EMBEDDING_CACHE.get("disabled"):
+            return None
+        cached = AI_CROP_DOCTOR_SEMANTIC_EMBEDDING_CACHE.get(bucket_key, {}).get(cache_key)
+        if cached is not None:
+            return cached
+
+    try:
+            response = genai.embed_content(
+                model=AI_CROP_DOCTOR_SEMANTIC_MODEL,
+                content=normalized_text,
+                task_type=task_type,
+                title=str(title or "").strip() or None,
+                output_dimensionality=AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS,
+            )
+    except TypeError:
+        try:
+            response = genai.embed_content(
+                model=AI_CROP_DOCTOR_SEMANTIC_MODEL,
+                content=normalized_text,
+                task_type=task_type,
+                output_dimensionality=AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS,
+            )
+        except Exception:
+            try:
+                response = genai.embed_content(
+                    model=AI_CROP_DOCTOR_SEMANTIC_MODEL,
+                    content=normalized_text,
+                    task_type=task_type,
+                )
+            except Exception:
+                disable_ai_crop_doctor_semantic_search()
+                return None
+    except Exception:
+        disable_ai_crop_doctor_semantic_search()
+        return None
+
+    embedding = normalize_ai_crop_doctor_semantic_embedding(extract_ai_crop_doctor_embedding_values(response))
+    if embedding is None:
+        return None
+    if int(embedding.size) != AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS:
+        return None
+
+    with AI_CROP_DOCTOR_SEMANTIC_CACHE_LOCK:
+        cache_bucket = AI_CROP_DOCTOR_SEMANTIC_EMBEDDING_CACHE.setdefault(bucket_key, {})
+        cache_bucket[cache_key] = embedding
+        trim_ai_crop_doctor_semantic_cache(cache_bucket, limit=384 if bucket_key == "document" else 128)
+    return embedding
+
+
+def compute_ai_crop_doctor_semantic_similarity(query_text, candidate_text, title=""):
+    query_embedding = get_ai_crop_doctor_semantic_embedding(query_text, task_type="retrieval_query")
+    candidate_embedding = get_ai_crop_doctor_semantic_embedding(candidate_text, task_type="retrieval_document", title=title)
+    if query_embedding is None or candidate_embedding is None:
+        return 0.0
+    return float(np.dot(query_embedding, candidate_embedding))
+
+
+def build_ai_crop_doctor_chat_entry_semantic_text(entry):
+    if not isinstance(entry, dict):
+        return ""
+
+    sections = []
+    tag = str(entry.get("tag") or "").replace("_", " ").strip()
+    category = str(entry.get("category") or "").strip()
+    if tag:
+        sections.append(f"intent {tag}")
+    if category:
+        sections.append(f"category {category}")
+    patterns = [str(item or "").strip() for item in (entry.get("patterns") or []) if str(item or "").strip()]
+    keywords = [str(item or "").strip() for item in (entry.get("keywords") or []) if str(item or "").strip()]
+    if patterns:
+        sections.append("patterns " + " ; ".join(patterns[:6]))
+    if keywords:
+        sections.append("keywords " + " ; ".join(keywords[:8]))
+    answer = entry.get("answer")
+    if isinstance(answer, dict):
+        answer_parts = [
+            str(answer.get("disease") or "").strip(),
+            str(answer.get("cause") or "").strip(),
+            " ; ".join(answer.get("symptoms", [])[:4]) if isinstance(answer.get("symptoms"), list) else "",
+            " ; ".join((answer.get("solution") or {}).get("organic", [])[:3]) if isinstance(answer.get("solution"), dict) else "",
+            " ; ".join((answer.get("solution") or {}).get("chemical", [])[:3]) if isinstance(answer.get("solution"), dict) else "",
+            " ; ".join(answer.get("prevention", [])[:3]) if isinstance(answer.get("prevention"), list) else "",
+            str(answer.get("recommendation") or "").strip(),
+        ]
+        sections.extend([part for part in answer_parts if part])
+    elif isinstance(answer, list):
+        sections.append("responses " + " ; ".join(str(item or "").strip() for item in answer[:3] if str(item or "").strip()))
+    elif isinstance(answer, str):
+        sections.append(answer.strip())
+    return "\n".join(section for section in sections if section).strip()
+
+
+def build_ai_crop_doctor_local_qa_semantic_text(entry):
+    if not isinstance(entry, dict):
+        return ""
+
+    question = str(entry.get("question") or entry.get("q") or "").strip()
+    category = str(entry.get("category") or "").strip()
+    keywords = [str(item or "").strip() for item in (entry.get("keywords") or []) if str(item or "").strip()]
+    answer = str(entry.get("answer") or entry.get("answer_en") or entry.get("english_answer") or "").strip()
+    sections = []
+    if question:
+        sections.append(f"question {question}")
+    if category:
+        sections.append(f"category {category}")
+    if keywords:
+        sections.append("keywords " + " ; ".join(keywords[:8]))
+    if answer:
+        sections.append(answer)
+    return "\n".join(section for section in sections if section).strip()
+
+
+def build_switch_crop_semantic_text(entry):
+    if not isinstance(entry, dict):
+        return ""
+
+    suitability = entry.get("suitability") if isinstance(entry.get("suitability"), dict) else {}
+    soil_impact = entry.get("soil_impact") if isinstance(entry.get("soil_impact"), dict) else {}
+    sections = [f"crop {str(entry.get('name') or '').strip()}"]
+    if soil_impact:
+        sections.append(
+            "soil impact "
+            + "; ".join(
+                f"{label} {str(soil_impact.get(label) or '').strip()}"
+                for label in ["N", "P", "K", "pH"]
+                if str(soil_impact.get(label) or "").strip()
+            )
+        )
+    if suitability:
+        sections.append(
+            "suitability "
+            + "; ".join(
+                f"{label} {str(suitability.get(label) or '').strip()}"
+                for label in ["pH_range", "N_level", "P_level", "K_level", "climate", "season"]
+                if str(suitability.get(label) or "").strip()
+            )
+        )
+    return "\n".join(section for section in sections if section).strip()
+
+
+def get_ai_crop_doctor_local_qa_semantic_title(entry):
+    if not isinstance(entry, dict):
+        return ""
+    return str(entry.get("question") or entry.get("q") or "").strip()
+
+
+def build_ai_crop_doctor_pgvector_document(source_kind, source_key, title, content_text):
+    normalized_title = str(title or "").strip()
+    normalized_content = re.sub(r"\s+", " ", str(content_text or "").strip())
+    if not source_key or not normalized_content:
+        return None
+    content_hash = sha256(
+        f"{AI_CROP_DOCTOR_SEMANTIC_MODEL}|{AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS}|{normalized_title}|{normalized_content}".encode("utf-8")
+    ).hexdigest()
+    return {
+        "source_kind": str(source_kind or "").strip(),
+        "source_key": str(source_key or "").strip(),
+        "title": normalized_title,
+        "content_text": normalized_content,
+        "content_hash": content_hash,
+    }
+
+
+def build_ai_crop_doctor_chat_pgvector_documents():
+    documents = []
+    for entry in load_ai_crop_doctor_chat_match_entries():
+        document = build_ai_crop_doctor_pgvector_document(
+            "chat_knowledge",
+            entry.get("source_key"),
+            str(entry.get("tag") or "").replace("_", " ").strip(),
+            build_ai_crop_doctor_chat_entry_semantic_text(entry),
+        )
+        if document is not None:
+            documents.append(document)
+    return documents
+
+
+def build_ai_crop_doctor_local_qa_pgvector_documents():
+    documents = []
+    for entry in load_ai_crop_doctor_local_qa():
+        document = build_ai_crop_doctor_pgvector_document(
+            "local_qa",
+            build_ai_crop_doctor_local_qa_source_key(entry),
+            get_ai_crop_doctor_local_qa_semantic_title(entry),
+            build_ai_crop_doctor_local_qa_semantic_text(entry),
+        )
+        if document is not None:
+            documents.append(document)
+    return documents
+
+
+def build_switch_crop_pgvector_documents():
+    documents = []
+    for entry in load_switch_crop_dataset():
+        document = build_ai_crop_doctor_pgvector_document(
+            "switch_crop",
+            build_switch_crop_source_key(entry),
+            str(entry.get("name") or "").strip(),
+            build_switch_crop_semantic_text(entry),
+        )
+        if document is not None:
+            documents.append(document)
+    return documents
+
+
+def get_ai_crop_doctor_pgvector_documents(source_kind):
+    if source_kind == "chat_knowledge":
+        return build_ai_crop_doctor_chat_pgvector_documents()
+    if source_kind == "local_qa":
+        return build_ai_crop_doctor_local_qa_pgvector_documents()
+    if source_kind == "switch_crop":
+        return build_switch_crop_pgvector_documents()
+    return []
+
+
+def disable_ai_crop_doctor_pgvector_search():
+    with AI_CROP_DOCTOR_PGVECTOR_LOCK:
+        AI_CROP_DOCTOR_PGVECTOR_STATE["disabled"] = True
+
+
+def ensure_ai_crop_doctor_pgvector_table():
+    if not is_shared_pgvector_enabled():
+        return False
+
+    with AI_CROP_DOCTOR_PGVECTOR_LOCK:
+        if AI_CROP_DOCTOR_PGVECTOR_STATE.get("disabled"):
+            return False
+        if AI_CROP_DOCTOR_PGVECTOR_STATE.get("ready"):
+            return True
+
+        try:
+            db.session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            db.session.execute(
+                text(
+                    f"""
+                    CREATE TABLE IF NOT EXISTS {AI_CROP_DOCTOR_PGVECTOR_TABLE} (
+                        id BIGSERIAL PRIMARY KEY,
+                        source_kind VARCHAR(40) NOT NULL,
+                        source_key VARCHAR(255) NOT NULL,
+                        title TEXT,
+                        content_text TEXT NOT NULL,
+                        content_hash VARCHAR(64) NOT NULL,
+                        embedding_model VARCHAR(160) NOT NULL,
+                        embedding_dimensions INTEGER NOT NULL,
+                        embedding vector({AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS}) NOT NULL,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        UNIQUE (source_kind, source_key)
+                    )
+                    """
+                )
+            )
+            db.session.execute(
+                text(
+                    f"CREATE INDEX IF NOT EXISTS idx_{AI_CROP_DOCTOR_PGVECTOR_TABLE}_source_kind "
+                    f"ON {AI_CROP_DOCTOR_PGVECTOR_TABLE} (source_kind)"
+                )
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            AI_CROP_DOCTOR_PGVECTOR_STATE["disabled"] = True
+            return False
+
+        AI_CROP_DOCTOR_PGVECTOR_STATE["ready"] = True
+        AI_CROP_DOCTOR_PGVECTOR_STATE["checked"] = True
+        return True
+
+
+def sync_ai_crop_doctor_pgvector_documents(source_kind):
+    if not ensure_ai_crop_doctor_pgvector_table():
+        return False
+
+    documents = get_ai_crop_doctor_pgvector_documents(source_kind)
+    manifest_hash = sha256(
+        "\n".join(f"{item['source_key']}|{item['content_hash']}" for item in documents).encode("utf-8")
+    ).hexdigest() if documents else ""
+
+    with AI_CROP_DOCTOR_PGVECTOR_LOCK:
+        if AI_CROP_DOCTOR_PGVECTOR_SYNC_CACHE.get(source_kind) == manifest_hash:
+            return True
+
+    try:
+        existing_rows = db.session.execute(
+            text(
+                f"SELECT source_key, content_hash FROM {AI_CROP_DOCTOR_PGVECTOR_TABLE} "
+                "WHERE source_kind = :source_kind"
+            ),
+            {"source_kind": source_kind},
+        ).mappings().all()
+    except Exception:
+        db.session.rollback()
+        disable_ai_crop_doctor_pgvector_search()
+        return False
+
+    existing_hashes = {row["source_key"]: row["content_hash"] for row in existing_rows}
+    seen_keys = set()
+
+    for document in documents:
+        seen_keys.add(document["source_key"])
+        if existing_hashes.get(document["source_key"]) == document["content_hash"]:
+            continue
+
+        embedding = get_ai_crop_doctor_semantic_embedding(
+            document["content_text"],
+            task_type="retrieval_document",
+            title=document["title"],
+        )
+        if embedding is None:
+            continue
+
+        try:
+            db.session.execute(
+                text(
+                    f"""
+                    INSERT INTO {AI_CROP_DOCTOR_PGVECTOR_TABLE}
+                        (source_kind, source_key, title, content_text, content_hash, embedding_model, embedding_dimensions, embedding)
+                    VALUES
+                        (:source_kind, :source_key, :title, :content_text, :content_hash, :embedding_model, :embedding_dimensions, CAST(:embedding AS vector))
+                    ON CONFLICT (source_kind, source_key)
+                    DO UPDATE SET
+                        title = EXCLUDED.title,
+                        content_text = EXCLUDED.content_text,
+                        content_hash = EXCLUDED.content_hash,
+                        embedding_model = EXCLUDED.embedding_model,
+                        embedding_dimensions = EXCLUDED.embedding_dimensions,
+                        embedding = EXCLUDED.embedding,
+                        updated_at = NOW()
+                    """
+                ),
+                {
+                    "source_kind": document["source_kind"],
+                    "source_key": document["source_key"],
+                    "title": document["title"],
+                    "content_text": document["content_text"],
+                    "content_hash": document["content_hash"],
+                    "embedding_model": AI_CROP_DOCTOR_SEMANTIC_MODEL,
+                    "embedding_dimensions": AI_CROP_DOCTOR_SEMANTIC_DIMENSIONS,
+                    "embedding": format_ai_crop_doctor_vector_literal(embedding),
+                },
+            )
+        except Exception:
+            db.session.rollback()
+            disable_ai_crop_doctor_pgvector_search()
+            return False
+
+    stale_keys = set(existing_hashes) - seen_keys
+    if stale_keys:
+        placeholders = ", ".join(f":key_{index}" for index, _ in enumerate(stale_keys))
+        params = {"source_kind": source_kind}
+        for index, key in enumerate(sorted(stale_keys)):
+            params[f"key_{index}"] = key
+        try:
+            db.session.execute(
+                text(
+                    f"DELETE FROM {AI_CROP_DOCTOR_PGVECTOR_TABLE} WHERE source_kind = :source_kind "
+                    f"AND source_key IN ({placeholders})"
+                ),
+                params,
+            )
+        except Exception:
+            db.session.rollback()
+            disable_ai_crop_doctor_pgvector_search()
+            return False
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        disable_ai_crop_doctor_pgvector_search()
+        return False
+
+    with AI_CROP_DOCTOR_PGVECTOR_LOCK:
+        AI_CROP_DOCTOR_PGVECTOR_SYNC_CACHE[source_kind] = manifest_hash
+    return True
+
+
+def search_ai_crop_doctor_pgvector(source_kind, query_text, limit=5):
+    if not sync_ai_crop_doctor_pgvector_documents(source_kind):
+        return []
+
+    query_embedding = get_ai_crop_doctor_semantic_embedding(query_text, task_type="retrieval_query")
+    if query_embedding is None:
+        return []
+
+    try:
+        rows = db.session.execute(
+            text(
+                f"""
+                SELECT
+                    source_key,
+                    title,
+                    content_text,
+                    1 - (embedding <=> CAST(:embedding AS vector)) AS semantic_score
+                FROM {AI_CROP_DOCTOR_PGVECTOR_TABLE}
+                WHERE source_kind = :source_kind
+                ORDER BY embedding <=> CAST(:embedding AS vector)
+                LIMIT :limit
+                """
+            ),
+            {
+                "source_kind": source_kind,
+                "embedding": format_ai_crop_doctor_vector_literal(query_embedding),
+                "limit": int(limit),
+            },
+        ).mappings().all()
+    except Exception:
+        db.session.rollback()
+        disable_ai_crop_doctor_pgvector_search()
+        return []
+
+    results = []
+    semantic_min_score = get_ai_crop_doctor_semantic_min_score()
+    for row in rows:
+        semantic_score = float(row.get("semantic_score") or 0.0)
+        if semantic_score < semantic_min_score:
+            continue
+        results.append(
+            {
+                "source_key": row.get("source_key"),
+                "title": row.get("title"),
+                "content_text": row.get("content_text"),
+                "semantic_score": semantic_score,
+            }
+        )
+    return results
+
+
+def merge_ai_crop_doctor_pgvector_candidates(scored_candidates, vector_matches, entry_lookup, threshold_floor=4.5):
+    if not isinstance(scored_candidates, list) or not isinstance(vector_matches, list):
+        return
+
+    semantic_weight = get_ai_crop_doctor_semantic_weight()
+    candidate_map = {
+        str(candidate.get("source_key") or "").strip(): candidate
+        for candidate in scored_candidates
+        if str(candidate.get("source_key") or "").strip()
+    }
+
+    for match in vector_matches:
+        source_key = str(match.get("source_key") or "").strip()
+        semantic_score = float(match.get("semantic_score") or 0.0)
+        if not source_key or semantic_score <= 0:
+            continue
+
+        candidate = candidate_map.get(source_key)
+        if candidate is not None:
+            candidate["semantic_score"] = max(float(candidate.get("semantic_score") or 0.0), semantic_score)
+            candidate["blended_score"] = max(
+                float(candidate.get("blended_score") or candidate.get("score") or 0.0),
+                float(candidate.get("score") or 0.0) + semantic_score * semantic_weight,
+            )
+            continue
+
+        entry = entry_lookup.get(source_key) if isinstance(entry_lookup, dict) else None
+        if entry is None:
+            continue
+
+        boosted_score = 1.5 + semantic_score * max(1.0, semantic_weight * 0.35)
+        new_candidate = {
+            "entry": entry,
+            "source_key": source_key,
+            "score": boosted_score,
+            "blended_score": boosted_score + semantic_score * semantic_weight,
+            "semantic_score": semantic_score,
+            "strong_overlap": 0,
+            "phrase_match": False,
+            "threshold": min(6.0, max(threshold_floor, boosted_score)),
+        }
+        candidate_map[source_key] = new_candidate
+        scored_candidates.append(new_candidate)
+
+
+def rerank_ai_crop_doctor_semantic_candidates(query_text, candidates):
+    if not isinstance(candidates, list) or not candidates:
+        return None
+
+    for candidate in candidates:
+        candidate["blended_score"] = float(candidate.get("score") or 0.0)
+        candidate["semantic_score"] = float(candidate.get("semantic_score") or 0.0)
+
+    if not is_ai_crop_doctor_semantic_search_enabled():
+        return None
+
+    shortlist = sorted(
+        [candidate for candidate in candidates if str(candidate.get("semantic_text") or "").strip()],
+        key=lambda item: float(item.get("score") or 0.0),
+        reverse=True,
+    )[: get_ai_crop_doctor_semantic_shortlist_size()]
+    if not shortlist:
+        return None
+
+    query_embedding = get_ai_crop_doctor_semantic_embedding(query_text, task_type="retrieval_query")
+    if query_embedding is None:
+        return None
+
+    semantic_min_score = get_ai_crop_doctor_semantic_min_score()
+    semantic_weight = get_ai_crop_doctor_semantic_weight()
+    best_candidate = None
+    best_blended_score = float("-inf")
+
+    for candidate in shortlist:
+        candidate_embedding = get_ai_crop_doctor_semantic_embedding(
+            candidate.get("semantic_text"),
+            task_type="retrieval_document",
+            title=candidate.get("semantic_title"),
+        )
+        if candidate_embedding is None:
+            continue
+
+        semantic_score = float(np.dot(query_embedding, candidate_embedding))
+        candidate["semantic_score"] = semantic_score
+        if semantic_score >= semantic_min_score:
+            candidate["blended_score"] = float(candidate.get("score") or 0.0) + semantic_score * semantic_weight
+
+        if float(candidate.get("blended_score") or 0.0) > best_blended_score:
+            best_blended_score = float(candidate.get("blended_score") or 0.0)
+            best_candidate = candidate
+
+    return best_candidate
 
 
 def build_ai_chat_greeting_reply(language="Hinglish"):
@@ -3339,13 +4124,13 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
     if is_ai_chat_greeting_query(query_text):
         return build_ai_chat_greeting_reply(language=language)
 
-    best_entry = None
-    best_score = 0.0
-    best_strong_overlap = 0
-    best_phrase_match = False
-    best_threshold = 7.0
+    entry_lookup = {}
+    scored_candidates = []
 
     for entry in load_ai_crop_doctor_chat_match_entries():
+        source_key = str(entry.get("source_key") or "").strip()
+        if source_key:
+            entry_lookup[source_key] = entry
         signature_tokens = set()
         score = 0.0
         phrase_match = False
@@ -3448,14 +4233,44 @@ def lookup_ai_crop_doctor_chat_knowledge(query_text):
         if keyword_hits and strong_overlap:
             threshold -= 0.5
 
-        if score > best_score:
-            best_score = score
-            best_entry = entry
-            best_strong_overlap = strong_overlap
-            best_phrase_match = phrase_match
-            best_threshold = threshold
+        scored_candidates.append(
+            {
+                "entry": entry,
+                "source_key": source_key,
+                "score": score,
+                "strong_overlap": strong_overlap,
+                "phrase_match": phrase_match,
+                "threshold": threshold,
+                "semantic_title": str(entry.get("tag") or "").replace("_", " ").strip(),
+                "semantic_text": build_ai_crop_doctor_chat_entry_semantic_text(entry),
+            }
+        )
 
-    if best_entry and best_score >= best_threshold and (best_phrase_match or best_strong_overlap >= 2):
+    rerank_ai_crop_doctor_semantic_candidates(query_text, scored_candidates)
+    merge_ai_crop_doctor_pgvector_candidates(
+        scored_candidates,
+        search_ai_crop_doctor_pgvector("chat_knowledge", query_text, limit=get_ai_crop_doctor_semantic_shortlist_size()),
+        entry_lookup,
+        threshold_floor=4.8,
+    )
+    best_candidate = None
+    if scored_candidates:
+        best_candidate = max(scored_candidates, key=lambda item: float(item.get("blended_score") or item.get("score") or 0.0))
+
+    if best_candidate is None:
+        return None
+
+    best_entry = best_candidate.get("entry")
+    best_score = float(best_candidate.get("blended_score") or best_candidate.get("score") or 0.0)
+    best_threshold = float(best_candidate.get("threshold") or 7.0)
+    best_strong_overlap = int(best_candidate.get("strong_overlap") or 0)
+    best_phrase_match = bool(best_candidate.get("phrase_match"))
+    best_semantic_score = float(best_candidate.get("semantic_score") or 0.0)
+    acceptance_floor = max(4.8, best_threshold - 1.8) if best_semantic_score >= get_ai_crop_doctor_semantic_min_score() + 0.08 else best_threshold
+
+    if best_entry and best_score >= acceptance_floor and (
+        best_phrase_match or best_strong_overlap >= 2 or best_semantic_score >= get_ai_crop_doctor_semantic_min_score() + 0.08
+    ):
         add_follow_up = best_score < best_threshold + 2 and best_entry.get("follow_up")
         return format_ai_crop_doctor_structured_answer(
             best_entry.get("answer"),
@@ -3515,11 +4330,12 @@ def lookup_ai_crop_doctor_local_qa(query_text):
     if structured_answer:
         return structured_answer
 
-    best_entry = None
-    best_score = 0.0
-    best_strong_overlap = 0
-    best_phrase_match = False
+    entry_lookup = {}
+    scored_candidates = []
     for entry in load_ai_crop_doctor_local_qa():
+        source_key = build_ai_crop_doctor_local_qa_source_key(entry)
+        if source_key:
+            entry_lookup[source_key] = entry
         question = str(entry.get("question") or entry.get("q") or "").strip()
         answer = get_ai_crop_doctor_local_answer(entry, language=language)
         if not question or not answer:
@@ -3586,13 +4402,43 @@ def lookup_ai_crop_doctor_local_qa(query_text):
         if fuzzy_strong_overlap:
             score += float(fuzzy_strong_overlap) * 2.0
 
-        if score > best_score:
-            best_entry = entry
-            best_score = score
-            best_strong_overlap = strong_overlap
-            best_phrase_match = phrase_match
+        scored_candidates.append(
+            {
+                "entry": entry,
+                "source_key": source_key,
+                "score": score,
+                "strong_overlap": strong_overlap,
+                "phrase_match": phrase_match,
+                "threshold": 7.0,
+                "semantic_title": question,
+                "semantic_text": build_ai_crop_doctor_local_qa_semantic_text(entry),
+            }
+        )
 
-    if best_entry and best_score >= 7 and (best_phrase_match or best_strong_overlap >= 2):
+    rerank_ai_crop_doctor_semantic_candidates(query_text, scored_candidates)
+    merge_ai_crop_doctor_pgvector_candidates(
+        scored_candidates,
+        search_ai_crop_doctor_pgvector("local_qa", query_text, limit=get_ai_crop_doctor_semantic_shortlist_size()),
+        entry_lookup,
+        threshold_floor=4.5,
+    )
+    best_candidate = None
+    if scored_candidates:
+        best_candidate = max(scored_candidates, key=lambda item: float(item.get("blended_score") or item.get("score") or 0.0))
+
+    if best_candidate is None:
+        return None
+
+    best_entry = best_candidate.get("entry")
+    best_score = float(best_candidate.get("blended_score") or best_candidate.get("score") or 0.0)
+    best_strong_overlap = int(best_candidate.get("strong_overlap") or 0)
+    best_phrase_match = bool(best_candidate.get("phrase_match"))
+    best_semantic_score = float(best_candidate.get("semantic_score") or 0.0)
+    acceptance_floor = 4.5 if best_semantic_score >= get_ai_crop_doctor_semantic_min_score() + 0.08 else 7.0
+
+    if best_entry and best_score >= acceptance_floor and (
+        best_phrase_match or best_strong_overlap >= 2 or best_semantic_score >= get_ai_crop_doctor_semantic_min_score() + 0.08
+    ):
         return get_ai_crop_doctor_local_answer(best_entry, language=language)
 
     return None
@@ -6108,12 +6954,71 @@ def ask_groq_ai_crop_doctor(user, query, history):
     return content or None
 
 
+def extract_ai_chat_weather_location(query_text, default_location=""):
+    raw_query = str(query_text or "").strip()
+    if not raw_query:
+        return str(default_location or "").strip()
+
+    query_lower = raw_query.lower()
+    weather_terms_pattern = r"(?:weather|mausam|rainfall|rain|barish|baarish|humidity|temperature|temp|tapman|taapman|wind|hawa)"
+    candidate_patterns = [
+        rf"\b(.+?)\s+(?:me|mein|in|at|for|ka|ki|ke)?\s*{weather_terms_pattern}\b",
+        rf"\b{weather_terms_pattern}\s+(?:in|at|for|of)?\s*(.+)$",
+    ]
+    trim_tokens = {
+        "aaj", "aj", "abhi", "today", "current", "latest", "live", "kal", "tomorrow",
+        "report", "forecast", "update", "info", "information", "kya", "kaisa", "kaisi",
+        "kitna", "kitni", "hai", "hain", "hoga", "hogi", "honge", "batao", "bataye",
+        "mujhe", "please", "plz", "yaha", "yahaan", "waha", "wahan", "city", "location",
+    }
+
+    def clean_candidate(value):
+        parts = [
+            token.strip(" ,.-")
+            for token in re.findall(r"[a-z0-9\u0900-\u097f]+", str(value or "").lower())
+            if token.strip(" ,.-")
+        ]
+        cleaned_parts = [token for token in parts if token not in trim_tokens]
+        if not cleaned_parts:
+            return ""
+        return " ".join(cleaned_parts[:4]).strip()
+
+    for pattern in candidate_patterns:
+        match = re.search(pattern, query_lower)
+        if not match:
+            continue
+        candidate = clean_candidate(match.group(1))
+        if candidate:
+            return candidate.title()
+
+    return str(default_location or "").strip()
+
+
+def is_ai_chat_live_weather_query(query_text, default_location=""):
+    query_lower = str(query_text or "").strip().lower()
+    if not query_lower:
+        return False
+
+    weather_terms = ["weather", "mausam", "rain", "rainfall", "barish", "baarish", "humidity", "temperature", "temp", "tapman", "taapman", "wind", "hawa"]
+    live_terms = ["today", "aaj", "abhi", "current", "latest", "live", "report", "forecast", "update", "kitna", "kitni", "kitne", "kya", "hoga", "hogi", "chance"]
+    if not any(term in query_lower for term in weather_terms):
+        return False
+
+    extracted_location = extract_ai_chat_weather_location(query_text, default_location=default_location)
+    default_location_text = str(default_location or "").strip().lower()
+    if extracted_location and extracted_location.strip().lower() and extracted_location.strip().lower() != default_location_text:
+        return True
+
+    return any(term in query_lower for term in live_terms)
+
+
 def build_kisan_dost_reply(user, query, history=None, allow_generic_fallback=True):
     crop_name = normalize_kisan_dost_crop_name(user.crop_type or "crop")
-    location_name = user.location or "aapke area"
+    default_location_name = user.location or "aapke area"
     history = sanitize_ai_chat_history(history)
     query_text = build_ai_chat_context_query(query, history)
     query_lower = query_text.lower()
+    location_name = extract_ai_chat_weather_location(query_text, default_location=default_location_name) or default_location_name
     answer_language = detect_ai_chat_language(query_text)
     farms = []
     task_summary = {"open_count": 0, "overdue_count": 0, "preview": []}
@@ -6327,6 +7232,16 @@ def build_ai_chat_unknown_reply(query_text=""):
 def resolve_ai_chat_response(user, query, history=None):
     sanitized_history = sanitize_ai_chat_history(history)
     context_query = build_ai_chat_context_query(query, sanitized_history)
+
+    if is_ai_chat_live_weather_query(context_query, default_location=getattr(user, "location", "")):
+        contextual_weather_reply = build_kisan_dost_reply(
+            user,
+            query,
+            sanitized_history,
+            allow_generic_fallback=False,
+        )
+        if contextual_weather_reply:
+            return {"response": contextual_weather_reply, "provider": "contextual_assistant"}
 
     groq_reply = ask_groq_ai_crop_doctor(user, query, sanitized_history)
     if groq_reply:
@@ -8752,6 +9667,8 @@ def build_openweather_monitor_payload(city):
             "Weather data is running in fallback mode right now.",
             "Use crop scouting and field checks before spray or irrigation decisions.",
         ],
+        "lat": fallback_weather.get("lat"),
+        "lon": fallback_weather.get("lon"),
         "source": "fallback",
     }
 
@@ -8838,12 +9755,44 @@ def build_openweather_monitor_payload(city):
             daily_points,
             aqi_data,
         ),
+        "lat": lat,
+        "lon": lon,
         "source": "openweather",
     }
     if normalize_weather_place_name(str(merged_payload["matched_location"])) == normalize_weather_place_name(location_name):
         merged_payload["matched_location"] = ""
     set_cached_weather_api_payload(location_name, merged_payload)
     return merged_payload
+
+
+def build_weather_bundle_from_monitor_payload(monitor_payload, fallback_location=""):
+    payload = monitor_payload if isinstance(monitor_payload, dict) else {}
+    current = payload.get("current") if isinstance(payload.get("current"), dict) else {}
+    location_name = str(payload.get("requested_location") or payload.get("location") or fallback_location or "Bhubaneswar").strip() or "Bhubaneswar"
+    data_location = str(payload.get("matched_location") or payload.get("requested_location") or payload.get("location") or fallback_location or "Bhubaneswar").strip() or "Bhubaneswar"
+    return {
+        "city": data_location,
+        "display_city": location_name,
+        "temp": round(coerce_float(current.get("temp"), 32)),
+        "description": str(current.get("condition") or "Clear").title(),
+        "humidity": int(coerce_float(current.get("humidity"), 62)),
+        "rainfall_mm": 0,
+        "wind_speed": round(coerce_float(current.get("wind_speed"), 16.2) / 3.6, 1),
+        "wind_speed_kmh": round(coerce_float(current.get("wind_speed"), 16.2), 1),
+        "wind_deg": int(coerce_float(current.get("wind_deg"), 90)),
+        "clouds": 28,
+        "pressure": int(coerce_float(current.get("pressure"), 1009)),
+        "lat": payload.get("lat"),
+        "lon": payload.get("lon"),
+        "updated_at": str(payload.get("updated_at") or datetime.now().strftime("%d %b, %I:%M %p")),
+        "chart": [],
+        "chart_polyline": "",
+        "slider_percent": 62,
+        "feels_like": round(coerce_float(current.get("feels_like"), current.get("temp") or 33)),
+        "icon_code": "",
+        "icon_url": str(current.get("icon") or build_weather_icon_url("01d")),
+        "source": str(payload.get("source") or "fallback"),
+    }
 
 
 def fetch_weather_bundle(location):
@@ -9104,6 +10053,550 @@ def build_recommendations(user, weather, soil, crop_health):
     return list(recommendations[:3])  # type: ignore
 
 
+def estimate_switch_crop_base_soil(user, weather):
+    base_soil = build_soil_profile(user, weather)
+    seed_source = f"{user.id}-{user.email}-{user.location or ''}-{user.crop_type or ''}-switch-crop"
+    seed = sum((index + 1) * ord(char) for index, char in enumerate(seed_source))
+    humidity = float(weather.get("humidity", 60) or 60)
+    rainfall = float(weather.get("rainfall_mm", 0) or 0)
+    temperature = float(weather.get("temp", 30) or 30)
+    pressure = float(weather.get("pressure", 1008) or 1008)
+    lat = float(weather.get("lat") or 20.0)
+    lon = float(weather.get("lon") or 78.0)
+
+    phosphorus = clamp(
+        int(
+            24
+            + humidity * 0.16
+            + rainfall * 1.35
+            - temperature * 0.21
+            + (pressure - 1000) * 0.08
+            + (seed % 9)
+            + int(abs(lat) % 6)
+        ),
+        18,
+        88,
+    )
+    potassium = clamp(
+        int(
+            28
+            + humidity * 0.11
+            + rainfall * 1.55
+            - temperature * 0.18
+            + (seed % 13)
+            + int(abs(lon) % 7)
+        ),
+        20,
+        92,
+    )
+    organic_matter = clamp(
+        int(
+            34
+            + humidity * 0.22
+            + rainfall * 1.1
+            - temperature * 0.14
+            + (seed % 10)
+        ),
+        26,
+        86,
+    )
+
+    return {
+        "ph": float(base_soil.get("ph") or 6.4),
+        "nitrogen": int(base_soil.get("nitrogen") or 46),
+        "phosphorus": phosphorus,
+        "potassium": potassium,
+        "moisture": int(base_soil.get("moisture") or 50),
+        "organic_matter": organic_matter,
+    }
+
+
+def get_switch_crop_impact_value(label):
+    normalized_label = str(label or "").strip().lower()
+    impact_map = {
+        "low": 5,
+        "moderate": 11,
+        "decrease": 15,
+        "high decrease": 23,
+    }
+    return impact_map.get(normalized_label, 11)
+
+
+def get_switch_crop_requirement_score(label):
+    normalized_label = str(label or "").strip().lower()
+    requirement_map = {
+        "low": 10.0,
+        "medium": 6.0,
+        "high": 1.5,
+    }
+    return requirement_map.get(normalized_label, 6.0)
+
+
+def get_switch_crop_requirement_penalty(label):
+    normalized_label = str(label or "").strip().lower()
+    penalty_map = {
+        "low": 0.8,
+        "moderate": 1.6,
+        "decrease": 2.4,
+        "high decrease": 4.0,
+    }
+    return penalty_map.get(normalized_label, 1.6)
+
+
+def get_switch_crop_ph_shift(label):
+    normalized_label = str(label or "").strip().lower()
+    if normalized_label == "acidic":
+        return -0.38
+    if normalized_label == "slightly acidic":
+        return -0.16
+    return 0.0
+
+
+def parse_switch_crop_ph_range(value):
+    matches = re.findall(r"\d+(?:\.\d+)?", str(value or ""))
+    if len(matches) >= 2:
+        try:
+            return float(matches[0]), float(matches[1])
+        except (TypeError, ValueError):
+            return 5.5, 7.0
+    return 5.5, 7.0
+
+
+def classify_switch_crop_nutrient(value):
+    numeric_value = float(value or 0)
+    if numeric_value < 35:
+        return {"label": "Critical", "tone": "critical", "severity": 1.0}
+    if numeric_value < 48:
+        return {"label": "Low", "tone": "warning", "severity": 0.76}
+    if numeric_value < 62:
+        return {"label": "Moderate", "tone": "moderate", "severity": 0.42}
+    return {"label": "Stable", "tone": "good", "severity": 0.0}
+
+
+def classify_switch_crop_ph(value):
+    numeric_value = float(value or 6.4)
+    if numeric_value < 5.6:
+        return {"label": "Acidic", "tone": "warning", "severity": 0.8}
+    if numeric_value < 6.1:
+        return {"label": "Slightly Acidic", "tone": "moderate", "severity": 0.35}
+    if numeric_value <= 7.2:
+        return {"label": "Balanced", "tone": "good", "severity": 0.0}
+    return {"label": "Alkaline", "tone": "warning", "severity": 0.55}
+
+
+def get_switch_crop_season_label(month):
+    if month in {11, 12, 1, 2, 3}:
+        return "Rabi"
+    if month in {7, 8, 9, 10}:
+        return "Kharif"
+    return "Zaid"
+
+
+def build_switch_crop_climate_rankings(weather):
+    temperature = float(weather.get("temp", 30) or 30)
+    humidity = float(weather.get("humidity", 60) or 60)
+    rainfall = float(weather.get("rainfall_mm", 0) or 0)
+    pressure = float(weather.get("pressure", 1008) or 1008)
+
+    climate_scores = {}
+    if temperature <= 27:
+        climate_scores["Cool"] = round(2.1 + max(0.0, (27 - temperature) * 0.18) + max(0.0, (62 - humidity) * 0.015), 2)
+    if temperature >= 25:
+        climate_scores["Warm"] = round(1.9 + max(0.0, (temperature - 25) * 0.22) + max(0.0, (humidity - 40) * 0.01), 2)
+    if temperature >= 28 and humidity >= 55:
+        climate_scores["Tropical"] = round(
+            2.2 + max(0.0, (temperature - 28) * 0.2) + max(0.0, (humidity - 55) * 0.02) + min(rainfall * 0.08, 1.2),
+            2,
+        )
+    if rainfall >= 5 or humidity >= 74:
+        climate_scores["Rainy"] = round(2.0 + min(rainfall * 0.2, 2.2) + max(0.0, (humidity - 70) * 0.03), 2)
+    if rainfall <= 4 and humidity <= 62:
+        climate_scores["Dry"] = round(2.0 + max(0.0, (4 - rainfall) * 0.35) + max(0.0, (62 - humidity) * 0.04), 2)
+    if temperature <= 22 and pressure >= 1007:
+        climate_scores["Hilly"] = round(1.7 + max(0.0, (22 - temperature) * 0.2) + max(0.0, (pressure - 1007) * 0.08), 2)
+
+    if not climate_scores:
+        fallback_climate = "Warm" if temperature >= 28 else "Cool" if temperature <= 25 else "Mixed"
+        return [fallback_climate]
+
+    ranked = [
+        label
+        for label, score in sorted(climate_scores.items(), key=lambda item: (item[1], item[0]), reverse=True)
+        if score >= 2.0
+    ]
+    return ranked[:3] or [max(climate_scores.items(), key=lambda item: item[1])[0]]
+
+
+def detect_switch_crop_context(weather):
+    month = datetime.now().month
+    season = get_switch_crop_season_label(month)
+    ranked_climates = build_switch_crop_climate_rankings(weather)
+    climate_tags = set(ranked_climates)
+    return {
+        "season": season,
+        "climate_tags": climate_tags,
+        "ranked_climates": ranked_climates,
+        "climate_display": "/".join(ranked_climates[:2]) or "Mixed",
+    }
+
+
+def score_switch_crop_weather_fit(climate, weather):
+    normalized_climate = str(climate or "").strip()
+    temperature = float(weather.get("temp", 30) or 30)
+    humidity = float(weather.get("humidity", 60) or 60)
+    rainfall = float(weather.get("rainfall_mm", 0) or 0)
+    pressure = float(weather.get("pressure", 1008) or 1008)
+
+    if normalized_climate == "Cool":
+        return max(-2.5, 5.8 - abs(temperature - 22) * 0.65 - max(0.0, rainfall - 8) * 0.12)
+    if normalized_climate == "Warm":
+        return max(-2.5, 5.6 - abs(temperature - 30) * 0.7 + max(0.0, humidity - 45) * 0.015)
+    if normalized_climate == "Tropical":
+        return max(-3.0, 6.2 - abs(temperature - 31) * 0.65 + max(0.0, humidity - 60) * 0.03 + min(rainfall * 0.08, 1.4))
+    if normalized_climate == "Rainy":
+        return max(-3.0, 5.7 - abs(rainfall - 10) * 0.28 + max(0.0, humidity - 72) * 0.03)
+    if normalized_climate == "Dry":
+        return max(-2.8, 5.7 - rainfall * 0.55 + max(0.0, 58 - humidity) * 0.05)
+    if normalized_climate == "Hilly":
+        return max(-3.0, 5.3 - abs(temperature - 19) * 0.75 + max(0.0, pressure - 1008) * 0.05)
+    return 0.0
+
+
+def score_switch_crop_season_fit(candidate_season, context, weather):
+    normalized_candidate = str(candidate_season or "").strip()
+    context_season = str(context.get("season") or "").strip()
+    temperature = float(weather.get("temp", 30) or 30)
+    rainfall = float(weather.get("rainfall_mm", 0) or 0)
+
+    if normalized_candidate == "All":
+        return 2.4
+    if normalized_candidate == context_season:
+        return 6.4
+    if context_season == "Zaid":
+        if normalized_candidate == "Kharif":
+            return 2.8 if rainfall >= 5 or temperature >= 30 else 1.2
+        if normalized_candidate == "Rabi":
+            return 2.2 if temperature <= 31 else 0.6
+    return -1.8
+
+
+def select_switch_crop_recommendations(candidates, limit=3):
+    selected = []
+    seen_profiles = set()
+
+    for candidate in candidates:
+        suitability = candidate.get("suitability") if isinstance(candidate.get("suitability"), dict) else {}
+        profile = (
+            str(suitability.get("climate") or "").strip().lower(),
+            str(suitability.get("season") or "").strip().lower(),
+            str(suitability.get("N_level") or "").strip().lower(),
+        )
+        remaining_slots = limit - len(selected)
+        remaining_candidates = len(candidates) - len(selected)
+        if profile in seen_profiles and remaining_candidates > remaining_slots:
+            continue
+        selected.append(candidate)
+        seen_profiles.add(profile)
+        if len(selected) >= limit:
+            break
+
+    if len(selected) < limit:
+        for candidate in candidates:
+            if candidate in selected:
+                continue
+            selected.append(candidate)
+            if len(selected) >= limit:
+                break
+
+    return selected[:limit]
+
+
+def estimate_switch_crop_soil_after_crop(previous_crop_entry, base_soil):
+    if not isinstance(previous_crop_entry, dict):
+        return None
+
+    impact = previous_crop_entry.get("soil_impact") if isinstance(previous_crop_entry.get("soil_impact"), dict) else {}
+    adjusted = dict(base_soil)
+    adjusted["nitrogen"] = clamp(
+        int(float(base_soil.get("nitrogen", 48)) - get_switch_crop_impact_value(impact.get("N"))),
+        12,
+        94,
+    )
+    adjusted["phosphorus"] = clamp(
+        int(float(base_soil.get("phosphorus", 44)) - get_switch_crop_impact_value(impact.get("P"))),
+        12,
+        90,
+    )
+    adjusted["potassium"] = clamp(
+        int(float(base_soil.get("potassium", 46)) - get_switch_crop_impact_value(impact.get("K"))),
+        12,
+        92,
+    )
+    adjusted["ph"] = round(
+        clamp(float(base_soil.get("ph", 6.4)) + get_switch_crop_ph_shift(impact.get("pH")), 4.8, 7.8),
+        1,
+    )
+    adjusted["organic_matter"] = clamp(
+        int(float(base_soil.get("organic_matter", 45)) - (get_switch_crop_impact_value(impact.get("N")) * 0.35)),
+        18,
+        86,
+    )
+    return adjusted
+
+
+def build_switch_crop_vector_query(previous_crop_entry, adjusted_soil, context):
+    deficiency_labels = []
+    for nutrient_key, label in [("nitrogen", "nitrogen"), ("phosphorus", "phosphorus"), ("potassium", "potassium")]:
+        classification = classify_switch_crop_nutrient(adjusted_soil.get(nutrient_key))
+        if classification["severity"] > 0:
+            deficiency_labels.append(f"{label} {classification['label'].lower()}")
+
+    ph_state = classify_switch_crop_ph(adjusted_soil.get("ph"))
+    climate_phrase = context.get("climate_display") or "/".join(sorted(context["climate_tags"])) or "mixed"
+    return (
+        f"Previous crop {previous_crop_entry.get('name')}. "
+        f"Need switch crop for soil recovery with {', '.join(deficiency_labels) or 'balanced nutrients'}, "
+        f"{ph_state['label'].lower()} soil, climate {climate_phrase}, "
+        f"season {context['season']}. Recommend sustainable crop with lower nutrient demand."
+    )
+
+
+def build_switch_crop_recommendation_reason(candidate, deficiencies, adjusted_soil, context):
+    suitability = candidate.get("suitability") if isinstance(candidate.get("suitability"), dict) else {}
+    soil_impact = candidate.get("soil_impact") if isinstance(candidate.get("soil_impact"), dict) else {}
+    reasons = []
+
+    if deficiencies["nitrogen"]["severity"] > 0 and str(suitability.get("N_level") or "").strip().lower() == "low":
+        reasons.append("low nitrogen demand helps the field recover faster")
+    if deficiencies["potassium"]["severity"] > 0 and str(suitability.get("K_level") or "").strip().lower() in {"low", "medium"}:
+        reasons.append("manageable potassium demand keeps recovery pressure lower")
+    if deficiencies["phosphorus"]["severity"] > 0 and str(suitability.get("P_level") or "").strip().lower() == "low":
+        reasons.append("lighter phosphorus requirement supports balanced follow-up nutrition")
+
+    ph_min, ph_max = parse_switch_crop_ph_range(suitability.get("pH_range"))
+    if ph_min <= float(adjusted_soil.get("ph") or 6.4) <= ph_max:
+        reasons.append("its pH suitability matches the estimated post-harvest soil condition")
+    if str(soil_impact.get("pH") or "").strip().lower() == "neutral":
+        reasons.append("it is less likely to push soil reaction further away from neutral")
+
+    climate = str(suitability.get("climate") or "").strip()
+    if climate and (climate in context["climate_tags"] or (climate == "Warm" and "Tropical" in context["climate_tags"])):
+        reasons.append(f"{climate.lower()} fit matches the current weather pattern")
+
+    return reasons[:3]
+
+
+def recommend_switch_crops(previous_crop_entry, user, weather):
+    base_soil = estimate_switch_crop_base_soil(user, weather)
+    adjusted_soil = estimate_switch_crop_soil_after_crop(previous_crop_entry, base_soil)
+    if adjusted_soil is None:
+        return None
+
+    context = detect_switch_crop_context(weather)
+    deficiencies = {
+        "nitrogen": classify_switch_crop_nutrient(adjusted_soil.get("nitrogen")),
+        "phosphorus": classify_switch_crop_nutrient(adjusted_soil.get("phosphorus")),
+        "potassium": classify_switch_crop_nutrient(adjusted_soil.get("potassium")),
+        "ph": classify_switch_crop_ph(adjusted_soil.get("ph")),
+    }
+    vector_matches = {
+        str(item.get("source_key") or "").strip(): float(item.get("semantic_score") or 0.0)
+        for item in search_ai_crop_doctor_pgvector(
+            "switch_crop",
+            build_switch_crop_vector_query(previous_crop_entry, adjusted_soil, context),
+            limit=6,
+        )
+    }
+
+    candidates = []
+    previous_name = str(previous_crop_entry.get("name") or "").strip().lower()
+    previous_suitability = previous_crop_entry.get("suitability") if isinstance(previous_crop_entry.get("suitability"), dict) else {}
+    for candidate in load_switch_crop_dataset():
+        candidate_name = str(candidate.get("name") or "").strip()
+        if not candidate_name or candidate_name.lower() == previous_name:
+            continue
+
+        suitability = candidate.get("suitability") if isinstance(candidate.get("suitability"), dict) else {}
+        soil_impact = candidate.get("soil_impact") if isinstance(candidate.get("soil_impact"), dict) else {}
+        score = 0.0
+
+        for nutrient_key, suit_key, impact_key in [
+            ("nitrogen", "N_level", "N"),
+            ("phosphorus", "P_level", "P"),
+            ("potassium", "K_level", "K"),
+        ]:
+            severity = float(deficiencies[nutrient_key]["severity"])
+            if severity <= 0:
+                continue
+            score += get_switch_crop_requirement_score(suitability.get(suit_key)) * severity
+            score -= get_switch_crop_requirement_penalty(soil_impact.get(impact_key)) * severity
+
+        score += max(0.0, get_switch_crop_requirement_score(suitability.get("N_level")) - 5.0) * (0.35 + deficiencies["nitrogen"]["severity"] * 0.9)
+        score += max(0.0, get_switch_crop_requirement_score(suitability.get("K_level")) - 5.0) * (0.3 + deficiencies["potassium"]["severity"] * 0.85)
+        score += max(0.0, get_switch_crop_requirement_score(suitability.get("P_level")) - 5.0) * (0.24 + deficiencies["phosphorus"]["severity"] * 0.75)
+
+        ph_min, ph_max = parse_switch_crop_ph_range(suitability.get("pH_range"))
+        adjusted_ph = float(adjusted_soil.get("ph") or 6.4)
+        if ph_min <= adjusted_ph <= ph_max:
+            score += 7.0
+        else:
+            ph_gap = min(abs(adjusted_ph - ph_min), abs(adjusted_ph - ph_max))
+            score -= ph_gap * 4.0
+
+        crop_ph_impact = str(soil_impact.get("pH") or "").strip().lower()
+        if deficiencies["ph"]["severity"] > 0 and crop_ph_impact == "neutral":
+            score += 4.0
+        elif deficiencies["ph"]["severity"] > 0 and crop_ph_impact == "acidic":
+            score -= 3.0
+
+        climate = str(suitability.get("climate") or "").strip()
+        score += score_switch_crop_weather_fit(climate, weather)
+        if climate == "All":
+            score += 2.2
+        elif climate in context["climate_tags"]:
+            score += 5.5
+        elif climate == "Warm" and "Tropical" in context["climate_tags"]:
+            score += 3.6
+        elif climate == "Tropical" and "Warm" in context["climate_tags"]:
+            score += 2.6
+        else:
+            score -= 2.4
+
+        season = str(suitability.get("season") or "").strip()
+        score += score_switch_crop_season_fit(season, context, weather)
+
+        if float(base_soil.get("moisture") or 50) < 42 and climate in {"Dry", "Warm"}:
+            score += 2.0
+        if float(weather.get("rainfall_mm", 0) or 0) >= 8 and climate == "Rainy":
+            score += 2.4
+        if climate and climate == str(previous_suitability.get("climate") or "").strip():
+            score -= 1.1
+        if season and season == str(previous_suitability.get("season") or "").strip() and season != "All":
+            score -= 0.9
+        for key in ("N_level", "P_level", "K_level"):
+            if str(suitability.get(key) or "").strip().lower() == str(previous_suitability.get(key) or "").strip().lower():
+                score -= 0.35
+
+        source_key = build_switch_crop_source_key(candidate)
+        semantic_score = vector_matches.get(str(source_key or "").strip(), 0.0)
+        if semantic_score > 0:
+            score += semantic_score * 8.5
+
+        reasons = build_switch_crop_recommendation_reason(candidate, deficiencies, adjusted_soil, context)
+        candidates.append(
+            {
+                "name": candidate_name,
+                "score": round(score, 2),
+                "semantic_score": semantic_score,
+                "reasons": reasons,
+                "suitability": suitability,
+                "soil_impact": soil_impact,
+                "badge": "Best Fit" if score >= 18 else "Recovery Fit" if score >= 13 else "Balanced Option",
+            }
+        )
+
+    candidates.sort(key=lambda item: (float(item.get("score") or 0.0), float(item.get("semantic_score") or 0.0)), reverse=True)
+    top_recommendations = select_switch_crop_recommendations(candidates, limit=3)
+
+    impact_analysis = []
+    for nutrient_key, source_key, label in [
+        ("nitrogen", "N", "Nitrogen draw"),
+        ("phosphorus", "P", "Phosphorus draw"),
+        ("potassium", "K", "Potassium draw"),
+    ]:
+        classification = deficiencies[nutrient_key]
+        impact_label = str((previous_crop_entry.get("soil_impact") or {}).get(source_key) or "Moderate").strip()
+        impact_analysis.append(
+            {
+                "title": label,
+                "impact": impact_label,
+                "estimated_value": f"{int(adjusted_soil.get(nutrient_key) or 0)}/100",
+                "status": classification["label"],
+                "tone": classification["tone"],
+                "detail": f"{previous_crop_entry.get('name')} likely left {label.lower()} at an estimated {classification['label'].lower()} level.",
+            }
+        )
+
+    ph_classification = deficiencies["ph"]
+    impact_analysis.append(
+        {
+            "title": "pH trend",
+            "impact": str((previous_crop_entry.get("soil_impact") or {}).get("pH") or "Neutral").strip(),
+            "estimated_value": f"{float(adjusted_soil.get('ph') or 6.4):.1f}",
+            "status": ph_classification["label"],
+            "tone": ph_classification["tone"],
+            "detail": f"Estimated soil reaction after {previous_crop_entry.get('name')} leans {ph_classification['label'].lower()}.",
+        }
+    )
+
+    deficiency_labels = []
+    for label, item in [
+        ("Nitrogen", deficiencies["nitrogen"]),
+        ("Phosphorus", deficiencies["phosphorus"]),
+        ("Potassium", deficiencies["potassium"]),
+    ]:
+        if item["severity"] > 0:
+            deficiency_labels.append(f"{label} {item['label'].lower()}")
+    if ph_classification["severity"] > 0:
+        deficiency_labels.append(f"pH {ph_classification['label'].lower()}")
+
+    summary_headline = (
+        f"After {previous_crop_entry.get('name')}, the field looks {', '.join(deficiency_labels[:2]) or 'reasonably balanced'}."
+    )
+    summary_description = (
+        "This module combines the app's weather-linked soil estimator with crop impact data to suggest the next crop. "
+        "Treat the numbers as field planning estimates and confirm with a soil test before major input decisions."
+    )
+    justification = (
+        f"Recommendations are ranked by estimated nutrient recovery need, current {context['season']} season fit, "
+        f"{context.get('climate_display') or '/'.join(sorted(context['climate_tags'])) or 'mixed'} climate alignment, crop pH suitability, and lower future nutrient draw. "
+        f"Optional pgvector semantic matching also boosts crops whose profile best matches the recovery goal."
+    )
+
+    return {
+        "previous_crop": previous_crop_entry,
+        "base_soil": base_soil,
+        "adjusted_soil": adjusted_soil,
+        "impact_analysis": impact_analysis,
+        "deficiencies": deficiency_labels,
+        "summary": {
+            "headline": summary_headline,
+            "description": summary_description,
+            "chips": [
+                {"label": "Location Climate", "value": context.get("climate_display") or "Mixed"},
+                {"label": "Current Season", "value": context["season"]},
+                {"label": "Estimated Soil pH", "value": f"{float(adjusted_soil.get('ph') or 6.4):.1f}"},
+                {"label": "Organic Matter", "value": f"{int(adjusted_soil.get('organic_matter') or 0)}%"},
+            ],
+        },
+        "recommended_crops": top_recommendations,
+        "justification": justification,
+    }
+
+
+def build_switch_crop_page_context(user, selected_crop_name=""):
+    dataset = load_switch_crop_dataset()
+    crop_options = [str(item.get("name") or "").strip() for item in dataset if str(item.get("name") or "").strip()]
+    requested_crop = str(selected_crop_name or "").strip()
+    previous_crop_entry = resolve_switch_crop_entry(requested_crop) if requested_crop else None
+    weather = fetch_weather_bundle(user.location or "Bhubaneswar")
+    rotation_plan = recommend_switch_crops(previous_crop_entry, user, weather) if previous_crop_entry is not None else None
+
+    return {
+        "selected_crop_name": str(previous_crop_entry.get("name") if previous_crop_entry else requested_crop or "").strip(),
+        "crop_options": crop_options,
+        "weather": weather,
+        "location_name": weather.get("city") or user.location or "Bhubaneswar",
+        "rotation_plan": rotation_plan,
+        "location_tags": [
+            {"label": "Temperature", "value": f"{weather.get('temp', '--')}C"},
+            {"label": "Humidity", "value": f"{weather.get('humidity', '--')}%"},
+            {"label": "Rainfall", "value": f"{weather.get('rainfall_mm', '--')} mm"},
+        ],
+        "warning": None if previous_crop_entry is not None or not requested_crop else "Previous crop dataset me nahi mila. Please listed crop name select karein.",
+    }
+
+
 def build_forecast_cards(weather, forecast_payload, onecall_payload):
     cards = []
 
@@ -9258,6 +10751,698 @@ def build_weather_advisories(weather, forecast_cards, onecall_payload):
         )
 
     return list(advisories[:2])  # type: ignore
+
+
+def coerce_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def format_pct_label(value, lower=1, upper=99):
+    return f"{clamp(int(round(float(value))), lower, upper)}%"
+
+
+def build_risk_visuals(risk_type, severity):
+    type_key = str(risk_type or "").strip().lower()
+    icon = "🌱"
+
+    if "cyclone" in type_key or "severe storm" in type_key:
+        icon = "🌪️"
+    elif "thunder" in type_key or "storm" in type_key:
+        icon = "🌩️"
+    elif "drought" in type_key:
+        icon = "🌵"
+    elif "heat" in type_key:
+        icon = "☀️"
+    elif "cold" in type_key:
+        icon = "❄️"
+    elif "wind" in type_key:
+        icon = "🌬️"
+    elif "rain" in type_key or "flood" in type_key:
+        icon = "🌧️"
+    elif "fungal" in type_key:
+        icon = "🦠"
+
+    severity_label = str(severity or "Low").title()
+    severity_tone = {"High": "high", "Medium": "medium"}.get(severity_label, "low")
+    severity_rank = {"Low": 0, "Medium": 1, "High": 2}.get(severity_label, 0)
+
+    return {
+        "icon": icon,
+        "severity_tone": severity_tone,
+        "severity_rank": severity_rank,
+    }
+
+
+def build_risk_trend_cards(forecast_cards):
+    trend_cards = []
+
+    for item in (forecast_cards or [])[:3]:
+        rainfall = round(coerce_float(item.get("rainfall_mm"), 0), 1)
+        temperature = round(coerce_float(item.get("temp"), 0))
+        tone = "low"
+        icon = "🌤️"
+        note = "Good field window"
+
+        if rainfall >= 40:
+            tone = "high"
+            icon = "🌧️"
+            note = "Heavy rain watch"
+        elif rainfall >= 10:
+            tone = "medium"
+            icon = "⛅"
+            note = "Rain likely, keep drainage ready"
+        elif temperature >= 38:
+            tone = "high"
+            icon = "☀️"
+            note = "Very hot day, protect crops"
+        elif temperature >= 35:
+            tone = "medium"
+            icon = "☀️"
+            note = "Hot day, plan irrigation early"
+        elif temperature <= 10:
+            tone = "medium"
+            icon = "❄️"
+            note = "Cold stress chance"
+
+        trend_cards.append(
+            {
+                "day": str(item.get("label") or item.get("day") or "Day"),
+                "temp": temperature,
+                "rainfall_mm": rainfall,
+                "note": note,
+                "tone": tone,
+                "icon": icon,
+            }
+        )
+
+    return trend_cards
+
+
+def get_risk_severity(score):
+    numeric_score = max(0.0, min(float(score or 0.0), 0.95))
+    if numeric_score >= 0.68:
+        return "High"
+    if numeric_score >= 0.40:
+        return "Moderate"
+    return "Low"
+
+
+def get_risk_probability(score):
+    numeric_score = max(0.0, min(float(score or 0.0), 0.95))
+    return clamp(int(round(14 + (numeric_score * 70))), 14, 84)
+
+
+def build_farmer_risk_entry(risk_type, score, reasons, mitigating_reasons=None, actions=None, trend="", expected=""):
+    severity = get_risk_severity(score)
+    reason_lines = list(reasons[:2])
+    if mitigating_reasons:
+        reason_lines.append(str((mitigating_reasons or [""])[0]))
+    if not reason_lines:
+        reason_lines = ["No strong early warning signal is visible in the next 3 to 7 days."]
+
+    return {
+        "type": str(risk_type),
+        "severity": severity,
+        "probability": f"{get_risk_probability(score)}%",
+        "score": round(max(0.0, min(float(score or 0.0), 0.95)), 2),
+        "trend": str(trend or "").strip(),
+        "expected": str(expected or "").strip(),
+        "reason": reason_lines[:3],
+        "action": list((actions or [])[:3]),
+    }
+
+
+def build_farmer_actions(assessments):
+    actions = []
+    seen = set()
+    severity_rank = {"High": 2, "Moderate": 1, "Low": 0}
+    sorted_assessments = sorted(
+        list(assessments or []),
+        key=lambda item: (
+            severity_rank.get(str(item.get("severity") or "Low"), 0),
+            float(item.get("score") or 0.0),
+        ),
+        reverse=True,
+    )
+
+    for item in sorted_assessments:
+        for action in item.get("action") or []:
+            normalized = str(action or "").strip().lower()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            actions.append(str(action).strip())
+            if len(actions) >= 3:
+                return actions
+
+    if not actions:
+        actions = [
+            "Check the local forecast again before spraying or harvesting",
+            "Monitor soil moisture and field drainage once a day",
+            "Keep seeds, fertilizer, and tools ready for quick weather changes",
+        ]
+
+    return actions[:3]
+
+
+def format_farmer_risk_report(location_name, assessments, actions):
+    lines = [f"Climate Risk Prediction (Next 3-7 Days) - {location_name}", ""]
+
+    for index, item in enumerate(assessments or [], start=1):
+        lines.append(f"{index}. {item['type']}:")
+        lines.append(f"Risk: {item['severity']} ({item['probability']})")
+        if item.get("trend"):
+            lines.append(f"Trend: {item['trend']}")
+        if item.get("expected"):
+            lines.append(f"Expected: {item['expected']}")
+        lines.append("Reason:")
+        for reason in item.get("reason") or []:
+            lines.append(f"- {reason}")
+        lines.append("")
+
+    lines.append("-----------------------------------")
+    lines.append("")
+    lines.append("FINAL SECTION:")
+    lines.append("")
+    lines.append("Recommended Farmer Actions:")
+    for action in actions or []:
+        lines.append(f"- {action}")
+
+    return "\n".join(lines)
+
+
+def build_agricultural_risk_module(location_name, weather=None, forecast_payload=None, onecall_payload=None, matched_location=""):
+    requested_location = str(location_name or "").strip() or str((weather or {}).get("city") or "").strip() or "Bhubaneswar"
+    current_weather = weather if isinstance(weather, dict) else fetch_weather_bundle(requested_location)
+    resolved_location = str((current_weather or {}).get("city") or "").strip() or requested_location
+    matched_location_label = str(matched_location or "").strip()
+    if not matched_location_label and normalize_weather_place_name(resolved_location) != normalize_weather_place_name(requested_location):
+        matched_location_label = resolved_location
+    forecast_source = forecast_payload
+    onecall_source = onecall_payload
+
+    if forecast_source is None:
+        forecast_source = fetch_forecast_payload(current_weather.get("lat"), current_weather.get("lon"))
+    if onecall_source is None:
+        onecall_source = fetch_onecall_daily_payload(current_weather.get("lat"), current_weather.get("lon"))
+
+    if onecall_source and onecall_source.get("daily"):
+        normalized_daily = []
+        fallback_daily_timestamp = int(time.time())
+        for index, item in enumerate(onecall_source.get("daily") or []):
+            if not isinstance(item, dict):
+                continue
+            normalized_item = dict(item)
+            normalized_item.setdefault("dt", fallback_daily_timestamp + (index * 86400))
+            normalized_daily.append(normalized_item)
+        onecall_source = {**onecall_source, "daily": normalized_daily}
+
+    forecast_cards = build_forecast_cards(current_weather, forecast_source, onecall_source)
+    forecast_items = list((forecast_source or {}).get("list") or [])
+    onecall_daily = list((onecall_source or {}).get("daily") or [])
+
+    current_temp = coerce_float(current_weather.get("temp"), 30)
+    current_humidity = coerce_float(current_weather.get("humidity"), 60)
+    current_rainfall = coerce_float(current_weather.get("rainfall_mm"), 0)
+    current_wind_kmh = coerce_float(current_weather.get("wind_speed_kmh"), coerce_float(current_weather.get("wind_speed"), 0) * 3.6)
+    current_pressure = coerce_float(current_weather.get("pressure"), 1008)
+
+    hourly_pressures = [coerce_float((item.get("main") or {}).get("pressure"), current_pressure) for item in forecast_items[:6]]
+    hourly_temps = [current_temp] + [coerce_float((item.get("main") or {}).get("temp"), current_temp) for item in forecast_items[:6]]
+    hourly_humidity = [current_humidity] + [coerce_float((item.get("main") or {}).get("humidity"), current_humidity) for item in forecast_items[:6]]
+    hourly_winds = [current_wind_kmh] + [
+        round(coerce_float((item.get("wind") or {}).get("speed"), current_wind_kmh / 3.6) * 3.6, 1)
+        for item in forecast_items[:6]
+    ]
+    hourly_rainfall = [current_rainfall] + [coerce_float((item.get("rain") or {}).get("3h"), 0) for item in forecast_items[:6]]
+
+    daily_rainfall = [coerce_float(item.get("rainfall_mm"), 0) for item in forecast_cards[:7]]
+    daily_temps = [coerce_float(item.get("temp"), current_temp) for item in forecast_cards[:7]]
+    onecall_max_temps = [coerce_float((item.get("temp") or {}).get("max"), current_temp) for item in onecall_daily[:5]]
+    onecall_min_temps = [coerce_float((item.get("temp") or {}).get("min"), current_temp) for item in onecall_daily[:5]]
+    hourly_temp_mins = [coerce_float((item.get("main") or {}).get("temp_min"), current_temp) for item in forecast_items[:8]]
+    hourly_temp_maxes = [coerce_float((item.get("main") or {}).get("temp_max"), current_temp) for item in forecast_items[:8]]
+
+    pressure_baseline = [current_pressure] + hourly_pressures
+    pressure_drop = max(0.0, current_pressure - min(pressure_baseline or [current_pressure]))
+    continuous_pressure_drop = (
+        len(pressure_baseline) >= 4
+        and pressure_drop >= 5
+        and all((earlier - later) >= 0.4 for earlier, later in zip(pressure_baseline[:4], pressure_baseline[1:5]))
+    )
+    temperature_swing = 0.0
+    if len(hourly_temps) >= 2:
+        temperature_swing = max(abs(later - earlier) for earlier, later in zip(hourly_temps, hourly_temps[1:]))
+
+    max_wind_kmh = max(hourly_winds or [current_wind_kmh])
+    max_daily_rainfall = max([current_rainfall] + daily_rainfall) if daily_rainfall else current_rainfall
+    max_three_hour_rainfall = max(hourly_rainfall or [current_rainfall])
+    max_temp = max([current_temp] + daily_temps + onecall_max_temps + hourly_temp_maxes)
+    min_temp = min([current_temp] + onecall_min_temps + hourly_temp_mins) if (onecall_min_temps or hourly_temp_mins) else current_temp
+    avg_temp = sum(hourly_temps[:4] or [current_temp]) / max(len(hourly_temps[:4]), 1)
+
+    dry_days = 0
+    for rainfall_value in [current_rainfall] + daily_rainfall[:6]:
+        if rainfall_value < 5:
+            dry_days += 1
+        else:
+            break
+
+    has_forecast_support = bool(forecast_items or onecall_daily)
+    risk_cards = []
+
+    def push_risk(risk_type, severity, score, reasons, actions):
+        normalized_severity = str(severity or "Low").title()
+        probability_value = clamp(int(round(12 + (float(score) * 72))), 12, 84)
+        confidence_value = clamp(
+            int(round(54 + (len(reasons) * 7) + (5 if has_forecast_support else 0) + (3 if normalized_severity == "High" else 0))),
+            56,
+            90,
+        )
+        card = {
+            "type": str(risk_type),
+            "probability": format_pct_label(probability_value, 12, 84),
+            "severity": normalized_severity,
+            "confidence": format_pct_label(confidence_value, 60, 96),
+            "reason": list(reasons[:3]),
+            "action": list(actions[:3]),
+        }
+        card.update(build_risk_visuals(risk_type, normalized_severity))
+        card["probability_value"] = probability_value
+        card["confidence_value"] = confidence_value
+        risk_cards.append(card)
+
+    storm_score = 0.0
+    storm_reasons = []
+    storm_mitigations = []
+    if current_humidity > 70:
+        storm_score += 0.27
+        storm_reasons.append(f"High humidity ({round(current_humidity)}%)")
+    else:
+        storm_mitigations.append(f"Humidity is only {round(current_humidity)}%, so storm buildup is slower")
+    if max_wind_kmh >= 20:
+        storm_score += 0.33
+        storm_reasons.append(f"Wind speed rising ({round(max_wind_kmh)} km/h)")
+    else:
+        storm_mitigations.append(f"Wind stays moderate near {round(max_wind_kmh)} km/h")
+    if pressure_drop >= 4:
+        storm_score += 0.22
+        storm_reasons.append(f"Pressure dropping ({pressure_drop:.1f} hPa)")
+    else:
+        storm_mitigations.append("Pressure trend is fairly stable")
+    if temperature_swing >= 4:
+        storm_score += 0.18
+        storm_reasons.append(f"Sudden temperature change ({temperature_swing:.1f} C)")
+    if max_three_hour_rainfall >= 8 or max_daily_rainfall >= 18:
+        storm_score += 0.20
+        storm_reasons.append(f"Rainfall may build quickly ({round(max_three_hour_rainfall)} mm in 3 hours)")
+    else:
+        storm_mitigations.append("No sharp rain burst is visible yet")
+    storm_score = max(0.0, min(storm_score, 0.92))
+    if storm_score >= 0.58 and len(storm_reasons) >= 2:
+        push_risk(
+            "Thunderstorm",
+            "High" if max_wind_kmh > 30 else "Medium",
+            storm_score,
+            storm_reasons,
+            [
+                "Avoid pesticide spraying",
+                "Secure crops and equipment",
+                "Delay irrigation until conditions settle",
+            ],
+        )
+
+    cyclone_score = 0.0
+    cyclone_reasons = []
+    cyclone_rain_flag = False
+    if max_wind_kmh >= 40:
+        cyclone_score += 0.42
+        cyclone_reasons.append(f"Very strong wind forecast ({round(max_wind_kmh)} km/h)")
+    if continuous_pressure_drop:
+        cyclone_score += 0.28
+        cyclone_reasons.append("Pressure keeps dropping over the next hours")
+    if max_daily_rainfall > 50 or max_three_hour_rainfall >= 20:
+        cyclone_rain_flag = True
+        cyclone_score += 0.30
+        cyclone_reasons.append(f"Heavy rainfall forecast ({round(max_daily_rainfall)} mm)")
+    if cyclone_score >= 0.62 and max_wind_kmh >= 40 and cyclone_rain_flag:
+        push_risk(
+            "Severe Storm / Cyclone",
+            "High",
+            cyclone_score,
+            cyclone_reasons,
+            [
+                "Harvest mature crops early if safe",
+                "Secure nets, pipes, and equipment",
+                "Keep field drainage channels open",
+            ],
+        )
+
+    drought_score = 0.0
+    drought_reasons = []
+    drought_mitigations = []
+    if dry_days >= 2:
+        drought_score += 0.34 if dry_days < 5 else 0.48
+        drought_reasons.append(f"Very low rainfall for {dry_days} day{'s' if dry_days != 1 else ''}")
+    if max_temp > 35:
+        drought_score += 0.30
+        drought_reasons.append(f"High temperature ({round(max_temp)} C)")
+    if current_humidity < 40:
+        drought_score += 0.22
+        drought_reasons.append(f"Low humidity ({round(current_humidity)}%)")
+    elif current_humidity >= 70:
+        drought_score -= 0.14
+        drought_mitigations.append(f"Humidity is high ({round(current_humidity)}%), so drought stress may build more slowly")
+    if max_daily_rainfall >= 8 or max_three_hour_rainfall >= 6:
+        drought_score -= 0.18
+        drought_mitigations.append(f"Rain is forecast ({round(max_daily_rainfall)} mm), which reduces short-term drought risk")
+    drought_score = max(0.0, min(drought_score, 0.9))
+    if drought_score >= 0.55:
+        push_risk(
+            "Drought",
+            "High" if dry_days >= 5 and max_temp >= 35 else "Medium",
+            drought_score,
+            drought_reasons,
+            [
+                "Increase irrigation planning",
+                "Use mulching to keep soil moisture",
+                "Prioritize water-saving irrigation methods",
+            ],
+        )
+
+    heatwave_score = 0.0
+    heatwave_reasons = []
+    heatwave_mitigations = []
+    if max_temp >= 35:
+        heatwave_score += 0.32 if max_temp < 38 else 0.48 if max_temp < 40 else 0.64
+        heatwave_reasons.append(f"Temperature may reach {round(max_temp)} C")
+    else:
+        heatwave_mitigations.append(f"Temperature is still within a manageable range near {round(max_temp)} C")
+    if current_humidity < 45:
+        heatwave_score += 0.12
+        heatwave_reasons.append(f"Dry air is increasing stress ({round(current_humidity)}% humidity)")
+    elif current_humidity >= 70:
+        heatwave_score -= 0.08
+        heatwave_mitigations.append(f"Humidity is high ({round(current_humidity)}%), so pure heatwave stress is lower")
+    if dry_days >= 2:
+        heatwave_score += 0.12
+        heatwave_reasons.append(f"Low rainfall is continuing for {dry_days} days")
+    if max_daily_rainfall >= 8:
+        heatwave_score -= 0.10
+        heatwave_mitigations.append(f"Rainfall is forecast ({round(max_daily_rainfall)} mm), which can limit heat buildup")
+    heatwave_score = max(0.0, min(heatwave_score, 0.94))
+    if heatwave_score >= 0.50:
+        push_risk(
+            "Heatwave",
+            "High" if max_temp >= 40 else "Medium",
+            heatwave_score,
+            heatwave_reasons,
+            [
+                "Irrigate early morning or evening",
+                "Protect young crops from midday heat",
+                "Avoid field work during peak afternoon heat",
+            ],
+        )
+
+    cold_wave_score = 0.0
+    cold_reasons = []
+    cold_mitigations = []
+    if min_temp <= 14:
+        cold_wave_score += 0.18
+        cold_reasons.append(f"Night temperature may fall to {round(min_temp)} C")
+    else:
+        cold_mitigations.append(f"Night temperature is staying near {round(min_temp)} C")
+    if min_temp < 10:
+        cold_wave_score += 0.24
+        if coerce_float(current_weather.get("humidity"), 0) >= 70:
+            cold_reasons.append(f"Moist air ({round(current_humidity)}%) can increase crop stress")
+            cold_wave_score += 0.08
+    if (current_temp - min_temp) >= 6:
+        cold_wave_score += 0.10
+        cold_reasons.append(f"Day to night temperature may drop by about {round(current_temp - min_temp)} C")
+    cold_wave_score = max(0.0, min(cold_wave_score, 0.9))
+    if cold_wave_score >= 0.50:
+        push_risk(
+            "Cold Wave",
+            "High" if min_temp <= 5 else "Medium",
+            cold_wave_score,
+            cold_reasons,
+            [
+                "Use covers or light mulching for sensitive crops",
+                "Plan irrigation after sunrise if needed",
+                "Avoid transplanting until temperatures improve",
+            ],
+        )
+
+    if max_wind_kmh > 30:
+        wind_reasons = [f"Wind may reach {round(max_wind_kmh)} km/h"]
+        if pressure_drop >= 4:
+            wind_reasons.append(f"Falling pressure ({pressure_drop:.1f} hPa) can worsen wind damage")
+        push_risk(
+            "Strong Wind",
+            "High" if max_wind_kmh >= 40 else "Medium",
+            0.60 + min(max(max_wind_kmh - 30, 0), 20) * 0.01,
+            wind_reasons,
+            [
+                "Support tall crops with stakes if needed",
+                "Secure shade nets and loose materials",
+                "Avoid spraying during strong wind hours",
+            ],
+        )
+
+    flood_score = 0.0
+    flood_reasons = []
+    if max_daily_rainfall >= 40:
+        flood_score += 0.46 if max_daily_rainfall < 50 else 0.56
+        flood_reasons.append(f"Heavy rainfall forecast ({round(max_daily_rainfall)} mm)")
+    if max_three_hour_rainfall >= 15:
+        flood_score += 0.20
+        flood_reasons.append(f"Short burst rain may reach {round(max_three_hour_rainfall)} mm in 3 hours")
+    if current_humidity >= 80:
+        flood_score += 0.14
+        flood_reasons.append(f"Humidity remains high ({round(current_humidity)}%)")
+    if flood_score >= 0.56:
+        push_risk(
+            "Heavy Rain / Flood",
+            "High" if max_daily_rainfall >= 50 else "Medium",
+            flood_score,
+            flood_reasons,
+            [
+                "Clear drainage paths before rain starts",
+                "Stop irrigation until the field drains",
+                "Move inputs and tools to higher ground",
+            ],
+        )
+
+    fungal_score = 0.0
+    fungal_reasons = []
+    if current_humidity > 80:
+        fungal_score += 0.38
+        fungal_reasons.append(f"Very high humidity ({round(current_humidity)}%)")
+    if 18 <= avg_temp <= 32:
+        fungal_score += 0.24
+        fungal_reasons.append(f"Moderate temperature ({round(avg_temp)} C) favors disease")
+    if max_daily_rainfall >= 5 or current_rainfall >= 2:
+        fungal_score += 0.18
+        fungal_reasons.append(f"Moist conditions from rain ({round(max_daily_rainfall, 1)} mm forecast)")
+    if max(hourly_humidity or [current_humidity]) >= 85:
+        fungal_score += 0.12
+    if fungal_score >= 0.58 and current_humidity > 80 and 18 <= avg_temp <= 32:
+        push_risk(
+            "Fungal Risk",
+            "High" if current_humidity >= 88 and (max_daily_rainfall >= 8 or current_rainfall >= 3) else "Medium",
+            fungal_score,
+            fungal_reasons,
+            [
+                "Check leaves daily for early spots or mildew",
+                "Avoid overhead irrigation for now",
+                "Keep field airflow open between plants",
+            ],
+        )
+
+    drought_assessment = build_farmer_risk_entry(
+        "Drought",
+        drought_score,
+        drought_reasons,
+        drought_mitigations,
+        [
+            "Monitor soil moisture before adding extra irrigation",
+            "Use mulch or residue cover to slow moisture loss",
+            "Shift irrigation to early morning if dry spell continues",
+        ],
+        trend="Increasing" if drought_score >= 0.55 else "Stable" if drought_score >= 0.32 else "Low for now",
+    )
+    thunderstorm_assessment = build_farmer_risk_entry(
+        "Thunderstorm",
+        storm_score,
+        storm_reasons,
+        storm_mitigations,
+        [
+            "Prepare drainage and keep channels open",
+            "Avoid pesticide spraying before risky weather windows",
+            "Secure loose pipes, sheets, and equipment",
+        ],
+        expected="Within 48 hours" if storm_score >= 0.58 else "Possible in 3 to 5 days" if storm_score >= 0.40 else "No strong trigger yet",
+    )
+    heatwave_assessment = build_farmer_risk_entry(
+        "Heatwave",
+        heatwave_score,
+        heatwave_reasons,
+        heatwave_mitigations,
+        [
+            "Keep irrigation ready for early morning or evening",
+            "Protect young crops during peak afternoon heat",
+            "Avoid fertilizer or spray work in the hottest hours",
+        ],
+    )
+    cold_wave_assessment = build_farmer_risk_entry(
+        "Cold Wave",
+        cold_wave_score,
+        cold_reasons,
+        cold_mitigations,
+        [
+            "Use light mulch or cover on sensitive nursery crops",
+            "Delay transplanting if cold nights are forecast",
+            "Irrigate after sunrise instead of late evening",
+        ],
+    )
+    farmer_assessments = [
+        drought_assessment,
+        thunderstorm_assessment,
+        heatwave_assessment,
+        cold_wave_assessment,
+    ]
+    farmer_actions = build_farmer_actions(farmer_assessments)
+    farmer_report = format_farmer_risk_report(requested_location, farmer_assessments, farmer_actions)
+
+    risk_cards.sort(
+        key=lambda item: (
+            int(item.get("severity_rank", 0)),
+            int(item.get("probability_value", 0)),
+            int(item.get("confidence_value", 0)),
+        ),
+        reverse=True,
+    )
+    risk_cards = risk_cards[:3]
+
+    trend_cards = build_risk_trend_cards(forecast_cards)
+    if risk_cards:
+        primary_risk = risk_cards[0]
+        secondary_risk = risk_cards[1]["type"] if len(risk_cards) > 1 else ""
+        summary = (
+            f"Early warning for {requested_location}: {primary_risk['type']} risk is {primary_risk['severity'].lower()} over the next 3 to 7 days. "
+            f"{primary_risk['action'][0]}."
+        )
+        if secondary_risk:
+            summary += f" Also keep watch for {secondary_risk.lower()}."
+    else:
+        summary = (
+            f"No major weather risk is standing out in {requested_location} for the next few days. "
+            "Use the trend below before spray, irrigation, or harvest work."
+        )
+
+    json_payload = {
+        "location": requested_location,
+        "risks": [
+            {
+                "type": item["type"],
+                "probability": item["probability"],
+                "severity": item["severity"],
+                "confidence": item["confidence"],
+                "reason": item["reason"],
+                "action": item["action"],
+            }
+            for item in risk_cards
+        ],
+        "assessments": [
+            {
+                "type": item["type"],
+                "severity": item["severity"],
+                "probability": item["probability"],
+                "trend": item["trend"],
+                "expected": item["expected"],
+                "reason": item["reason"],
+                "action": item["action"],
+            }
+            for item in farmer_assessments
+        ],
+        "recommended_actions": farmer_actions,
+        "forecast_text": farmer_report,
+    }
+
+    return {
+        "location": requested_location,
+        "requested_location": requested_location,
+        "matched_location": matched_location_label,
+        "data_location": resolved_location,
+        "summary": summary,
+        "trend": trend_cards,
+        "cards": risk_cards,
+        "assessments": farmer_assessments,
+        "farmer_actions": farmer_actions,
+        "farmer_report": farmer_report,
+        "json": json_payload,
+        "updated_at": current_weather.get("updated_at", ""),
+        "has_risks": bool(risk_cards),
+    }
+
+
+def build_risk_alert_page_context(user, selected_location=""):
+    location_name = str(selected_location or getattr(user, "location", "") or "").strip() or "Bhubaneswar"
+    monitor_payload = build_openweather_monitor_payload(location_name)
+    weather = build_weather_bundle_from_monitor_payload(monitor_payload, fallback_location=location_name)
+    matched_location = str(monitor_payload.get("matched_location") or "").strip()
+    risk_module = build_agricultural_risk_module(location_name, weather=weather, matched_location=matched_location)
+    risk_cards = list(risk_module.get("cards") or [])
+    top_risk = risk_cards[0] if risk_cards else None
+    source_name = str(monitor_payload.get("source") or "fallback").strip().lower()
+    source_label = "Live OpenWeather" if source_name == "openweather" else "Fallback weather model"
+    source_note = (
+        "Risk scores are using live OpenWeather data."
+        if source_name == "openweather"
+        else "Live API data was not available, so the page is using fallback weather estimates."
+    )
+
+    return {
+        "active_page": "risk_alerts",
+        "location": risk_module.get("location") or location_name,
+        "requested_location": location_name,
+        "matched_location": matched_location,
+        "weather": weather,
+        "weather_payload": monitor_payload,
+        "source": source_name,
+        "source_label": source_label,
+        "source_note": source_note,
+        "risk_module": risk_module,
+        "top_risk_label": top_risk["type"] if top_risk else "Stable conditions",
+        "top_severity": top_risk["severity"] if top_risk else "Low",
+        "stats": [
+            {"label": "Top Risk", "value": top_risk["type"] if top_risk else "No major risk"},
+            {"label": "Current Temp", "value": f"{weather.get('temp', '--')} C"},
+            {"label": "Humidity", "value": f"{weather.get('humidity', '--')}%"},
+            {"label": "Wind", "value": f"{round(coerce_float(weather.get('wind_speed_kmh'), 0))} km/h"},
+        ],
+        "info_cards": [
+            {
+                "icon": "fa-cloud-bolt",
+                "title": "Rule-based detection",
+                "detail": "Checks humidity, wind, rainfall, temperature, and pressure together to catch storm, drought, heat, and flood risk early.",
+            },
+            {
+                "icon": "fa-layer-group",
+                "title": "Multi-risk ranking",
+                "detail": "Shows the top 2 to 3 risks together so farmers can act on the most urgent field problems first.",
+            },
+            {
+                "icon": "fa-person-rays",
+                "title": "Farmer-ready actions",
+                "detail": "Keeps advice simple with quick next steps like delay spray, prepare drainage, or plan irrigation early.",
+            },
+        ],
+    }
 
 
 def build_weather_page_context(user):
@@ -11794,6 +13979,17 @@ def dashboard():
     return render_template("dashboard.html", user=user, dashboard=dashboard_data, carbon=carbon_impact)
 
 
+@app.route("/risk-alerts")
+def risk_alerts_page():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    selected_location = (request.args.get("city") or request.args.get("location") or "").strip()
+    risk_page = build_risk_alert_page_context(user, selected_location=selected_location)
+    return render_template("risk_alerts.html", user=user, risk_page=risk_page)
+
+
 @app.route("/rent-a-tractor")
 def rent_a_tractor_page():
     user = get_current_user()
@@ -12269,6 +14465,18 @@ def api_weather_monitoring():
             if changed:
                 db.session.commit()
     return jsonify(payload)
+
+
+@app.route("/api/risk-alerts")
+def api_risk_alerts():
+    requested_city = (request.args.get("city") or request.args.get("location") or "").strip()
+    user = get_current_user()
+    city = requested_city or (user.location if user else "") or "Bhubaneswar"
+    monitor_payload = build_openweather_monitor_payload(city)
+    weather = build_weather_bundle_from_monitor_payload(monitor_payload, fallback_location=city)
+    matched_location = str(monitor_payload.get("matched_location") or "").strip()
+    module = build_agricultural_risk_module(city, weather=weather, matched_location=matched_location)
+    return jsonify(module["json"])
 
 
 @app.route("/soil-health", methods=["GET", "POST"])
@@ -13859,6 +16067,22 @@ def ai_insights_page():
     return render_template("ai_insights.html", user=user, ai_page=ai_data)
 
 
+@app.route("/switch-crop", methods=["GET", "POST"])
+def switch_crop_module():
+    user = get_current_user()
+    if not user:
+        return redirect("/login")
+
+    selected_crop = ""
+    if request.method == "POST":
+        selected_crop = str(request.form.get("previous_crop") or "").strip()
+    else:
+        selected_crop = str(request.args.get("previous_crop") or "").strip()
+
+    switch_page = build_switch_crop_page_context(user, selected_crop)
+    return render_template("switch_crop.html", user=user, switch_page=switch_page)
+
+
 @app.route("/community")
 def community():
     user = get_current_user()
@@ -14339,6 +16563,7 @@ def upgrade_to_pro():
 
 with app.app_context():
     db.create_all()
+    ensure_ai_crop_doctor_pgvector_table()
     # --- Auto-migrate: add missing columns to existing SQLite tables ---
     import sqlite3 as _sqlite3
     _db_path = os.path.join(app.instance_path, "database.db")

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Risk Alerts - AgroVision AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page risk-alerts-page">
+  <main class="dashboard-shell">
+    <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+      <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+    </button>
+
+    <aside class="dashboard-sidebar">
+      {% set active_page = risk_page.active_page %}
+      {% include "_user_sidebar.html" %}
+    </aside>
+
+    <section class="dashboard-main risk-alerts-main">
+      <div class="language-switcher">
+        <div id="google_translate_element"></div>
+      </div>
+
+      <header class="risk-page-hero">
+        <div class="risk-page-hero-copy">
+          <span class="section-kicker">AI weather risk intelligence</span>
+          <h1>AI Risk Alert Module</h1>
+          <p>Convert live weather signals into simple farm-ready alerts before damage happens.</p>
+          <div class="risk-page-hero-chips">
+            <span class="hero-chip">{{ risk_page.requested_location }}</span>
+            <span class="hero-chip">{{ risk_page.top_risk_label }}</span>
+            <span class="hero-chip">{{ risk_page.top_severity }} severity</span>
+            <span class="hero-chip">{{ risk_page.source_label }}</span>
+            <span class="hero-chip">Updated {{ risk_page.risk_module.updated_at }}</span>
+          </div>
+          {% if risk_page.matched_location %}
+            <p class="risk-page-match-note">Showing nearest weather match: {{ risk_page.matched_location }}</p>
+          {% endif %}
+        </div>
+
+        <aside class="risk-page-hero-panel">
+          <span class="shared-section-kicker">Search location</span>
+          <h2>Check another city</h2>
+          <form class="risk-page-search" method="GET" action="/risk-alerts">
+            <label class="risk-page-search-field" for="riskAlertCityInput">
+              <i class="fas fa-location-dot" aria-hidden="true"></i>
+              <input id="riskAlertCityInput" name="city" type="search" value="{{ risk_page.requested_location }}" placeholder="Search city or village">
+            </label>
+            <button class="store-primary-button" type="submit">Update Risks</button>
+          </form>
+          <p>{{ risk_page.risk_module.summary }}</p>
+          <p class="risk-page-source-note">{{ risk_page.source_note }}</p>
+        </aside>
+      </header>
+
+      <section class="risk-page-stats-grid">
+        {% for item in risk_page.stats %}
+          <article class="agro-card risk-page-stat-card">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+          </article>
+        {% endfor %}
+      </section>
+
+      <script id="riskAlertJsonData" type="application/json">{{ risk_page.risk_module.json|tojson }}</script>
+
+      <section class="risk-page-layout">
+        <article class="agro-card risk-page-primary-card">
+          <div class="shared-section-heading">
+            <div>
+              <span class="shared-section-kicker">Today's Risk Summary</span>
+              <h2>Climate Risk Prediction</h2>
+            </div>
+            <a class="risk-page-api-link" href="/api/risk-alerts?location={{ risk_page.requested_location }}" target="_blank" rel="noopener">Open JSON</a>
+          </div>
+
+          <div class="risk-page-report-block">
+            <div class="risk-page-report-head">
+              <div>
+                <span class="risk-alert-list-title">Climate Risk Prediction (Next 3-7 Days)</span>
+                <h3>{{ risk_page.requested_location }}</h3>
+              </div>
+              <span class="risk-page-report-chip">Farmer-friendly outlook</span>
+            </div>
+
+            <div class="risk-assessment-grid">
+              {% for item in risk_page.risk_module.assessments %}
+                <article class="risk-assessment-card risk-assessment-card-{{ item.severity|lower }}">
+                  <div class="risk-assessment-top">
+                    <div>
+                      <span class="risk-assessment-index">{{ loop.index }}. {{ item.type }}</span>
+                      <strong>{{ item.severity }} <small>({{ item.probability }})</small></strong>
+                    </div>
+                    <span class="risk-assessment-badge risk-assessment-badge-{{ item.severity|lower }}">{{ item.severity }}</span>
+                  </div>
+                  <div class="risk-assessment-meta">
+                    {% if item.trend %}
+                      <span>Trend: {{ item.trend }}</span>
+                    {% endif %}
+                    {% if item.expected %}
+                      <span>Expected: {{ item.expected }}</span>
+                    {% endif %}
+                    {% if not item.trend and not item.expected %}
+                      <span>Early warning outlook</span>
+                    {% endif %}
+                  </div>
+                  <div class="risk-assessment-body">
+                    <span class="risk-alert-list-title">Reason</span>
+                    <ul class="risk-assessment-list">
+                      {% for reason in item.reason %}
+                        <li>{{ reason }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+
+            <section class="risk-actions-panel">
+              <div class="risk-actions-panel-top">
+                <div>
+                  <span class="risk-alert-list-title">Final Section</span>
+                  <h3>Recommended Farmer Actions</h3>
+                </div>
+                <span class="risk-page-report-chip">Top 3 actions</span>
+              </div>
+              <ul class="risk-actions-panel-list">
+                {% for action in risk_page.risk_module.farmer_actions %}
+                  <li>{{ action }}</li>
+                {% endfor %}
+              </ul>
+            </section>
+          </div>
+
+        </article>
+
+        <article class="agro-card risk-page-side-card">
+          <div class="shared-section-heading">
+            <div>
+              <span class="shared-section-kicker">Next 3 days trend</span>
+              <h2>Short field outlook</h2>
+            </div>
+          </div>
+          <div class="risk-trend-grid risk-trend-grid-compact">
+            {% for item in risk_page.risk_module.trend %}
+              <article class="risk-trend-card risk-trend-card-{{ item.tone }}">
+                <div class="risk-trend-day">
+                  <span class="risk-trend-icon" aria-hidden="true">{{ item.icon }}</span>
+                  <strong>{{ item.day }}</strong>
+                </div>
+                <div class="risk-trend-metrics">
+                  <span>{{ item.temp }}&deg;C</span>
+                  <span>{{ item.rainfall_mm }} mm</span>
+                </div>
+                <p>{{ item.note }}</p>
+              </article>
+            {% endfor %}
+          </div>
+        </article>
+      </section>
+
+      <section class="risk-page-info-grid">
+        {% for item in risk_page.info_cards %}
+          <article class="agro-card risk-page-info-card">
+            <span class="risk-page-info-icon"><i class="fas {{ item.icon }}" aria-hidden="true"></i></span>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.detail }}</p>
+          </article>
+        {% endfor %}
+      </section>
+
+      <section class="agro-card risk-page-json-card">
+        <div class="shared-section-heading">
+          <div>
+            <span class="shared-section-kicker">Strict JSON output</span>
+            <h2>Developer-ready risk payload</h2>
+          </div>
+          <button id="copyRiskJsonButton" class="risk-page-copy-btn" type="button">Copy JSON</button>
+        </div>
+        <pre id="riskJsonPreview" class="risk-page-json-preview">{{ risk_page.risk_module.json|tojson(indent=2) }}</pre>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
+      document.querySelector('.dashboard-sidebar')?.classList.toggle('sidebar-open');
+    });
+  </script>
+
+  <script>
+    document.getElementById('copyRiskJsonButton')?.addEventListener('click', async () => {
+      const node = document.getElementById('riskJsonPreview');
+      if (!node) return;
+      try {
+        await navigator.clipboard.writeText(node.textContent || '');
+        const button = document.getElementById('copyRiskJsonButton');
+        if (button) {
+          button.textContent = 'Copied';
+          window.setTimeout(() => {
+            button.textContent = 'Copy JSON';
+          }, 1400);
+        }
+      } catch (error) {
+        console.error('Unable to copy risk JSON', error);
+      }
+    });
+  </script>
+
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement(
+        {
+          pageLanguage: 'en',
+          includedLanguages: 'en,hi,or',
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+        },
+        'google_translate_element'
+      );
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</body>
+</html>

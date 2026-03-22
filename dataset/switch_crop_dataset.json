@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Cabbage",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Moderate", "pH": "Slightly Acidic"},
+    "suitability": {"pH_range": "5.5-7.0", "N_level": "Medium", "P_level": "Medium", "K_level": "Medium", "climate": "Cool", "season": "Rabi"}
+  },
+  {
+    "name": "Cauliflower",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Moderate", "pH": "Slightly Acidic"},
+    "suitability": {"pH_range": "5.5-7.0", "N_level": "Medium", "P_level": "Medium", "K_level": "Medium", "climate": "Cool", "season": "Rabi"}
+  },
+  {
+    "name": "Banana",
+    "soil_impact": {"N": "High Decrease", "P": "Moderate", "K": "High Decrease", "pH": "Acidic"},
+    "suitability": {"pH_range": "5.5-7.0", "N_level": "High", "P_level": "Medium", "K_level": "High", "climate": "Tropical", "season": "All"}
+  },
+  {
+    "name": "Papaya",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Moderate", "pH": "Neutral"},
+    "suitability": {"pH_range": "6.0-7.5", "N_level": "Medium", "P_level": "Medium", "K_level": "Medium", "climate": "Tropical", "season": "All"}
+  },
+  {
+    "name": "Mango",
+    "soil_impact": {"N": "Low", "P": "Moderate", "K": "Moderate", "pH": "Neutral"},
+    "suitability": {"pH_range": "6.0-7.5", "N_level": "Low", "P_level": "Medium", "K_level": "Medium", "climate": "Tropical", "season": "All"}
+  },
+  {
+    "name": "Guava",
+    "soil_impact": {"N": "Low", "P": "Moderate", "K": "Moderate", "pH": "Neutral"},
+    "suitability": {"pH_range": "6.0-7.5", "N_level": "Low", "P_level": "Medium", "K_level": "Medium", "climate": "Tropical", "season": "All"}
+  },
+  {
+    "name": "Tea",
+    "soil_impact": {"N": "High Decrease", "P": "Moderate", "K": "Low", "pH": "Acidic"},
+    "suitability": {"pH_range": "4.5-5.5", "N_level": "High", "P_level": "Medium", "K_level": "Low", "climate": "Hilly", "season": "All"}
+  },
+  {
+    "name": "Coffee",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Moderate", "pH": "Acidic"},
+    "suitability": {"pH_range": "5.0-6.5", "N_level": "Medium", "P_level": "Medium", "K_level": "Medium", "climate": "Hilly", "season": "All"}
+  },
+  {
+    "name": "Rice",
+    "soil_impact": {"N": "High Decrease", "P": "Moderate", "K": "Moderate", "pH": "Slightly Acidic"},
+    "suitability": {"pH_range": "5.0-6.8", "N_level": "High", "P_level": "Medium", "K_level": "Medium", "climate": "Rainy", "season": "Kharif"}
+  },
+  {
+    "name": "Wheat",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Low", "pH": "Neutral"},
+    "suitability": {"pH_range": "6.0-7.5", "N_level": "Medium", "P_level": "Medium", "K_level": "Low", "climate": "Cool", "season": "Rabi"}
+  },
+  {
+    "name": "Millet",
+    "soil_impact": {"N": "Low", "P": "Low", "K": "Low", "pH": "Slightly Acidic"},
+    "suitability": {"pH_range": "5.0-7.0", "N_level": "Low", "P_level": "Low", "K_level": "Low", "climate": "Dry", "season": "Kharif"}
+  },
+  {
+    "name": "Sorghum",
+    "soil_impact": {"N": "Decrease", "P": "Low", "K": "Moderate", "pH": "Neutral"},
+    "suitability": {"pH_range": "5.5-7.5", "N_level": "Low", "P_level": "Low", "K_level": "Medium", "climate": "Dry", "season": "Kharif"}
+  },
+  {
+    "name": "Jute",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Moderate", "pH": "Acidic"},
+    "suitability": {"pH_range": "5.0-6.5", "N_level": "Medium", "P_level": "Medium", "K_level": "Medium", "climate": "Rainy", "season": "Kharif"}
+  },
+  {
+    "name": "Okra",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Moderate", "pH": "Neutral"},
+    "suitability": {"pH_range": "6.0-7.5", "N_level": "Medium", "P_level": "Medium", "K_level": "Medium", "climate": "Warm", "season": "Kharif"}
+  },
+  {
+    "name": "Brinjal",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Moderate", "pH": "Neutral"},
+    "suitability": {"pH_range": "5.5-7.5", "N_level": "Medium", "P_level": "Medium", "K_level": "Medium", "climate": "Warm", "season": "All"}
+  },
+  {
+    "name": "Chili",
+    "soil_impact": {"N": "Moderate", "P": "Moderate", "K": "Moderate", "pH": "Neutral"},
+    "suitability": {"pH_range": "5.5-7.5", "N_level": "Medium", "P_level": "Medium", "K_level": "Medium", "climate": "Warm", "season": "All"}
+  }
+]

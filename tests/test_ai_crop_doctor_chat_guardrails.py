@@ -82,6 +82,12 @@ def test_lookup_ai_crop_doctor_local_qa_matches_irrigation_definition_typo():
     assert "Irrigation" in reply or "sinchai" in reply or "paani" in reply
 
 
+def test_extract_ai_chat_weather_location_uses_query_location():
+    location = app_module.extract_ai_chat_weather_location("Mumbai ka weather report kya hai", "Bhubaneswar")
+
+    assert location == "Mumbai"
+
+
 def test_disease_dataset_lookup_matches_typoed_powdery_mildew_query():
     reply = app_module.lookup_ai_crop_doctor_disease_dataset_answer(
         "leaf par powdary mildew jaisa white powder hai aur slo growth ho raha hai"
@@ -113,7 +119,7 @@ def test_resolve_ai_chat_response_uses_local_when_groq_missing(monkeypatch):
 
 
 def test_resolve_ai_chat_response_uses_contextual_assistant_for_weather(monkeypatch):
-    monkeypatch.setattr(app_module, "ask_groq_ai_crop_doctor", lambda user, query, history: None)
+    monkeypatch.setattr(app_module, "ask_groq_ai_crop_doctor", lambda user, query, history: "Groq answer")
     monkeypatch.setattr(app_module, "lookup_ai_crop_doctor_local_qa", lambda query: None)
     monkeypatch.setattr(
         app_module,
@@ -141,11 +147,12 @@ def test_resolve_ai_chat_response_uses_contextual_assistant_for_weather(monkeypa
         },
     )
 
-    result = app_module.resolve_ai_chat_response(DummyUser(), "aaj weather report kya hai", [])
+    result = app_module.resolve_ai_chat_response(DummyUser(), "Delhi ka weather report kya hai", [])
 
     assert result["provider"] == "contextual_assistant"
     assert "weather update" in result["response"].lower() or "temperature" in result["response"].lower()
     assert "humidity" in result["response"].lower()
+    assert "Delhi" in result["response"]
 
 
 def test_resolve_ai_chat_response_uses_simple_fallback_last(monkeypatch):

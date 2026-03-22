@@ -20,6 +20,14 @@
     <i class="fas fa-house sidebar-icon sidebar-icon-dashboard"></i>
     <span>Dashboard</span>
   </a>
+  <a class="sidebar-link{% if active_page == 'risk_alerts' %} is-active alerts-active{% endif %}" href="/risk-alerts">
+    <i class="fas fa-cloud-bolt sidebar-icon sidebar-icon-risk-alerts"></i>
+    <span>AI Risk Alerts</span>
+  </a>
+  <a class="sidebar-link{% if active_page == 'switch_crop' %} is-active soil-active{% endif %}" href="/switch-crop">
+    <i class="fas fa-arrows-rotate sidebar-icon sidebar-icon-soil"></i>
+    <span>Switch Crop</span>
+  </a>
   <a class="sidebar-link{% if active_page == 'crop_library' %} is-active library-active{% endif %}" href="/crop-library">
     <i class="fas fa-book-open sidebar-icon sidebar-icon-library"></i>
     <span>Crop Library</span>
