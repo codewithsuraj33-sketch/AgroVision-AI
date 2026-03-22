@@ -1,5 +1,6 @@
-import app
 import numpy as np
+
+import app
 
 
 def test_local_qa_returns_different_answers_for_different_symptoms():
