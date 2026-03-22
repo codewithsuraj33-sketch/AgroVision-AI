@@ -242,7 +242,11 @@ def test_risk_alerts_template_renders():
                     probability="59%",
                     trend="Increasing",
                     expected="",
-                    reason=["Very low rainfall for 7 days", "High temperature (37 C)", "Humidity is high (88%), so drought stress may build more slowly"],
+                    reason=[
+                        "Very low rainfall for 7 days",
+                        "High temperature (37 C)",
+                        "Humidity is high (88%), so drought stress may build more slowly",
+                    ],
                 ),
                 Obj(
                     type="Thunderstorm",
@@ -250,7 +254,11 @@ def test_risk_alerts_template_renders():
                     probability="78%",
                     trend="",
                     expected="Within 48 hours",
-                    reason=["High humidity (88%)", "Wind speed rising (25 km/h)", "No sharp rain burst is visible yet"],
+                    reason=[
+                        "High humidity (88%)",
+                        "Wind speed rising (25 km/h)",
+                        "No sharp rain burst is visible yet",
+                    ],
                 ),
             ],
             farmer_actions=[
@@ -273,7 +281,9 @@ def test_risk_alerts_template_renders():
             trend=[
                 Obj(day="Today", temp=31, rainfall_mm=14, note="Rain likely", tone="medium", icon="⛅"),
                 Obj(day="Tomorrow", temp=33, rainfall_mm=4, note="Short field window", tone="low", icon="🌤️"),
-                Obj(day="Day 3", temp=34, rainfall_mm=0, note="Plan irrigation early", tone="medium", icon="☀️"),
+                Obj(
+                    day="Day 3", temp=34, rainfall_mm=0, note="Plan irrigation early", tone="medium", icon="☀️"
+                ),
             ],
             json={"location": "Bhubaneswar", "risks": [{"type": "Thunderstorm"}]},
         ),

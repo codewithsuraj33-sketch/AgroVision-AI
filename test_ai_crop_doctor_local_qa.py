@@ -60,8 +60,12 @@ def test_local_qa_answers_temperature_and_fungicide_basics():
 def test_semantic_reranker_prefers_better_meaning_match(monkeypatch):
     vector_map = {
         ("retrieval_query", "leaf disease spray treatment"): np.array([1.0, 0.0], dtype=np.float32),
-        ("retrieval_document", "crop nutrition leaf growth booster"): np.array([0.15, 0.98], dtype=np.float32),
-        ("retrieval_document", "fungal leaf infection fungicide spray control"): np.array([0.98, 0.12], dtype=np.float32),
+        ("retrieval_document", "crop nutrition leaf growth booster"): np.array(
+            [0.15, 0.98], dtype=np.float32
+        ),
+        ("retrieval_document", "fungal leaf infection fungicide spray control"): np.array(
+            [0.98, 0.12], dtype=np.float32
+        ),
     }
 
     def fake_embedding(text, task_type="retrieval_document", title=""):

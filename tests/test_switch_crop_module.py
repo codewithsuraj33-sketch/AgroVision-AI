@@ -48,7 +48,9 @@ def test_resolve_switch_crop_entry_matches_rrice_to_rice():
 
 def test_recommend_switch_crops_for_banana_prefers_recovery_friendly_options(monkeypatch):
     previous_crop = app_module.resolve_switch_crop_entry("Banana")
-    monkeypatch.setattr(app_module, "search_ai_crop_doctor_pgvector", lambda source_kind, query_text, limit=5: [])
+    monkeypatch.setattr(
+        app_module, "search_ai_crop_doctor_pgvector", lambda source_kind, query_text, limit=5: []
+    )
 
     result = app_module.recommend_switch_crops(previous_crop, DummyUser(), build_weather())
 
@@ -91,11 +93,14 @@ def test_detect_switch_crop_context_uses_meaningful_season_and_ranked_climate(mo
         def now(cls):
             class _Now:
                 month = 3
+
             return _Now()
 
     monkeypatch.setattr(app_module, "datetime", FakeDateTime)
 
-    context = app_module.detect_switch_crop_context(build_weather(temp=22, humidity=44, rainfall=1, pressure=1011))
+    context = app_module.detect_switch_crop_context(
+        build_weather(temp=22, humidity=44, rainfall=1, pressure=1011)
+    )
 
     assert context["season"] == "Rabi"
     assert context["climate_display"]
@@ -105,7 +110,9 @@ def test_detect_switch_crop_context_uses_meaningful_season_and_ranked_climate(mo
 
 def test_recommend_switch_crops_changes_with_weather_context(monkeypatch):
     previous_crop = app_module.resolve_switch_crop_entry("Banana")
-    monkeypatch.setattr(app_module, "search_ai_crop_doctor_pgvector", lambda source_kind, query_text, limit=5: [])
+    monkeypatch.setattr(
+        app_module, "search_ai_crop_doctor_pgvector", lambda source_kind, query_text, limit=5: []
+    )
 
     dry_weather = build_weather(temp=22, humidity=40, rainfall=1, pressure=1011)
     rainy_weather = build_weather(temp=31, humidity=86, rainfall=12, pressure=1004)

@@ -11,9 +11,7 @@ def test_structured_chat_knowledge_matches_non_exact_powder_query():
 
 
 def test_structured_chat_knowledge_matches_typoed_powder_query():
-    reply = app_module.lookup_ai_crop_doctor_local_qa(
-        "bhai mere paudhe pe safed powdar aa gaya hai kya kru"
-    )
+    reply = app_module.lookup_ai_crop_doctor_local_qa("bhai mere paudhe pe safed powdar aa gaya hai kya kru")
 
     assert reply is not None
     assert "Powdery Mildew" in reply or "Sulfur" in reply or "Milk spray" in reply
